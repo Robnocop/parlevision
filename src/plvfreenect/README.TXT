@@ -20,3 +20,5 @@ For libfreenect to work you will need glut32, libusb and pththreadVC2. Libfreene
 Building libfreenect on windows machine will give some problems amongst others due to different versions of libusb. This was previously called usb. Binaries can be used as well to install and run libfreenect properly, unfortunatly libfreenect does not ship its binaries directly so you will have to find someone who allready has a proper build for your machine.
 
 Libfreenect uses a different colour order so you need to switch rgb to bgr for example using the "color and scale conversion" processor in the pipeline. 
+
+If building produces failures on first attempt try to rebuild the plvfreenect solution again when the rest is succesfully build.
