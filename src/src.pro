@@ -10,6 +10,9 @@ SRC_SUBDIRS += plvgraphical
 SRC_SUBDIRS += plvconsole
 SRC_SUBDIRS += plvtcpserver
 SRC_SUBDIRS += plvtest
+SRC_SUBDIRS += plvsynchrony
+SRC_SUBDIRS += plvfreenect
+SRC_SUBDIRS += plvmskinect
 
 SUBDIRS += $$SRC_SUBDIRS
 
