@@ -25,6 +25,8 @@ plvgraphical-build*
 libs
 common.pri
 parlevision-all.pro
+ipch
+*.opensdf
 
 
 
