@@ -23,6 +23,8 @@ plvgui-build
 plvheadless-build*
 plvgraphical-build*
 libs
+common.pri
+parlevision-all.pro
 
 
 
