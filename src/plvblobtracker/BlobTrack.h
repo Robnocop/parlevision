@@ -33,7 +33,10 @@ namespace plvblobtracker
             historySize(_historySize),
             trackSize(_trackSize),
             age(0),
-            state(BlobTrackBirth)
+			bitsBeenSet(false),
+			direction(361),
+			state(BlobTrackBirth),
+			centroid(cv::Point(0,0))
         {
             assert(_blob.isValid());
             history.append(_blob);
@@ -51,16 +54,33 @@ namespace plvblobtracker
         unsigned int historySize;
         unsigned int trackSize;
         unsigned int age;
+		
+		/** the last LED bit measurements */
+		std::vector< bool > bitseq; 
+		//should these actually be public I doubt it
+		unsigned int lastmeasurementpoint;
+		unsigned int nrofmeasures;
+		unsigned int nrofones;
+		//direction based on three LEDs
+		unsigned int direction;
+		//last measured centroid of the three leds
+		cv::Point centroid;
+
+		//
+		bool bitsBeenSet;
 
         PlvOpenCVBlobTrackState state;
 
         QList<Blob>        history; /** the history of this blob track */
         QVector<cv::Point> track;   /** the actual route this blob has followed */
         cv::Vec2d          speed;   /** the speed of this blob track */
-        cv::Vec2d          conversionFactor; /** conversion factor from pixels to millimeters. */
+		cv::Vec2d          conversionFactor; /** conversion factor from pixels to millimeters. */
         cv::Scalar         color;   /** color to use when drawing this track onto an image */
     };
 
+	//reason why it got stuck! 10*int max*point list is a lot to keep track of
+	//int trackSize=INT_MAX 
+	//int historySize=10,
     class BlobTrack
     {
     public:
@@ -69,8 +89,8 @@ namespace plvblobtracker
                   int birthThreshold=3,
                   int birthWindow=10,
                   int dieThreshold=10,
-                  int historySize=10,
-                  int trackSize=INT_MAX);
+                  int historySize=5,
+                  int trackSize=1000);
 
         virtual ~BlobTrack();
 
@@ -85,11 +105,27 @@ namespace plvblobtracker
         }
 
         inline unsigned int getId() const { return d->id; }
+		inline unsigned int getBitsBeenSet() const { return d->bitsBeenSet; }
+		inline unsigned int getDirection() const { return d->direction; }
+		inline cv::Point getCentroidLed() const { return d->centroid; }
 
         /** adds a measurement to this track */
         void addMeasurement( const Blob& blob );
 
-        /** call when track is not matched */
+		/** resets the ID based on an external measurement in the blob */
+		void setID(int id);
+		/** sets the average of the three leds being the centroid of the three leds*/
+		void setCentroidLed( std::vector< cv::Point > cogs );
+
+		/** saves the last x slots with measured bits*/
+		//void BlobTrack::setBits(bool bit, int slot);
+		void setBits(bool bit, int slot);
+		void setDirection(std::vector< cv::Point > cogs);
+
+		/** gets the x-ed bit*/
+		bool BlobTrack::getBit(int measurepoint);
+
+		/** call when track is not matched */
         void notMatched(  unsigned int frameNumber );
 
         /** returns last blob measurement */
@@ -101,6 +137,8 @@ namespace plvblobtracker
         /** draws the blob, its track and prediction. Target must have depth CV_8U. */
         void draw( cv::Mat& target ) const;
 
+		
+
         int matches( const Blob& blob ) const;
 
         inline cv::Vec2d getSpeed() const { return d->speed; }
@@ -111,8 +149,13 @@ namespace plvblobtracker
 
         inline PlvOpenCVBlobTrackState getState() const { return d->state; }
 
+		//resets state of a reborn blob 
+		//void setState(const PlvOpenCVBlobTrackState statename);
+		//inline PlvOpenCVBlobTrackState setState(int statename) const { d->state = statename; return d->state;}
+
     private:
         QSharedDataPointer<BlobTrackData> d;
+		
     };
 }
 

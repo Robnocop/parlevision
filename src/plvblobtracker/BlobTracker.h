@@ -44,13 +44,37 @@ namespace plvblobtracker
         Q_CLASSINFO("author", "Richard")
         Q_CLASSINFO("name", "Blob Tracker")
         Q_CLASSINFO("description", "Tracks blobs" )
-
+		Q_PROPERTY( int blobSelector READ getBlobSelector WRITE setBlobSelector NOTIFY blobSelectorChanged )
+		Q_PROPERTY( int threshold READ getThreshold WRITE setThreshold NOTIFY blobThresholdChanged )
+		Q_PROPERTY( int minLedSize READ getMinLedSize WRITE setMinLedSize NOTIFY minLedSizeChanged )
+		Q_PROPERTY( int maxLedSize READ getMaxLedSize WRITE setMaxLedSize NOTIFY maxLedSizeChanged )
+		Q_PROPERTY( int blinkTime READ getBlinkTime WRITE setBlinkTime NOTIFY blinkTimeChanged )
         //Q_PROPERTY( double alpha READ getAlpha WRITE setAlpha NOTIFY alphaChanged )
         //Q_PROPERTY( double beta READ getBeta WRITE setBeta NOTIFY betaChanged )
         //Q_PROPERTY( double gamma READ getGamma WRITE setGamma NOTIFY gammaChanged )
 
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
+		
+		int getBlobSelector() const;
+		int getThreshold() const;
+		int getMinLedSize() const;
+		int getMaxLedSize() const;
+		int getBlinkTime() const;
+
+	public slots:
+		void setBlobSelector(int blobid);
+		void setThreshold(int threshold);
+		void setMinLedSize(int minledsize);
+		void setMaxLedSize(int maxledsize);
+		void setBlinkTime (int blinktime);
+	
+	signals:
+		void blobSelectorChanged (int s);
+		void blobThresholdChanged (int t);
+		void minLedSizeChanged (int l);
+		void maxLedSizeChanged (int l);
+		void blinkTimeChanged (int b);
 
     public:
         BlobTracker();
@@ -66,12 +90,31 @@ namespace plvblobtracker
         plv::CvMatDataInputPin* m_inputImage;
         plv::InputPin< QList<plvblobtracker::Blob> >* m_inputBlobs;
         plv::CvMatDataOutputPin* m_outputImage;
+		plv::CvMatDataOutputPin* m_outputImage2;
+		plv::CvMatDataOutputPin* m_outputImage3;
+		plv::CvMatDataOutputPin* m_outputImage4;
+		plv::CvMatDataOutputPin* m_outputImage5;
         QList<BlobTrack> m_blobTracks;
 
+		//unsigned??
+		unsigned int m_blobSelector;
+		unsigned int m_threshold;
+		unsigned int m_minLedSize;
+		unsigned int m_maxLedSize;
+		unsigned int m_blinkTime;
+		
         void matchBlobs(QList<Blob>& newBlobs, QList<BlobTrack>& blobTracks);
-        unsigned int m_idCounter;
+        //void setTrackID(QList<BlobTrack>& blobTracks, int ID, int i);
+		void setTrackID(BlobTrack& trackunit);
+		int getIDBySum(int sum);
+		unsigned int m_idCounter;
+		unsigned int m_iterations;
         inline unsigned int getNewId() { return ++m_idCounter; }
 
+		//TEST FPS callback from plugin
+		QTime m_timeSinceLastFPSCalculation;
+		int m_numFramesSinceLastFPSCalculation;
+		float m_fps; /** running avg of fps */
 
     };
 }
