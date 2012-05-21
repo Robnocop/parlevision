@@ -26,21 +26,24 @@
 using namespace plv;
 using namespace plvmskinect;
 
+
 KinectDevice::KinectDevice(int id, QObject* parent) :
     QThread(parent)
 {
     zero();
-    m_id = id;
+	//cast to OLECHAR???
+	m_id = id;
     connect( this, SIGNAL( finished()), this, SLOT( threadFinished()) );
 }
 
 KinectDevice::~KinectDevice()
 {
+	
 }
 
 void KinectDevice::zero()
 {
-    m_state = KINECT_UNINITIALIZED;
+	m_state = KINECT_UNINITIALIZED;
 
     m_nuiInstance          = NULL;
     m_hNextDepthFrameEvent = NULL;
@@ -48,10 +51,10 @@ void KinectDevice::zero()
     m_hNextSkeletonEvent   = NULL;
     m_pDepthStreamHandle   = NULL;
     m_pVideoStreamHandle   = NULL;
-    m_hThNuiProcess        = NULL;
-    m_hEvNuiProcessStop    = NULL;
+ //   m_hThNuiProcess        = NULL;
+    //m_hEvNuiProcessStop    = NULL;
 
-    //ZeroMemory(m_Pen, sizeof(m_Pen));
+    //ZeroMemory(m_pen, sizeof(m_pen));
     //m_SkeletonDC           = NULL;
     //m_SkeletonBMP          = NULL;
     //m_SkeletonOldObj       = NULL;
@@ -65,53 +68,101 @@ void KinectDevice::zero()
     //m_LastFramesTotal       = 0;
 }
 
+//in case of multiple kinects mskinectproducer will create multiple devices by running it multiple times
+// use m_kinects, a QVector with kinectdevices, to retrieve a specific device. But be carefull the vector might be empty
+
 bool KinectDevice::init()
 {
-    // kinect must not already be initialized
-    assert( getState() == KINECT_UNINITIALIZED );
+	// kinect must not already be initialized
+	assert( getState() == KINECT_UNINITIALIZED );
     
-    QMutexLocker lock( &m_deviceMutex );
+	QMutexLocker lock( &m_deviceMutex );
     
     // initialize all variables except ID to default values
     zero();
 
     HRESULT hr;
 
-    hr = MSR_NuiCreateInstanceByIndex( m_id, &m_nuiInstance );
+    //hr = MSR_NuiCreateInstanceByIndex( m_id, &m_nuiInstance );
+	//new use a callbacck (stop has a bug) NuiCreateSensorByIndex
+	//need to implement the callback method, probably because the destroy instance is not available anymore:
+	//see: http://www.microsoft.com/en-us/kinectforwindows/develop/release-notes.aspx#_6._known_issues 
+	//and http://social.msdn.microsoft.com/Forums/en-US/kinectsdknuiapi/thread/0c62b444-bf05-4700-a1e7-a9b3a1a2dcec
+	//I needed it to run outside KinectDevice otherwise
+//	NuiSetDeviceStatusCallback((NuiStatusProc)&KinectStatusProc, NULL);
+	hr = NuiCreateSensorByIndex( m_id, &m_nuiInstance );
     if( FAILED( hr ) )
     {
         qDebug() << tr("Kinect device with id %1 failed MSR_NuiCreateInstanceByIndex.").arg(m_id);
         return false;
+		//return hr used in nuiimpl
     }
+
+	//for current Kinect declared in header
+	//we changed name of nuisensor to nuiinstance
+	//used in nui_statusproc in the producer claas that deals with status changes
+
+//    INuiSensor *            m_pNuiSensor;
+//    BSTR                    m_instanceId;
+	//SysFreeString(m_instanceId);
+	//m_instanceId = m_nuiInstance->NuiDeviceConnectionId();
 
     m_hNextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
     m_hNextVideoFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
     m_hNextSkeletonEvent   = CreateEvent( NULL, TRUE, FALSE, NULL );
-    m_hEvNuiProcessStop    = CreateEvent( NULL, FALSE,FALSE, NULL);
+   // m_hEvNuiProcessStop    = CreateEvent( NULL, FALSE,FALSE, NULL);
 
 //    hr = NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX |
 //                        NUI_INITIALIZE_FLAG_USES_SKELETON |
 //                        NUI_INITIALIZE_FLAG_USES_COLOR );
+	
+    //hr = m_nuiinstance->nuiinitialize( nui_initialize_flag_uses_depth
+    //                    // | nui_initialize_flag_uses_skeleton
+    //                     | nui_initialize_flag_uses_color
 
-    hr = m_nuiInstance->NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH
-                        // | NUI_INITIALIZE_FLAG_USES_SKELETON
-                         | NUI_INITIALIZE_FLAG_USES_COLOR
-                        );
-
-    if( FAILED( hr ) )
+	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
+	//DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON |  NUI_INITIALIZE_FLAG_USES_COLOR;
+    hr = m_nuiInstance->NuiInitialize( nuiFlags);
+	//old fail protocol
+	
+    //if( FAILED( hr ) )
+    //{
+    //    //MessageBoxResource(m_hWnd,IDS_ERROR_NUIINIT,MB_OK | MB_ICONHAND);
+    //    qDebug() << tr("Kinect device with id %1 failed NuiInitialize with return handle %2.").arg(m_id).arg(hr);
+    //    return false;
+    //}
+	
+   // hr = m_pNuiSensor->NuiInitialize( nuiFlags );
+    if ( E_NUI_SKELETAL_ENGINE_BUSY == hr )
     {
-        //MessageBoxResource(m_hWnd,IDS_ERROR_NUIINIT,MB_OK | MB_ICONHAND);
-        qDebug() << tr("Kinect device with id %1 failed NuiInitialize with return handle %2.").arg(m_id).arg(hr);
-        return false;
+        qDebug()<<"error in skeletal engine bussy";
+		nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
+        hr = m_nuiInstance->NuiInitialize( nuiFlags) ;
+    }
+  
+    if ( FAILED( hr ) )
+    {
+        if ( E_NUI_DEVICE_IN_USE == hr )
+        {
+            //MessageBoxResource( IDS_ERROR_IN_USE, MB_OK | MB_ICONHAND );
+			qDebug()<<"error NUI in use";
+        }
+        else
+        {
+            //MessageBoxResource( IDS_ERROR_NUIINIT, MB_OK | MB_ICONHAND );
+			qDebug()<<"error somewhere else in init";
+        }
+        return hr;
     }
 
-    hr = m_nuiInstance->NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, 0 );
-    if( FAILED( hr ) )
-    {
-        //MessageBoxResource(m_hWnd,IDS_ERROR_SKELETONTRACKING,MB_OK | MB_ICONHAND);
-        qDebug() << tr("Failed to open skeleton stream on Kinect with id %1 and with return handle %2.").arg(m_id).arg(hr);
-        return false;
-    }
+    //hr = m_nuiInstance->NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, 0 );
+	//turned of skeleton shit hr =  m_nuiInstance->NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, 0 );
+    //if( FAILED( hr ) )
+    //{
+    //    //MessageBoxResource(m_hWnd,IDS_ERROR_SKELETONTRACKING,MB_OK | MB_ICONHAND);
+    //    qDebug() << tr("Failed to open skeleton stream on Kinect with id %1 and with return handle %2.").arg(m_id).arg(hr);
+    //    return false;
+    //}
 
     hr = m_nuiInstance->NuiImageStreamOpen(
         NUI_IMAGE_TYPE_COLOR,
@@ -134,6 +185,7 @@ bool KinectDevice::init()
 //        2,
 //        m_hNextDepthFrameEvent,
 //        &m_pDepthStreamHandle );
+//	OLD
     hr = m_nuiInstance->NuiImageStreamOpen(
         NUI_IMAGE_TYPE_DEPTH,
         NUI_IMAGE_RESOLUTION_640x480,
@@ -141,26 +193,49 @@ bool KinectDevice::init()
         2,
         m_hNextDepthFrameEvent,
         &m_pDepthStreamHandle );
-    if( FAILED( hr ) )
+		//Might be neccesary but was also used in beta sdk example
+  /*  hr = m_nuiInstance->NuiImageStreamOpen(
+        HasSkeletalEngine(m_nuiInstance) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
+        NUI_IMAGE_RESOLUTION_320x240,
+        0,
+        2,
+        m_hNextDepthFrameEvent,
+        &m_pDepthStreamHandle );
+	*/
+	if( FAILED( hr ) )
     {
         //MessageBoxResource(m_hWnd,IDS_ERROR_DEPTHSTREAM,MB_OK | MB_ICONHAND);
         qDebug() << tr("Failed to open depth stream on Kinect with id %1.").arg(m_id);
         return false;
     }
 
-    setState( KINECT_INITIALIZED );
+	// In the skeletalviewer example the following lines will start the Nui processing thread 
+	// We did and will not do this here as it should be handled by Qt efficiently
+    //m_hEvNuiProcessStop = CreateEvent( NULL, FALSE, FALSE, NULL );
+   // m_hThNuiProcess = CreateThread( NULL, 0, Nui_ProcessThread, this, 0, NULL );
+
+	setState( KINECT_INITIALIZED );
 
     return true;
 }
 
 bool KinectDevice::deinit()
 {
-    if( m_nuiInstance != NULL )
+	//in the nuiimpl they also delete other skeleton stuff
+	//reodered part of deinit to bottom of deinit
+	//in the nuiimpl they do not use compare to NULL
+	//in the old nuiimpl neither, only in the parlevision v
+
+	if ( m_nuiInstance != NULL)
+	{
+		m_nuiInstance->NuiShutdown( );
+	}
+	else
     {
-        m_nuiInstance->NuiShutdown( );
-        MSR_NuiDestroyInstance( m_nuiInstance );
+		qDebug() << "nui instance was null on shutdown!";
     }
-    if( m_hNextSkeletonEvent && ( m_hNextSkeletonEvent != INVALID_HANDLE_VALUE ) )
+
+	if( m_hNextSkeletonEvent && ( m_hNextSkeletonEvent != INVALID_HANDLE_VALUE ) )
     {
         CloseHandle( m_hNextSkeletonEvent );
         m_hNextSkeletonEvent = NULL;
@@ -175,14 +250,30 @@ bool KinectDevice::deinit()
         CloseHandle( m_hNextVideoFrameEvent );
         m_hNextVideoFrameEvent = NULL;
     }
-    setState( KINECT_UNINITIALIZED );
+    
+	//second part, was split into two as in the new nuiimp but added compare to NULL
+	if( m_nuiInstance != NULL )
+    {
+       	m_nuiInstance->Release();
+        m_nuiInstance = NULL;
+        //old kinectplugin had a destroy instance this is not available in new SDK thus needing thecallback funtion
+		//MSR_NuiDestroyInstance( m_nuiInstance );
+		//NuiSetDeviceStatusCallback(0, NULL);
+		//qDebug() << "finish release and null kinect";
+	}
+	else
+    {
+		qDebug() << "nui instance is null on release";
+    }
+		
+	setState( KINECT_UNINITIALIZED );
 
     return true;
 }
 
 int KinectDevice::getId() const
 {
-    return m_id;
+	return m_id;
 }
 
 int KinectDevice::width() const
@@ -197,20 +288,20 @@ int KinectDevice::height() const
 
 void KinectDevice::start()
 {
-    qDebug() << "Starting kinect";
-    
-    QMutexLocker lock( &m_deviceMutex );
-
-    switch( getState() )
+	QMutexLocker lock( &m_deviceMutex );
+	switch( getState() )
     {
     case KINECT_UNINITIALIZED:
         // TODO throw exception?
+		
         break;
     case KINECT_INITIALIZED:
         // Start thread
-        QThread::start();
-        break;
+		
+		QThread::start();
+		break;
     case KINECT_RUNNING:
+		
     default:
         // Do nothing
         return;
@@ -219,13 +310,14 @@ void KinectDevice::start()
 
 void KinectDevice::stop()
 {
-    QMutexLocker lock( &m_deviceMutex );
+	QMutexLocker lock( &m_deviceMutex );
 
     switch( getState() )
     {
     case KINECT_RUNNING:
         // Stop the Nui processing thread
         // Signal the thread
+		qDebug() << "i will stop the run and set case to stop request";
         setState( KINECT_STOP_REQUESTED );
         // switching m_state to KINECT_STOP_REQUESTED
         // will cause the run loop to exit eventually.
@@ -243,8 +335,8 @@ void KinectDevice::stop()
 
 void KinectDevice::run()
 {
-    setState(KINECT_RUNNING);
-    
+	setState(KINECT_RUNNING);
+    	
     // Configure events to be listened on
     HANDLE hEvents[3];
     hEvents[0] = this->m_hNextDepthFrameEvent;
@@ -255,13 +347,20 @@ void KinectDevice::run()
     while(true)
     {
         // Wait for an event to be signalled
-        int nEventIdx = WaitForMultipleObjects(sizeof(hEvents)/sizeof(hEvents[0]),hEvents,FALSE,100);
+       	int nEventIdx = WaitForMultipleObjects(sizeof(hEvents)/sizeof(hEvents[0]),hEvents,FALSE,100);
 
         // If the stop event, stop looping and exit
-        if( getState() == KINECT_STOP_REQUESTED )
-            break;
+        //if( getState() == KINECT_STOP_REQUESTED )
+        //    break;
 
-        // Perform FPS processing
+        if( getState() == KINECT_STOP_REQUESTED )
+        { 
+			qDebug() << "kinectstop requested";			
+			break;
+		}
+
+
+		// Perform FPS processing
 //        t = timeGetTime( );
 //        if( this->m_LastFPStime == -1 )
 //        {
@@ -307,14 +406,29 @@ void KinectDevice::run()
                 break;
         }
     }
-    setState( KINECT_INITIALIZED );
+	//apparently is set to unitialised at another point.
+	setState( KINECT_INITIALIZED );
 }
 
 void KinectDevice::Nui_GotDepthAlert()
 {
-    const NUI_IMAGE_FRAME * pImageFrame = NULL;
+    //changed old const NUI_IMAGE_FRAME * pImageFrame = NULL;
+	//NUI_IMAGE_FRAME pImageFrame;
+	const NUI_IMAGE_FRAME * pImageFrame = NULL;
 
+	// in new and old viewer:
+	 /*HRESULT hr = m_pNuiSensor->NuiImageStreamGetNextFrame(
+        m_pDepthStreamHandle,
+        0,
+        &imageFrame );*/
+	//TODO changed old, to new way no clue why it was this way, probably change it back!
     HRESULT hr = NuiImageStreamGetNextFrame(m_pDepthStreamHandle, 0, &pImageFrame);
+
+	/*HRESULT hr = m_nuiInstance->NuiImageStreamGetNextFrame(
+        m_pDepthStreamHandle,
+        0,
+        &pImageFrame );*/
+
     if( FAILED( hr ) )
     {
         return;
@@ -333,8 +447,14 @@ void KinectDevice::Nui_GotDepthAlert()
         height = 480;
     }
 
-    NuiImageBuffer * pTexture = pImageFrame->pFrameTexture;
-    KINECT_LOCKED_RECT LockedRect;
+    //old :
+	//NuiImageBuffer * pTexture = pImageFrame->pFrameTexture;
+    //KINECT_LOCKED_RECT LockedRect;
+	
+	//changed to new new??
+	INuiFrameTexture *  pTexture = pImageFrame->pFrameTexture;
+    NUI_LOCKED_RECT LockedRect;
+
     pTexture->LockRect( 0, &LockedRect, NULL, 0 );
     BYTE* pBuffer = 0;
     if( LockedRect.Pitch != 0 )
@@ -372,12 +492,19 @@ void KinectDevice::Nui_GotDepthAlert()
         //    }
         //}
 
-        img = CvMatData::create(width, height, CV_16U, 1);
-
+        //old img = CvMatData::create(width, height, CV_16U, 1);
+		img = CvMatData::create(width, height, CV_16U, 1);
+		//upto value 65535 
+		//maxvalue will be around 62000
+		//maxvalue is 31800 so bitshift once should do
+		//Find min max
+		
         // draw the bits to the bitmap
         USHORT* pBufferRun = (USHORT*) pBuffer;
         cv::Mat& mat = img;
 
+		//int maxValue = 0;
+		//int minValue = 15000;
         // todo should be faster with memcpy
         for( int y = 0 ; y < height ; y++ )
         {
@@ -386,10 +513,27 @@ void KinectDevice::Nui_GotDepthAlert()
                 // multiply by 2^4 so we see something in the viewer
                 // this is a temporary hack until we can adjust viewer to see
                 // 12 bit values
-                mat.at<USHORT>(y,x) = (*pBufferRun) << 4;
+                //mat.at<USHORT>(y,x) = (*pBufferRun) << 4;
+
+				//TEMP 
+			/*	if (((*pBufferRun) << 1)  > maxValue)
+				{
+					maxValue = *pBufferRun << 1;
+				}
+				
+				if (((*pBufferRun) << 1) < minValue)
+				{
+					minValue = *pBufferRun << 1;
+				}*/
+
+				mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
                 pBufferRun++;
+
+				//mat.at<USHORT>(y,x)  = Nui_ShortToIntensity(*pBufferRun);
+				//pBufferRun++;
             }
         }
+		//qDebug() << tr("maxvalue is %1 ...%2").arg(maxValue).arg(minValue);
 
         // for some reason (bug?) the image is flipped in 640x480 depth mode
         // flip the image back around y-axis
@@ -428,12 +572,34 @@ void KinectDevice::Nui_GotDepthAlert()
         }
     }
     emit newDepthFrame( m_id, img );
-    NuiImageStreamReleaseFrame( m_pDepthStreamHandle, pImageFrame );
+	//changed old:
+    //NuiImageStreamReleaseFrame( m_pDepthStreamHandle, pImageFrame );
+	NuiImageStreamReleaseFrame( m_pDepthStreamHandle, pImageFrame );
 }
+
+//TEMP solution 
+BYTE KinectDevice::Nui_ShortToIntensity( USHORT s )
+{
+    USHORT RealDepth = NuiDepthPixelToDepth(s);
+    USHORT Player    = NuiDepthPixelToPlayerIndex(s);
+
+    // transform 13-bit depth information into an 8-bit intensity appropriate
+    // for display (we disregard information in most significant bit)
+    BYTE intensity = (BYTE)~(RealDepth >> 4);
+
+    // tint the intensity by dividing by per-player values
+  //  RGBQUAD color;
+ //   color.rgbRed   = intensity >> g_IntensityShiftByPlayerR[Player];
+ //   color.rgbGreen = intensity >> g_IntensityShiftByPlayerG[Player];
+ //   color.rgbBlue  = intensity >> g_IntensityShiftByPlayerB[Player];
+
+    return intensity;
+}
+
 
 void KinectDevice::Nui_GotVideoAlert()
 {
-    const NUI_IMAGE_FRAME * pImageFrame = NULL;
+	const NUI_IMAGE_FRAME * pImageFrame = NULL;
 
     HRESULT hr = NuiImageStreamGetNextFrame( m_pVideoStreamHandle, 0, &pImageFrame );
     if( FAILED( hr ) )
@@ -441,8 +607,11 @@ void KinectDevice::Nui_GotVideoAlert()
         return;
     }
 
-    NuiImageBuffer* pTexture = pImageFrame->pFrameTexture;
-    KINECT_LOCKED_RECT LockedRect;
+    //old NuiImageBuffer* pTexture = pImageFrame->pFrameTexture;
+	//new??
+	INuiFrameTexture*  pTexture = pImageFrame->pFrameTexture;
+    //old KINECT_LOCKED_RECT LockedRect;
+	NUI_LOCKED_RECT LockedRect;
     pTexture->LockRect( 0, &LockedRect, NULL, 0 );
     if( LockedRect.Pitch != 0 )
     {
@@ -577,7 +746,7 @@ RGBQUAD KinectDevice::Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s )
 
 void KinectDevice::threadFinished()
 {
-    emit deviceFinished( m_id );
+	emit deviceFinished( m_id );
 }
 
 

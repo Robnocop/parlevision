@@ -59,16 +59,23 @@ namespace plvmskinect
         int height() const;
 
         virtual void run();
+		//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);
 
     private:
         int         m_id;
         KinectState m_state;
-        INuiInstance* m_nuiInstance;
-        mutable QMutex m_stateMutex;
+        //old INuiInstance* m_nuiInstance;
+        INuiSensor*	m_nuiInstance;
+
+		//added and removed
+		BSTR		m_instanceId;
+
+		mutable QMutex m_stateMutex;
         mutable QMutex m_deviceMutex;
 
-        HANDLE      m_hThNuiProcess;
-        HANDLE      m_hEvNuiProcessStop;
+		//removed first two
+        //HANDLE      m_hThNuiProcess;
+        //HANDLE      m_hEvNuiProcessStop;
         HANDLE      m_hNextDepthFrameEvent;
         HANDLE      m_hNextVideoFrameEvent;
         HANDLE      m_hNextSkeletonEvent;
@@ -92,7 +99,8 @@ namespace plvmskinect
         void Nui_GotDepthAlert();
         void Nui_GotVideoAlert();
         void Nui_GotSkeletonAlert();
-        RGBQUAD Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s );
+		RGBQUAD Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s );
+		BYTE Nui_ShortToIntensity( USHORT s);
 
     signals:
         void newDepthFrame( int deviceIndex, plv::CvMatData frame );
@@ -104,7 +112,12 @@ namespace plvmskinect
         virtual void start();
         virtual void stop();
         void threadFinished();
+		//ADDED
+		
+		
     };
+	////callback in plvm
+	//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);
 }
 
 #endif // PLVKINECTDEVICE_H

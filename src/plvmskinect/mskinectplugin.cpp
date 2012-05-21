@@ -4,6 +4,7 @@
 
 #include "mskinectproducer.h"
 #include "mskinectdatatypes.h"
+#include "mskinectfakecolor.h"
 #include "skeletondataviewer.h"
 #include "kinectthreshold.h"
 #include <plvgui/RendererFactory.h>
@@ -41,6 +42,7 @@ void MSKinectPlugin::onLoad()
 
     plvRegisterPipelineElement<plvmskinect::MSKinectProducer>();
     plvRegisterPipelineElement<plvmskinect::KinectThreshold>();
+	plvRegisterPipelineElement<plvmskinect::MSKinectFakeColor>();
 
     // register renderers
     plvgui::RendererFactory::add<plvmskinect::SkeletonFrame, plvmskinect::SkeletonDataViewer>();

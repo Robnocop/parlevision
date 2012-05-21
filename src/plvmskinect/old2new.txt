@@ -1,0 +1,13 @@
+- nieuwe sdk, 
+
+Device devices = new Device();    
+	for (int i = 0; i < devices.Count; i++)    
+	{        Runtime nuiDevice = new Runtime(i);        // Your code here    }
+
+
+in kinectproducer we get the number of devices and create additional devices
+
+deinitialisation is not done properly
+
+deleted from linker input additional dependencies
+D:/ddevelop/mrKinectSDK/lib\MSRKinectNUI.lib
