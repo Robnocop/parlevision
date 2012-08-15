@@ -26,7 +26,10 @@
 
 #include "BlobDetector.h"
 #include "BlobTracker.h"
+#include "LedBlobTracker.h"
 #include "VPBlobToStringConverter.h"
+#include "TouchBlobAndStringConverter.h"
+#include "NaoBlob.h"
 
 using namespace plv;
 
@@ -44,8 +47,12 @@ void PlvBlobTrackPlugin::onLoad()
     qRegisterMetaType< QList<plvblobtracker::Blob*> >("QList<plvopencv::Blob*>");
 
     plvRegisterPipelineElement<plvblobtracker::BlobTracker>();
+	plvRegisterPipelineElement<plvblobtracker::LedBlobTracker>();
     plvRegisterPipelineElement<plvblobtracker::BlobDetector>();
     plvRegisterPipelineElement<plvblobtracker::VPBlobToStringConverter>();
+	plvRegisterPipelineElement<plvblobtracker::TouchBlobAndStringConverter>();
+	plvRegisterPipelineElement<plvblobtracker::NaoBlob>();
+
 }
 
 Q_EXPORT_PLUGIN2(plv_blobtracker_plugin, PlvBlobTrackPlugin)

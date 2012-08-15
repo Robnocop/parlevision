@@ -18,18 +18,25 @@ SOURCES += plvblobtracker_plugin.cpp \
            BlobDetector.cpp \
            Blob.cpp \
            BlobTrack.cpp \
-           BlobTracker.cpp \
+		   BlobTracker.cpp \
            munkres.cpp \
            matrix.cpp \
-    VPBlobToStringConverter.cpp
+		   VPBlobToStringConverter.cpp \
+		   TouchBlobAndStringConverter.cpp \
+		   NaoBlob.cpp \
+		   LedBlobTrack.cpp \
+		   LedBlobTracker.cpp
 
 HEADERS +=  plvblobtracker_plugin.h \
             plvblobtracker_global.h \
             BlobDetector.h \
             Blob.h \
             BlobTrack.h \
-            BlobTracker.h \
+			BlobTracker.h \
             munkres.h \
             matrix.h \
-    VPBlobToStringConverter.h
-			
+			VPBlobToStringConverter.h \
+			TouchBlobAndStringConverter.h \
+			NaoBlob.h \
+			LedBlobTracker.h \
+			LedBlobTrack.h
