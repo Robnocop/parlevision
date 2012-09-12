@@ -28,6 +28,7 @@
 #include "BlobTracker.h"
 #include "LedBlobTracker.h"
 #include "VPBlobToStringConverter.h"
+#include "TrackToStringConverter.h"
 #include "TouchBlobAndStringConverter.h"
 #include "NaoBlob.h"
 
@@ -50,6 +51,7 @@ void PlvBlobTrackPlugin::onLoad()
 	plvRegisterPipelineElement<plvblobtracker::LedBlobTracker>();
     plvRegisterPipelineElement<plvblobtracker::BlobDetector>();
     plvRegisterPipelineElement<plvblobtracker::VPBlobToStringConverter>();
+	plvRegisterPipelineElement<plvblobtracker::TrackToStringConverter>();
 	plvRegisterPipelineElement<plvblobtracker::TouchBlobAndStringConverter>();
 	plvRegisterPipelineElement<plvblobtracker::NaoBlob>();
 

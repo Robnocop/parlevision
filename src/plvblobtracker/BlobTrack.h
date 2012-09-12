@@ -25,17 +25,22 @@ namespace plvblobtracker
                               int _birthWindow,
                               int _dieThreshold,
                               int _historySize,
-                              int _trackSize) :
+                              int _trackSize,
+							  int _avgOver) :
             id(_id),
             birthThreshold( _birthThreshold ),
             birthWindow( _birthWindow ),
             dieThreshold( _dieThreshold ),
             historySize(_historySize),
             trackSize(_trackSize),
+			avgOver(_avgOver),
+			averagepixel(0),
             age(0),
 			direction(361),
 			lastUpdate(0),//should never be 0 i guess
 			velocity(0),
+			avgvelocity(0),
+			avgdirection(0),
 			state(BlobTrackBirth),
 			centroid(cv::Point(0,0))
         {
@@ -51,10 +56,16 @@ namespace plvblobtracker
 
         /** track dies if not seen for dieThreshold frames */
         unsigned int dieThreshold;
-
-        unsigned int historySize;
-        unsigned int trackSize;
+		
+		//longer age
         unsigned int age;
+		unsigned int averagepixel;
+		
+		//not unsigned to be able compare to GUI set values.
+        int historySize;
+        int trackSize;
+		int avgOver;
+		
 		
 		/** the last LED bit measurements */
 		//std::vector< bool > bitseq; 
@@ -67,6 +78,8 @@ namespace plvblobtracker
 		unsigned int direction;
 		//velocity
 		unsigned int velocity;
+		unsigned int avgvelocity;
+		unsigned int avgdirection;
 		unsigned int timesincelastmeasurement;
 
 		//for time since last update
@@ -77,9 +90,10 @@ namespace plvblobtracker
 
 	    PlvOpenCVBlobTrackState state;
 
-        QList<Blob>        history; /** the history of this blob track */
+        QList<Blob>        history; /** the history of this blob (track) */
         QVector<cv::Point> track;   /** the actual route this blob has followed */
-        cv::Vec2d          speed;   /** the speed of this blob track */
+        QVector<unsigned int>       speed;   /** the speed of this blob track */
+		QVector<unsigned int>       rotation;   /** the speed of this blob track */
 		cv::Vec2d          conversionFactor; /** conversion factor from pixels to millimeters. */
         cv::Scalar         color;   /** color to use when drawing this track onto an image */
     };
@@ -94,10 +108,11 @@ namespace plvblobtracker
         BlobTrack(unsigned int id,
                   Blob& blob,
                   int birthThreshold=3,
-                  int birthWindow=9, //equaled 10 <=  historysize sounds ok
-                  int dieThreshold=4000, //?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
-                  int historySize=10, //number of blobs in the vector
-                  int trackSize=1000); //tail length
+				  int birthWindow=9, //equaled 10 <=  historysize sounds ok
+                  int dieThreshold=400, //?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
+                  int historySize=10, //10 number of complete blobs in the vector that can be recalled
+                  int trackSize=90,
+				  int avgOver= 40); //1000 tail length, speed size
 
         virtual ~BlobTrack();
 
@@ -114,9 +129,12 @@ namespace plvblobtracker
         inline unsigned int getId() const { return d->id; }
 		inline unsigned int getDirection() const { return d->direction; }
 		inline unsigned int getVelocity() const { return d->velocity; }
+		inline unsigned int getAvgVelocity() const { return d->avgvelocity; }
+		inline unsigned int getAvgDirection() const { return d->avgdirection; }
 		inline unsigned int getLastUpdate() const { return d->lastUpdate; }
 		inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }
-		
+		inline unsigned int getAveragePixel() const {return d->averagepixel; }
+
         /** adds a measurement to this track */
         void addMeasurement( const Blob& blob );
 
@@ -129,13 +147,15 @@ namespace plvblobtracker
 		void setVelocity(std::vector< cv::Point > cogs);
 		void setLastUpdate(unsigned int updatetime);
 		void setTimeSinceLastUpdate(unsigned int amountoftimepast);
+		//void setAveragePixel(unsigned int pixelvalueofaveragez);
+		void setAveragePixelValue(unsigned int i) {d->averagepixel = i;}
 
 		/** call when track is not matched */
         void notMatched(  unsigned int frameNumber );
 
         /** returns last blob measurement */
         const Blob& getLastMeasurement() const;
-		const Blob& getAPreviousMeasurement(unsigned int previous) const;
+		const Blob& getAPreviousMeasurement(int previous) const;
 
         /** returns the size of the history */
         inline int getHistorySize() const { return d->history.size(); }
@@ -163,6 +183,7 @@ namespace plvblobtracker
         QSharedDataPointer<BlobTrackData> d;
 		
     };
-}
+}//need to add metatype in order to use it for pins. 
+Q_DECLARE_METATYPE( QList<plvblobtracker::BlobTrack> )
 
 #endif

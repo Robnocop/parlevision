@@ -12,18 +12,23 @@ BlobTrack::BlobTrack(unsigned int id,
                      int birthWindow,
                      int dieThreshold,
                      int historySize,
-                     int trackSize)
+                     int trackSize,
+					 int avgOver)
 {
-    d = new BlobTrackData(id, blob, birthThreshold, birthWindow, dieThreshold, historySize, trackSize);
+    d = new BlobTrackData(id, blob, birthThreshold, birthWindow, dieThreshold, historySize, trackSize, avgOver);
 
     d->id = id;
     d->historySize = historySize;
     d->trackSize = trackSize;
+	d->avgOver = avgOver;
     d->birthWindow = birthWindow;
 	//not really neccesary for age, direction and velocity i guess
 	d->age = 0;
+	d->averagepixel = 0;
 	d->direction = 361; //(361)
 	d->velocity = 0;
+	d->avgvelocity = 0;
+	d->avgdirection = 361;
 	d->color = cvScalar( qrand()%255, qrand()%255, qrand()%255);
     d->history.append(blob);
 }
@@ -38,7 +43,7 @@ const Blob& BlobTrack::getLastMeasurement() const
     return d->history.last();
 }
 
-const Blob& BlobTrack::getAPreviousMeasurement(unsigned int prevsteps) const
+const Blob& BlobTrack::getAPreviousMeasurement(int prevsteps) const
 {
 	if (d->history.size() >prevsteps)
 	{	
@@ -84,6 +89,7 @@ void BlobTrack::setVelocity(std::vector< cv::Point > cogs)
 	//d->velocity = (int) (sqrt(qone));
 	//velocity per second ?? gettime is in milliseconds
 	d->velocity = (int) 1000*(sqrt(qone))/getTimeSinceLastMeasurement();
+	
 }
 
 void BlobTrack::setLastUpdate(unsigned int lastupdate)
@@ -151,18 +157,20 @@ void BlobTrack::addMeasurement( const Blob& blob )
 	}
 
 	//TODO average value over history don't take two random recent values only
-	if (d->age>5)
-	{
-		std::vector< cv::Point > cogstoset;
-		//try to average later on instead of using age
-		cogstoset.push_back(getAPreviousMeasurement(5).getCenterOfGravity());
-		cogstoset.push_back(blob.getCenterOfGravity());
-		setDirection(cogstoset);
-		cogstoset[0] = getLastMeasurement().getCenterOfGravity();
-		setVelocity(cogstoset);
-		//d->direction = (int) (d->direction + tempdirection /2);
-	}
-	else if (d->age>1)
+	//doensn't need to be 5 anymore as we average it lateron
+	//if (d->age>5)
+	//{
+	//	std::vector< cv::Point > cogstoset;
+	//	//try to average later on instead of using age
+	//	//why do this over 5 steps?
+	//	//cogstoset.push_back(getAPreviousMeasurement(5).getCenterOfGravity());
+	//	cogstoset.push_back(getAPreviousMeasurement(1).getCenterOfGravity());
+	//	cogstoset.push_back(blob.getCenterOfGravity());
+	//	setDirection(cogstoset);
+	//	cogstoset[0] = getLastMeasurement().getCenterOfGravity();
+	//	setVelocity(cogstoset);
+	//}
+	if (d->age>1)
 	{
 		std::vector< cv::Point > cogstoset; 
 		cogstoset.push_back(getLastMeasurement().getCenterOfGravity());
@@ -170,6 +178,8 @@ void BlobTrack::addMeasurement( const Blob& blob )
 		setDirection(cogstoset);
 		setVelocity(cogstoset);
 	}
+
+		//d->direction = (int) (d->direction + tempdirection /2);
 
 	if (getDirection() >360)
 	{
@@ -186,10 +196,73 @@ void BlobTrack::addMeasurement( const Blob& blob )
     // TODO use ringbuffer
 	//??this will not be saved in to its history?
     d->track.push_back(blob.getCenterOfGravity());
+	//added for averaging
+	d->speed.push_back(getVelocity());
+    d->rotation.push_back(getDirection());
     if( d->track.size() > d->trackSize )
     {
         d->track.remove(0);
+		d->speed.remove(0);
+		d->rotation.remove(0);
     }
+
+	//AVERAGING 
+	double totaldir,total;
+	total = 0;
+	totaldir= 0;
+	//TODO check historysize
+	int averageover = d->avgOver; //40 (+-2s) or 500?? why not use tracksize for this as well?
+	//int minspeed = 1000;
+	//int maxspeed = 0;
+
+	if( d->speed.size() > averageover )
+	{
+		for(int i=d->speed.size()-averageover; i< d->speed.size(); i++)
+		{
+			total = total + d->speed[i];
+			/*if (d->speed[i] >maxspeed)
+			{
+				maxspeed = d->speed[i]; 
+			} 
+			if (d->speed[i] <= minspeed)
+			{
+				minspeed = d->speed[i];
+			} 
+*/
+		}
+		//d->velocity = (unsigned int) total / averageover ;
+		d->avgvelocity = (unsigned int) total / averageover ;
+		//qDebug() << "average" << d->velocity << "minspeed"  << minspeed << " but maxspeed:" << maxspeed ;
+		//qDebug() << "average speed" << d->velocity << "velocity actual" << d->speed[d->speed.size()-1];
+
+		//for direction we should take into account rapid changes in direction
+		double difference = 0;
+		int j = 0;
+		int i = 1;
+		//while ((difference <45) && i<(averageover+1))
+		//TODO create a MERGED blob condition in this case you do not use the last measurements of the blobs but use measurements untill the blob was merged.
+		//TODO incorporate 360=0 it is not a fair comparison now, changes around 0 will be way more extreme and not averaged
+		while ((difference <60) && i<(averageover+1))
+		{
+			j = d->rotation.size()-i; 
+			//whatever explicit cast
+			difference = (int) abs((double) (d->rotation[j] - d->rotation[d->rotation.size()]));
+			totaldir= totaldir+d->rotation[j];
+			i++;
+		}
+
+		/*if (difference > 45)
+		{
+			qDebug() << "i until difference is" << i;
+		}*/
+		
+		//d->direction = totaldir/i; 
+		d->avgdirection = totaldir/i; 
+
+		//qDebug() << "average dir" << d->direction << "velocity actual" << d->rotation[d->rotation.size()-1];
+	}
+
+
 
 	//check if the dead has come to live
 	if (d->state == BlobTrackDead)
@@ -257,7 +330,7 @@ void BlobTrack::draw( cv::Mat& target ) const
     b.drawContour(target, green, true);
     b.drawCenterOfGravity(target, blue);
     b.drawBoundingRect(target,red);
-    QString info = QString("ID: %1 D: %2 V: %3").arg(d->id).arg(getDirection()).arg(d->velocity);
+    QString info = QString("ID: %1 D: %2 V: %3").arg(d->id).arg(getDirection()).arg(d->avgvelocity);
     b.drawString(target, info);
 
     // draw track

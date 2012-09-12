@@ -6,15 +6,12 @@ object_script*
 .DS_Store
 build
 *.xcodeproj
-*.sln
-*.vcproj*
-*.vcxproj*
-*.suo
-*.pdb
+ParleVision.sln
+ParleVision.vcproj*
+ParleVision.suo
 vc90.*
-*.ncb
-*.sdf
-*.local
+ParleVision.ncb
+ParleVision.local
 *.pro.user.*
 ui_*.h
 *.pro.user
@@ -23,10 +20,7 @@ plvgui-build
 plvheadless-build*
 plvgraphical-build*
 libs
-common.pri
-parlevision-all.pro
-ipch
-*.opensdf
-
-
+dist
+test
+projecttesting
 

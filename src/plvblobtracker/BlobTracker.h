@@ -24,6 +24,7 @@
 
 #include <plvcore/PipelineProcessor.h>
 #include <plvcore/Pin.h>
+//#include <plvcore/Enum.h>
 #include <QStringList>
 
 #include "Blob.h"
@@ -43,24 +44,28 @@ namespace plvblobtracker
         Q_DISABLE_COPY( BlobTracker )
         Q_CLASSINFO("author", "Richard")
         Q_CLASSINFO("name", "Blob Tracker")
-        Q_CLASSINFO("description", "Tracks blobs, blobselector can be used to see one blob by its ID, the factor can be set to have tracker respond on either its direction or its overlap, in a range of 0 to 10, zero indicating totaly based on direction 10 totaly based on overlap" )
+        Q_CLASSINFO("description", "Tracks blobs, blobselector can be used to see one blob by its ID, the factor can be set to have tracker respond on either its direction or its overlap, in a range of 0 to 100, zero indicating totaly based on direction 100 totaly based on overlap" )
 		Q_PROPERTY( int blobSelector READ getBlobSelector WRITE setBlobSelector NOTIFY blobSelectorChanged )
 		Q_PROPERTY( int factorDirOverlap READ getFactorDirOverlap WRITE setFactorDirOverlap NOTIFY factorDirOverlapChanged )
+		Q_PROPERTY( bool averagePixelValue READ getAveragePixelValue WRITE setAveragePixelValue NOTIFY averagePixelValueChanged  )
 
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
 		
 		int getBlobSelector() const;
 		int getFactorDirOverlap() const;
+		bool getAveragePixelValue() {return m_averagePixelValue;}
 	
 	public slots:
 		void setBlobSelector(int blobid);
 		void setFactorDirOverlap(int factor);
+		//his is the boolean deciding whether or not to average the values in the track
+		void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
 
 	signals:
 		void blobSelectorChanged (int s);
 		void factorDirOverlapChanged (int s);
-	
+		void averagePixelValueChanged(bool value);
 
     public:
         BlobTracker();
@@ -77,6 +82,7 @@ namespace plvblobtracker
         plv::InputPin< QList<plvblobtracker::Blob> >* m_inputBlobs;
         plv::CvMatDataOutputPin* m_outputImage;
 		plv::CvMatDataOutputPin* m_outputImage2;
+		plv::OutputPin< QList<plvblobtracker::BlobTrack> >* m_outputBlobTracks;
 		//plv::CvMatDataOutputPin* m_outputImage3;
 		//plv::CvMatDataOutputPin* m_outputImage4;
 		//plv::CvMatDataOutputPin* m_outputImage5;
@@ -85,19 +91,24 @@ namespace plvblobtracker
 		//unsigned??
 		unsigned int m_blobSelector;
 		unsigned int m_factor;
+		bool m_averagePixelValue;
 
         void matchBlobs(QList<Blob>& newBlobs, QList<BlobTrack>& blobTracks);
+		unsigned int averagePixelsOfBlob(Blob blob,const cv::Mat& src);
         //void setTrackID(QList<BlobTrack>& blobTracks, int ID, int i);
-		void setTrackID(BlobTrack& trackunit);
+		//void setTrackID(BlobTrack& trackunit);
 		//int getIDBySum(int sum);
 		unsigned int m_idCounter;
 		unsigned int m_iterations;
 		int m_biggerMaxCount;
-		int m_maxNrOfBlobs;
+		int m_maxNrOfBlobs; //max nr of seen blobs
+		int m_maxNrOfTrackedBlobs; //needs to be adjustable if it works!
 		int m_thresholdFramesMaxNrOfBlobs;
-		unsigned int m_thresholdremove;
-        inline unsigned int getNewId() { return ++m_idCounter; }
-
+		int m_thresholdremove;
+        //inline unsigned int getNewId() { return ++m_idCounter; }
+		QList<unsigned int> m_idPool;
+		inline unsigned int getNewId() { if(!m_idPool.isEmpty()) {return m_idPool.first();} else{return 999;}; }
+		
 		//TEST FPS callback from plugin
 		QTime m_timeSinceLastFPSCalculation;
 		int m_numFramesSinceLastFPSCalculation;
