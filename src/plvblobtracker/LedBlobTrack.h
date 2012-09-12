@@ -55,8 +55,8 @@ namespace plvblobtracker
         /** track dies if not seen for dieThreshold frames */
         unsigned int dieThreshold;
 
-        unsigned int historySize;
-        unsigned int trackSize;
+        int historySize;
+        int trackSize;
         unsigned int age;
 		
 		/** the last LED bit measurements */
