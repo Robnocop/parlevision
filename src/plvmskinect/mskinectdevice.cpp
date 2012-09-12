@@ -186,6 +186,9 @@ bool KinectDevice::init()
 //        m_hNextDepthFrameEvent,
 //        &m_pDepthStreamHandle );
 //	OLD
+	//TODO include sentinel values too near too far: http://social.msdn.microsoft.com/Forums/en-US/kinectsdknuiapi/thread/3fe21ce5-4b75-4b31-b73d-2ff48adfdf52/
+	// but this flag is not recognised: NUI_IMAGE_STREAM_FLAG_DISTINCT_OVERFLOW_DEPTH_VALUES 
+	// Too near: 0x0000 Too far: 0x7ff8 [32760 = 2^15-2^8] Unknown: 0xfff8 [65528 = 2^16-2^3).
     hr = m_nuiInstance->NuiImageStreamOpen(
         NUI_IMAGE_TYPE_DEPTH,
         NUI_IMAGE_RESOLUTION_640x480,
@@ -468,6 +471,7 @@ void KinectDevice::Nui_GotDepthAlert()
 
 
     CvMatData img;
+	//If your application included NUI_INITIALIZE_FLAG_USES_DEPTH in the dwFlags argument to NuiInitialize, depth data is returned as a 16-bit value in which the low-order 12 bits (bits 0–11) contain the depth value in millimeters.
     if( pImageFrame->eImageType == NUI_IMAGE_TYPE_DEPTH )
     {
         //img = CvMatData::create(width, height, CV_8U, 1);
@@ -494,17 +498,21 @@ void KinectDevice::Nui_GotDepthAlert()
 
         //old img = CvMatData::create(width, height, CV_16U, 1);
 		img = CvMatData::create(width, height, CV_16U, 1);
-		//upto value 65535 
-		//maxvalue will be around 62000
-		//maxvalue is 31800 so bitshift once should do
-		//Find min max
-		
+				
         // draw the bits to the bitmap
         USHORT* pBufferRun = (USHORT*) pBuffer;
         cv::Mat& mat = img;
 
-		//int maxValue = 0;
-		//int minValue = 15000;
+		//ok faq give sthe answer >>3 to get depth, actually upto 12 correct bits and max of 12 bits but given in 13bits and  in mm so I don't alter this here?
+		//Too near: 0x0000
+		//Too far: 0x7ff8
+		//Unknown: 0xfff8
+		//unsigned short maxValue = 0;
+		//unsigned short minValue = 15000; //should be 2^13 8192, unshifted it can become 31800 (<< 3 = 3975) thus bitshift once to create a better viewable image.
+		////maxvalue will then be around 62000
+				
+		//defined: ushort 0 - 65535
+		//int max = 32767, uint=65535, schar=127, uchar= 255, although std http://msdn.microsoft.com/en-us/library/s086ab1z(v=vs.71).aspx
         // todo should be faster with memcpy
         for( int y = 0 ; y < height ; y++ )
         {
@@ -516,16 +524,30 @@ void KinectDevice::Nui_GotDepthAlert()
                 //mat.at<USHORT>(y,x) = (*pBufferRun) << 4;
 
 				//TEMP 
-			/*	if (((*pBufferRun) << 1)  > maxValue)
+				/*if (((*pBufferRun) )  > maxValue)
 				{
-					maxValue = *pBufferRun << 1;
+					maxValue = *pBufferRun>>3;
 				}
 				
-				if (((*pBufferRun) << 1) < minValue)
+				if (((*pBufferRun) ) < minValue)
 				{
-					minValue = *pBufferRun << 1;
+					if (((*pBufferRun) ) > 5 )
+					{ 
+						minValue = *pBufferRun>>3;
+					}
 				}*/
+				//I(robby) probably did the following for new sdk 
+				//which means the number of bits has been changed (significant/unsignificant bits change?) showing 15bit max , accroding to doc the lower 12 bits are used, but faq says higher 13-bits and typo of doc
+				//anyway to convert to m use >> 4 in rest of program
+				//to show it we use more clearly in viewer we use << 1.
 
+				//video SDK 1.0/1.5
+				//Distance formula
+				//int depth = depthPoint >> DepthImageFrame.PlayerIndexBitmaskWidth;
+				//Player Formula
+				//int player = depthPoint & DepthImageFrame.PlayerIndexBitmask;
+
+				//<< bigger , >>smaller
 				mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
                 pBufferRun++;
 
@@ -533,7 +555,8 @@ void KinectDevice::Nui_GotDepthAlert()
 				//pBufferRun++;
             }
         }
-		//qDebug() << tr("maxvalue is %1 ...%2").arg(maxValue).arg(minValue);
+		//qDebug() << tr("maxvalue is %1 ...%2..bithsifted..%3").arg(maxValue).arg(minValue).arg(minValue<<4);
+		//if not bishifted:  "maxvalue is 31800 ...0"  qdebug 2^15=32768 what happend to the remaining 968? 2^10=1024
 
         // for some reason (bug?) the image is flipped in 640x480 depth mode
         // flip the image back around y-axis
@@ -550,7 +573,11 @@ void KinectDevice::Nui_GotDepthAlert()
         // sensor, windowing off the extra Y pixels), and from that it derives a
         // 632x480 depth map at 1:2 ratio and using 16 extra source pixels in X and Y. 
     }
-    else if( pImageFrame->eImageType == NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX )
+//	If your application included NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX in the dwFlags argument to NuiInitialize, depth data is returned as a 16-bit value that contains the following information:
+//
+//The low-order three bits (bits 0–2) contain the skeleton (player) ID.
+//The high-order bits (bits 3–15) contain the depth value in millimeters. A depth data value of zero indicates that no depth data is available at that position because all of the objects were either too close to the camera or too far away from it.
+	 else if( pImageFrame->eImageType == NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX )
     {
         img = CvMatData::create(width, height, CV_8U, 3);
 
@@ -692,8 +719,8 @@ void KinectDevice::setState( KinectDevice::KinectState state )
 
 RGBQUAD KinectDevice::Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s )
 {
-    USHORT RealDepth = (s & 0xfff8) >> 3;
-    USHORT Player = s & 7;
+    USHORT RealDepth = (s & 0xfff8) >> 3; //65528 ?2^16=65536??
+    USHORT Player = s & 7; //bitwise and operation
 
     // transform 13-bit depth information into an 8-bit intensity appropriate
     // for display (we disregard information in most significant bit)

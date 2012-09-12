@@ -69,7 +69,7 @@ bool MSKinectFakeColor::process()
 	//added
 	//CvMatData out = CvMatData::create(in.properties());
 	videoMatCache = cv::Mat(Size(matin.cols,matin.rows),CV_8UC3,Scalar(0));
-	
+	//videoMatCache = cv::Mat(Size(matin.cols,matin.rows),CV_32FC3,Scalar(0));
 	//videoMatCache = cv::Mat(Size(640,480),CV_32FC1);
 	//convert into output pin data
     //a 32FC1 goes upto 512 a 8uc3 goes upto 256.
@@ -78,6 +78,7 @@ bool MSKinectFakeColor::process()
 
 	//probably better to use UINT8 etc
 	int val = 0;
+	unsigned short greyval = 0;
 //	double maxval = 0;
 	int cb = 0;
 	int cr = 0;
@@ -86,6 +87,12 @@ bool MSKinectFakeColor::process()
 	int rcol = 0;
 	int yvalue = 0;
 	
+	//int numberofbands = 6; //42.67f
+	float division = 34.36f;//42.67f //5bands, 256colours : 51.2f; // (65536/number of bands of change) / 256
+	//unsigned int bandwidth = (unsigned int) 65536/6;
+	//qDebug() << in.type();
+	//depth=2
+	//camera =16
 	for (int y = 0; y < (matin.rows); ++y )
 		{
 			//for (int x = 0; x < (matin.cols); ++x )
@@ -93,6 +100,75 @@ bool MSKinectFakeColor::process()
 			{
 				switch(in.type())
 				{
+					case 2:
+						//mapp the 16bit values to rgb
+						//greyval = matin.at<cv::Vec3b>(y,3)[x];
+						//v = src.at<unsigned short>(j,i); //j=y, i=x
+						//http://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
+						//use only purple to red 
+						//maps to 5 areas 0-300degrees. 65536
+						//2^16 /5 = 13107, 26214, 39321, 52428, 65535 
+						//2^16 /6 = 10922.5 , 21845, 32767.5, 43690, 54612.5, 65535
+						greyval = matin.at<unsigned short>(y,x);
+						//bgr
+						//theoretical minimum if input is bitshifted to 16bit values: 800*16=12800;
+						//52736/6 --> 52740/6=8790
+						//*6 12794
+
+						//get out the black values:
+						if (greyval < 10)
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(0);
+						}
+						//values that are not supposed to be visible turn into grey <21845 the additional /(2) keeps them grey and not white.
+						else if (greyval < 12794)
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)((greyval)/(255*2));
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)((greyval)/(255*2));
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)((greyval)/(255*2));
+						}
+						//red to purple near
+						else if (greyval < 21584) //purple to blue (not there)
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)((greyval-12794)/division);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(255);
+						}
+						//TODO rescale as below 800 no measurements thus <12800 everything will be black
+						else if (greyval < (30374)) //purple to blue (not there)
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(255);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(255-((greyval-21584)/division));
+						}
+						else if (greyval < 39164) //blue to turkoois
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(255);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)((greyval-30374)/division);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(0);
+						}
+						else if (greyval < 47954) //turkoise to green //third 
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(255-(greyval-39164)/division);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(255);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(0);
+						}
+						else if (greyval < 56744)
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(255);
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)((greyval-47954)/division);
+						}
+						else
+						{
+							videoMatCache.at<cv::Vec3b>(y,x)[0] = (int)(0);
+							videoMatCache.at<cv::Vec3b>(y,x)[1] = (int)(255-((greyval-56744)/division));
+							videoMatCache.at<cv::Vec3b>(y,x)[2] = (int)(255);
+						}
+						break;
+						//bgr?
 					//GRAY
 					case 0:
 						//BGR format
@@ -121,7 +197,7 @@ bool MSKinectFakeColor::process()
 						//	maxval = val;
 						//}
 						//val = matin.at<cv::Vec3b>(y,3)[x];
-						break;
+						break;	
 					//RGB
 					case 16:
 						val = (matin.at<cv::Vec3b>(y,x)[0]+matin.at<cv::Vec3b>(y,x)[1]+matin.at<cv::Vec3b>(y,x)[2])/3;
@@ -168,8 +244,9 @@ bool MSKinectFakeColor::process()
     //TEMP m_outputPin->put( target );
 	m_outputPin->put( a );
 
-    // update our "frame counter"
-    this->setSomeInt(this->getSomeInt()+1);
+    // update our "frame counter" 
+	//wtf?
+    //this->setSomeInt(this->getSomeInt()+1);
 
     return true;
 }
