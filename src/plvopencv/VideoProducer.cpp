@@ -33,8 +33,7 @@ using namespace plv;
 using namespace plvopencv;
 
 VideoProducer::VideoProducer() :
-    m_filename(""), m_directory(""), m_frameCount(0), m_posMillis(0), m_ratio(0), m_fps(0),
-    m_capture( new cv::VideoCapture() )
+    m_filename(""), m_directory(""), m_frameCount(0), m_posMillis(0), m_ratio(0), m_fps(0)
 {
     //create the output pin
     m_outputPin = createCvMatDataOutputPin("image_output", this );
@@ -82,8 +81,9 @@ void VideoProducer::setDirectory(const QString& directory)
     QDir dir(directory);
     if( dir.exists() )
     {
-        QMutexLocker lock( m_propertyMutex );
-        m_directory = directoryCopy;
+        if(!directoryCopy.endsWith('/')) directoryCopy.append('/');
+		QMutexLocker lock( m_propertyMutex );
+		m_directory = directoryCopy;
         qDebug() << "New directory selected:" << m_directory;
     }
 }
@@ -96,27 +96,59 @@ QString VideoProducer::getDirectory()
 
 bool VideoProducer::validateExtension(const QString& filename)
 {
+	//this doesnt seem to be right!
     return true;
 }
 
 bool VideoProducer::init()
 {
-    //build the path
-    QString path =  m_directory;
-    if(!path.endsWith('/')) path.append('/');
-    path.append(m_filename);
+    //create the m_capture here
+	m_capture =  new cv::VideoCapture(); 
+	
+	QString pathorg = getDirectory();
+	pathorg.append(m_filename);
+	QFile testfile = pathorg;
 
-    if(!m_capture->open(path.toStdString()))
+	const std::string path = pathorg.toStdString(); //"D:/videos/work/showcase-rapper2.avi";
+	const char * path2 = path.c_str();
+
+	////build the path use get instead
+ //   QString path =  getDirectory();
+	////should have been in set if(!directoryCopy.endsWith('/')) directoryCopy.append('/');
+ //   path.append(m_filename);
+	////const std::string path2 = path.toStdString();
+	//const char * path2 = path.toStdString().c_str();
+	//QFile testfile = path;
+	
+	
+	if (testfile.exists())
+	{
+		qDebug() <<"checking file... file exists";
+	} else
+	{
+		qDebug() << "checking file... file does not exist";
+	}
+
+	//temp reminder ignore library set to off/no in properties
+
+	//m_capture = cv::VideoCapture::open(path);
+    //if(!m_capture->open(path.toStdString()))
+	m_capture->open(path2);
+	//if(!m_capture->open(path2))
+	if(!m_capture->isOpened())
     {
-        setError(PlvPipelineInitError, tr("Failed to open video %1.").arg(path));
+        setError(PlvPipelineInitError, tr("Failed to open video, check type of lossless avi %1").arg(pathorg));
         return false;
     }
 
+	
+	//don't think it should be here as it not yet grabbed only opened
     m_frameCount = (int)m_capture->get(CV_CAP_PROP_FRAME_COUNT);
     m_posMillis = (long)m_capture->get(CV_CAP_PROP_POS_MSEC);
     m_ratio = m_capture->get(CV_CAP_PROP_POS_AVI_RATIO);
     m_fps = (int)m_capture->get(CV_CAP_PROP_FPS);
-    return true;
+    
+	return true;
 }
 
 bool VideoProducer::deinit() throw()
@@ -127,18 +159,36 @@ bool VideoProducer::deinit() throw()
 
 bool VideoProducer::readyToProduce() const
 {
-    return m_capture->grab();
+	//qDebug()<< "goingtoproduce" <<"with grab" ;
+	//m_capture->grab();
+	//qDebug()<< "grabbed" ;
+	//m_capture->grab();
+	return true;
 }
 
 bool VideoProducer::produce()
 {
-    if( !m_capture->retrieve(m_frame, 0) )
+	//try to combine grab and retrieve using query maybe that works
+	//m_capture->query(m_frame); 
+	//not opencv 2.1 : http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=videocapture#VideoCapture::VideoCapture
+
+	qDebug()<< "producing";
+	if( !m_capture->grab() )
     {
         setError(PlvPipelineInitError, tr("Failed to grab frame"));
         return false;
     }
+
+    if( !m_capture->retrieve(m_frame) ) //, 0
+    {
+        setError(PlvPipelineInitError, tr("Failed to retrieve frame"));
+        return false;
+    }
+	
+	//Why does it need to be copied? ahh it may not be altered!
     CvMatData d = CvMatData::create(m_frame.properties());
-    m_frame.copyTo(d);
+    //m_frame.copyTo(d);
+	d = m_frame;
     m_outputPin->put(d);
 
     m_frameCount = (long)m_capture->get(CV_CAP_PROP_FRAME_COUNT);

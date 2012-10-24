@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ParleVisionConfig>
+<Pipeline>
+<Processors>
+<Processor id="1" name="CameraProducer">
+<Settings selectedCamera="1"></Settings>
+</Processor>
+<Processor id="2" name="FunctionViewer">
+<Settings frameswidth="320" minval="1.e+004" maxval="5.e+005"></Settings>
+</Processor>
+<Processor id="4" name="ImageSplitter">
+<Settings xsplit="160"></Settings>
+</Processor>
+<Processor id="5" name="DelayImage">
+<Settings delay="2" DelayImageMethod="1"></Settings>
+</Processor>
+<Processor id="6" name="DelayImage">
+<Settings delay="2" DelayImageMethod="1"></Settings>
+</Processor>
+<Processor id="7" name="SumPixels">
+<Settings></Settings>
+</Processor>
+<Processor id="8" name="SumPixels">
+<Settings></Settings>
+</Processor>
+<Processor id="9" name="FunctionViewer">
+<Settings frameswidth="320" minval="1.e+004" maxval="5.e+005"></Settings>
+</Processor>
+<Processor id="10" name="BokerView">
+<Settings winSize="40" winInc="4" maxLag="20" lagShift="4"></Settings>
+</Processor>
+<Processor id="11" name="AddSub">
+<Settings x="1" y="1" ks="0" normalize="0" addSubMethod="2"></Settings>
+</Processor>
+<Processor id="12" name="AddSub">
+<Settings x="1" y="1" ks="0" normalize="0" addSubMethod="2"></Settings>
+</Processor>
+<Processor id="13" name="Threshold">
+<Settings threshold="100"></Settings>
+</Processor>
+<Processor id="14" name="Threshold">
+<Settings threshold="100"></Settings>
+</Processor>
+<Processor id="15" name="MovingAverage">
+<Settings radius="1"></Settings>
+</Processor>
+<Processor id="16" name="MovingAverage">
+<Settings radius="1"></Settings>
+</Processor>
+</Processors>
+<Links>
+<Link SourceProc="15" SourceOutPin="0" SinkProc="2" SinkInPin="0" szSourceProc="MovingAverage" szSourceOutPin="smooth" szSinkProc="FunctionViewer" szSinkInPin="function"></Link>
+<Link SourceProc="1" SourceOutPin="0" SinkProc="4" SinkInPin="0" szSourceProc="CameraProducer" szSourceOutPin="source" szSinkProc="ImageSplitter" szSinkInPin="input"></Link>
+<Link SourceProc="4" SourceOutPin="0" SinkProc="5" SinkInPin="0" szSourceProc="ImageSplitter" szSourceOutPin="outleft" szSinkProc="DelayImage" szSinkInPin="input"></Link>
+<Link SourceProc="4" SourceOutPin="1" SinkProc="6" SinkInPin="0" szSourceProc="ImageSplitter" szSourceOutPin="outright" szSinkProc="DelayImage" szSinkInPin="input"></Link>
+<Link SourceProc="13" SourceOutPin="0" SinkProc="7" SinkInPin="0" szSourceProc="Threshold" szSourceOutPin="output" szSinkProc="SumPixels" szSinkInPin="input"></Link>
+<Link SourceProc="14" SourceOutPin="0" SinkProc="8" SinkInPin="0" szSourceProc="Threshold" szSourceOutPin="output" szSinkProc="SumPixels" szSinkInPin="input"></Link>
+<Link SourceProc="16" SourceOutPin="0" SinkProc="9" SinkInPin="0" szSourceProc="MovingAverage" szSourceOutPin="smooth" szSinkProc="FunctionViewer" szSinkInPin="function"></Link>
+<Link SourceProc="15" SourceOutPin="0" SinkProc="10" SinkInPin="0" szSourceProc="MovingAverage" szSourceOutPin="smooth" szSinkProc="BokerView" szSinkInPin="f"></Link>
+<Link SourceProc="16" SourceOutPin="0" SinkProc="10" SinkInPin="1" szSourceProc="MovingAverage" szSourceOutPin="smooth" szSinkProc="BokerView" szSinkInPin="g"></Link>
+<Link SourceProc="4" SourceOutPin="0" SinkProc="11" SinkInPin="0" szSourceProc="ImageSplitter" szSourceOutPin="outleft" szSinkProc="AddSub" szSinkInPin="input1"></Link>
+<Link SourceProc="5" SourceOutPin="0" SinkProc="11" SinkInPin="1" szSourceProc="DelayImage" szSourceOutPin="output" szSinkProc="AddSub" szSinkInPin="input2"></Link>
+<Link SourceProc="4" SourceOutPin="1" SinkProc="12" SinkInPin="0" szSourceProc="ImageSplitter" szSourceOutPin="outright" szSinkProc="AddSub" szSinkInPin="input1"></Link>
+<Link SourceProc="6" SourceOutPin="0" SinkProc="12" SinkInPin="1" szSourceProc="DelayImage" szSourceOutPin="output" szSinkProc="AddSub" szSinkInPin="input2"></Link>
+<Link SourceProc="11" SourceOutPin="0" SinkProc="13" SinkInPin="0" szSourceProc="AddSub" szSourceOutPin="output" szSinkProc="Threshold" szSinkInPin="input"></Link>
+<Link SourceProc="12" SourceOutPin="0" SinkProc="14" SinkInPin="0" szSourceProc="AddSub" szSourceOutPin="output" szSinkProc="Threshold" szSinkInPin="input"></Link>
+<Link SourceProc="7" SourceOutPin="0" SinkProc="15" SinkInPin="0" szSourceProc="SumPixels" szSourceOutPin="sum" szSinkProc="MovingAverage" szSinkInPin="function"></Link>
+<Link SourceProc="8" SourceOutPin="0" SinkProc="16" SinkInPin="0" szSourceProc="SumPixels" szSourceOutPin="sum" szSinkProc="MovingAverage" szSinkInPin="function"></Link>
+</Links>
+</Pipeline>
+</ParleVisionConfig>

@@ -32,7 +32,8 @@ using namespace plvblobtracker;
 
 BlobDetector::BlobDetector() :
     m_iterations(0),
-    m_minBlobSize(0)
+    m_minBlobSize(0),
+	m_maxBlobSize(0)
 {
     m_inputImage = createCvMatDataInputPin( "input image", this );
 
@@ -94,7 +95,7 @@ bool BlobDetector::process()
     {
         const std::vector< cv::Point >& c = contours[i];
         Blob b(m_iterations,c);
-        if( b.getSize() >= m_minBlobSize )
+        if( b.getSize() >= m_minBlobSize && ( (b.getSize() <= m_maxBlobSize) ||  (m_maxBlobSize < 1) ) )
         {
             newBlobs.append(b);
             b.drawContour(dst, green, true);
@@ -116,7 +117,7 @@ bool BlobDetector::process()
     while( itr.hasNext() )
     {
         const Blob& newBlob = itr.next();
-        if(newBlob.getSize() < m_minBlobSize )
+        if(newBlob.getSize() < m_minBlobSize || (newBlob.getSize() > m_maxBlobSize && m_maxBlobSize > 0))
             itr.remove();
     }
     m_outputImage->put( out );
@@ -143,6 +144,12 @@ int BlobDetector::getMinBlobSize() const
     return m_minBlobSize;
 }
 
+int BlobDetector::getMaxBlobSize() const
+{
+    QMutexLocker lock( m_propertyMutex );
+    return m_maxBlobSize;
+}
+
 void BlobDetector::setMode( plv::Enum mode )
 {
     QMutexLocker lock( m_propertyMutex );
@@ -165,4 +172,11 @@ void BlobDetector::setMinBlobSize(int size)
     emit minBlobSizeChanged(m_minBlobSize);
 }
 
+void BlobDetector::setMaxBlobSize(int size)
+{
+    QMutexLocker lock( m_propertyMutex );
+    if( size >= 0 )
+        m_maxBlobSize = size;
+    emit maxBlobSizeChanged(m_maxBlobSize);
+}
 

@@ -133,10 +133,11 @@ namespace plv
             return *this;
         }
 
-        inline void copyTo(CvMatData& dst)
+		//removed due to opencv changes
+        /*inline void copyTo(CvMatData& dst)
         {
             d->mat.copyTo(dst);
-        }
+        }*/
 
         /** Returns if the contained matrix has allocated data */
         inline bool isValid() const { return !d->mat.empty(); }

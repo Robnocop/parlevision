@@ -1,0 +1,87 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::ImageProducer">
+   <properties>
+    <filename>background2.bmp</filename>
+    <directory>c:/temp</directory>
+    <sceneCoordX>64</sceneCoordX>
+    <sceneCoordY>362</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>76</sceneCoordX>
+    <sceneCoordY>237</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::BackgroundSubtractor">
+   <properties>
+    <method>gray</method>
+    <reset>false</reset>
+    <replacement>255</replacement>
+    <threshold>29</threshold>
+    <sceneCoordX>463</sceneCoordX>
+    <sceneCoordY>231</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvopencv::ImageColorConvert">
+   <properties>
+    <conversionType>CV_RGB2GRAY</conversionType>
+    <sceneCoordX>281</sceneCoordX>
+    <sceneCoordY>327</sceneCoordY>
+   </properties>
+  </element>
+  <element id="4" name="plvopencv::ImageColorConvert">
+   <properties>
+    <conversionType>CV_RGB2GRAY</conversionType>
+    <sceneCoordX>238</sceneCoordX>
+    <sceneCoordY>154</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>4</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>4</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>1</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

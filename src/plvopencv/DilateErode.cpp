@@ -59,6 +59,11 @@ bool DilateErode::process()
     CvMatData out = CvMatData::create(in.properties());
     CvMatData out2 = CvMatData::create(in.properties());
 
+	//added inefficient way?
+	cv::Mat incvmat = in;
+	cv::Mat& dst = out; 
+	cv::Mat& dst2 = out2;
+
     cv::Mat element;
     cv::Point point(-1,-1);
 
@@ -67,12 +72,17 @@ bool DilateErode::process()
     // first dilation, then erosion
     case BGDEO_ERODE_DELATE:
         // first erosion, then dilation
-        cv::erode(in, out, element, point, m_erosionIterations);
-        cv::dilate(out, out2, element, point, m_dilationIterations);
-        break;
+        //cv::erode(in, out, element, point, m_erosionIterations);
+        cv::erode(incvmat, dst, element, point, m_erosionIterations);
+		//cv::dilate(out, out2, element, point, m_dilationIterations);
+		cv::dilate(dst, dst2, element, point, m_dilationIterations);
+		break;
     case BGDEO_DELATE_ERODE:
-        cv::dilate(in, out, element, point, m_dilationIterations);
-        cv::erode(out, out2, element, point, m_erosionIterations);
+        //cv::dilate(in, out, element, point, m_dilationIterations);
+		cv::dilate(incvmat, dst, element, point, m_dilationIterations);
+		cv::erode(dst, dst2, element, point, m_erosionIterations);
+
+		//cv::erode(out, out2, element, point, m_erosionIterations);
         break;
     }
     m_outputPin->put(out2);

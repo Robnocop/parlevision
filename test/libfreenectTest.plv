@@ -1,0 +1,14 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvfreenect::FreenectProducer">
+   <properties>
+    <tiltDegree>0</tiltDegree>
+    <kinectId>0</kinectId>
+    <videoFormat>freenect_get_video_mode(i).video_format</videoFormat>
+    <sceneCoordX>341</sceneCoordX>
+    <sceneCoordY>352</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

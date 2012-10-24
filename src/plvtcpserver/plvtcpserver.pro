@@ -5,6 +5,7 @@ QT += core gui network
 DESTDIR = ../../libs/plugins
 INCLUDEPATH += ../../include/plvopencv
 LIBS += -lplvcore -lplvgui
+LIBS += -lws2_32
 QMAKE_LIBDIR += ../../libs/plugins
 
 macx {
@@ -19,7 +20,8 @@ SOURCES +=  tcpserverplugin.cpp \
             TCPServerProcessor.cpp \
             Server.cpp \
             ServerConnection.cpp \
-            TCPClientProducer.cpp
+            TCPClientProducer.cpp \
+			genericTCPServerProcessor.cpp
 
 HEADERS +=  tcpserverplugin.h \
             tcpserver_global.h \
@@ -27,4 +29,5 @@ HEADERS +=  tcpserverplugin.h \
             Server.h \
             ServerConnection.h \
             TCPClientProducer.h \
-			Proto.h
+			Proto.h \
+			genericTCPServerProcessor.h

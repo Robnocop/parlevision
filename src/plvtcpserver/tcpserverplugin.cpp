@@ -25,6 +25,7 @@
 
 #include "TCPServerProcessor.h"
 #include "TCPClientProducer.h"
+//#include "genericTCPServerProcessor.h"
 
 using namespace plv;
 
@@ -42,7 +43,8 @@ void TCPServerPlugin::onLoad()
 {
     qDebug() << "TCPServerPlugin onLoad";
     plvRegisterPipelineElement<TCPServerProcessor>();
-    plvRegisterPipelineElement<TCPClientProducer>();
+	plvRegisterPipelineElement<TCPClientProducer>();
+	//plvRegisterPipelineElement<genericTCPServerProcessor>();
 }
 
 Q_EXPORT_PLUGIN2(tcp_server_plugin, TCPServerPlugin)

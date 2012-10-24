@@ -46,6 +46,7 @@ ImageFlip::ImageFlip()
     m_method.add( "flip around x and y-axis", -1 );
     m_method.add( "flip around x-axis", 0 );
     m_method.add( "flip around y-axis", 1 );
+	m_method.add( "do not flip", 2 );
 }
 
 ImageFlip::~ImageFlip() {}
@@ -61,8 +62,16 @@ bool ImageFlip::process()
     // open image for writing
     cv::Mat& target = out;
 
+    //often you have a pipeline that is generic, you don't know ehteher it should be flipped or not but do not want to alter the entire pipeline for testing this.
+	if (m_method.getSelectedValue()!=2)
+	{
     // do a flip of the image
-    cv::flip( src, target, m_method.getSelectedValue() );
+		cv::flip( src, target, m_method.getSelectedValue() );
+	}
+	else
+	{
+		target = in;
+	}
 
     // publish the new image
     m_outputPin->put( target );

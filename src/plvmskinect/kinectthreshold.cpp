@@ -43,10 +43,14 @@ KinectThreshold::KinectThreshold() :
     //PLV_ENUM_ADD( m_method, CV_THRESH_TOZERO_INV );
 
     m_inputPin->addSupportedChannels(1);
-    m_inputPin->addSupportedDepth(CV_16U);
+    //m_inputPin->addSupportedDepth(CV_8U); //IR camera 
+	m_inputPin->addSupportedDepth(CV_16U);
+	//m_inputPin->addSupportedDepth(CV_32F);
 
     m_outputPin->addSupportedChannels(1);
+	//m_inputPin->addSupportedDepth(CV_8U); //IR camera 
     m_outputPin->addSupportedDepth(CV_16U);
+	//m_inputPin->addSupportedDepth(CV_32F);
 }
 
 KinectThreshold::~KinectThreshold(){}
@@ -54,16 +58,21 @@ KinectThreshold::~KinectThreshold(){}
 bool KinectThreshold::process()
 {
     CvMatData in = m_inputPin->get();
+	//qDebug()<< "w " << in.width() << "h"<< in.height() << "type " << in.type(); // w  640 h 480 type  5  qdebug 
     CvMatData out = CvMatData::create( in.width(), in.height(), in.type() );
 
     const cv::Mat& src = in;
     cv::Mat& dst = out;
 
     // perform threshold operation on the image
+	//CV_THRESH_TOZERO
     //cv::threshold( src, dst, m_threshold, m_maxValue, m_method.getSelectedValue() );
-
-    unsigned int threshold = m_threshold << 4;
+	//cv::threshold( src, dst, m_threshold, m_maxValue, CV_THRESH_TOZERO);
+	//FOR A LIBFREENECT PIC IT ONLY RETURNED HALF OF THE PIC
+    unsigned int threshold = m_threshold << 4; //bitshift <<
     unsigned int maxValue = m_maxValue << 4;
+
+	bool toggle = false; 
 
     for( int y = 0 ; y < src.rows ; ++y )
     {
@@ -71,7 +80,17 @@ bool KinectThreshold::process()
         {
             unsigned short v = src.at<unsigned short>(y,x);
             dst.at<unsigned short>(y,x) = v >= threshold ? (v > maxValue ? 0 : v) : 0;
-        }
+			//if (toggle )
+		//	//{
+		//	//		qDebug() << "x is " << x  << "v is" << v;  //indeed 640 or 639 indeed similar values left and rigth of cut off x.
+		//	//}
+
+        }/*
+		*if (y == 20)
+			toggle = true;
+		else 
+			toggle = false;
+		**////qDebug() << "x is " << y;  //indedd 480 or 479
     }
 
     // publish the new image

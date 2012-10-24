@@ -1,0 +1,103 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvblobtracker::BlobDetector">
+   <properties>
+    <minBlobSize>0</minBlobSize>
+    <sceneCoordX>872</sceneCoordX>
+    <sceneCoordY>46</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvmskinect::MSKinectProducer">
+   <properties>
+    <sceneCoordX>-30</sceneCoordX>
+    <sceneCoordY>63</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvmskinect::KinectThreshold">
+   <properties>
+    <threshold>1000</threshold>
+    <maxValue>1400</maxValue>
+    <sceneCoordX>492</sceneCoordX>
+    <sceneCoordY>56</sceneCoordY>
+   </properties>
+  </element>
+  <element id="6" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>8</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>181</sceneCoordX>
+    <sceneCoordY>62</sceneCoordY>
+   </properties>
+  </element>
+  <element id="12" name="plvopencv::DilateErode">
+   <properties>
+    <erosionIterations>6</erosionIterations>
+    <dilationIterations>15</dilationIterations>
+    <order>erode then delate</order>
+    <sceneCoordX>648</sceneCoordX>
+    <sceneCoordY>52</sceneCoordY>
+   </properties>
+  </element>
+  <element id="13" name="plvopencv::ImageFlip">
+   <properties>
+    <method>flip around y-axis</method>
+    <sceneCoordX>332</sceneCoordX>
+    <sceneCoordY>61</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>6</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>13</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>6</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>13</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>12</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>12</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

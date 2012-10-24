@@ -90,6 +90,7 @@ bool FreenectProducer::produce()
     //copy video to cache
     videoMatFromKinect.copyTo(videoMatCache);
     //copy depth to cache; rescale a bit
+	//TODO bitshift should be faster
     for (int y = 0; y < depthMatFromKinect.rows; ++y )
     {
         for (int x = 0; x < depthMatFromKinect.cols; ++x )

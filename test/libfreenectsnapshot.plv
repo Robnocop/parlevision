@@ -1,0 +1,63 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvfreenect::FreenectProducer">
+   <properties>
+    <tiltDegree>0</tiltDegree>
+    <kinectId>0</kinectId>
+    <videoFormat>freenect_get_video_mode(i).video_format</videoFormat>
+    <sceneCoordX>192</sceneCoordX>
+    <sceneCoordY>296</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::Snapshot">
+   <properties>
+    <makeSnapshot>false</makeSnapshot>
+    <keepSending>false</keepSending>
+    <sceneCoordX>404</sceneCoordX>
+    <sceneCoordY>414</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::BackgroundSubtractor">
+   <properties>
+    <method>color to color</method>
+    <reset>false</reset>
+    <replacement>255</replacement>
+    <threshold>20</threshold>
+    <sceneCoordX>560</sceneCoordX>
+    <sceneCoordY>302</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>1</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>1</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>1</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

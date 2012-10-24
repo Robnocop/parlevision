@@ -72,7 +72,8 @@ int Blob::matchingArea( const Blob& blob ) const
 
 bool Blob::overlappingAreaRect( const Blob& other, cv::Rect& area ) const
 {
-    const cv::Rect& rect = other.getBoundingRect();
+    const cv::Rect& rect = other.getBoundingRect(); 
+	//cant find it!
     return overlappingArea( d->boundingRect, rect, area ) > 0;
 }
 

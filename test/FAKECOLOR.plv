@@ -1,0 +1,52 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>222</sceneCoordX>
+    <sceneCoordY>344</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvmskinect::MSKinectFakeColor">
+   <properties>
+    <someInt>1337</someInt>
+    <someDouble>1.23456</someDouble>
+    <someBool>true</someBool>
+    <someString>hello</someString>
+    <sceneCoordX>560</sceneCoordX>
+    <sceneCoordY>331</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::ImageColorConvert">
+   <properties>
+    <conversionType>CV_RGB2GRAY</conversionType>
+    <sceneCoordX>377</sceneCoordX>
+    <sceneCoordY>316</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

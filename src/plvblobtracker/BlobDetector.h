@@ -47,6 +47,8 @@ namespace plvblobtracker
         //Q_PROPERTY( plv::Enum mode READ getMode WRITE setMode NOTIFY modeChanged )
         //Q_PROPERTY( plv::Enum method READ getMethod WRITE setMethod NOTIFY methodChanged )
         Q_PROPERTY( int minBlobSize READ getMinBlobSize WRITE setMinBlobSize NOTIFY minBlobSizeChanged )
+		Q_PROPERTY( int maxBlobSize READ getMaxBlobSize WRITE setMaxBlobSize NOTIFY maxBlobSizeChanged )
+
 
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
@@ -58,16 +60,21 @@ namespace plvblobtracker
         plv::Enum getMethod() const;
         plv::Enum getMode() const;
         int getMinBlobSize() const;
+		int getMaxBlobSize() const;
+
 
     public slots:
         void setMode( plv::Enum mode );
         void setMethod( plv::Enum method );
         void setMinBlobSize( int size );
+		void setMaxBlobSize( int size );
+
 
     signals:
         void modeChanged( plv::Enum mode );
         void methodChanged( plv::Enum method );
         void minBlobSizeChanged( int size );
+		void maxBlobSizeChanged( int size );
 
     private:
         plv::CvMatDataInputPin*  m_inputImage;
@@ -78,8 +85,11 @@ namespace plvblobtracker
         plv::Enum m_method; /* Contour approximation methods */
 
         QList<Blob> m_blobs;
+		//should this not be a double as 65535 is not that big of a scope!
         unsigned int m_iterations;
         int m_minBlobSize;
+		int m_maxBlobSize;
+
     };
 }
 #endif // BLOBDETECTOR_H

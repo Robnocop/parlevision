@@ -47,16 +47,22 @@ BackgroundSubtractor::BackgroundSubtractor() : m_threshold(128), m_replacement(2
     m_inInput->addSupportedChannels(1);
     m_inInput->addSupportedChannels(3);
     m_inInput->addSupportedDepth(CV_8U);
+	m_inInput->addSupportedDepth(CV_16U);
+	m_inInput->addSupportedDepth(CV_32F);
 
     m_inBackground->addSupportedChannels(1);
     m_inBackground->addSupportedChannels(3);
     m_inBackground->addSupportedDepth(CV_8U);
+	m_inBackground->addSupportedDepth(CV_16U);
+	m_inBackground->addSupportedDepth(CV_32F);
 
     m_outForeground->addAllChannels();
     m_outForeground->addAllDepths();
 
     m_outBackground->addSupportedChannels(1);
     m_outBackground->addSupportedDepth(CV_8U);
+	m_outBackground->addSupportedDepth(CV_16U);
+	m_outBackground->addSupportedDepth(CV_32F);
 
     m_method.add("gray", BGSM_GRAYSCALE);
     m_method.add("color to gray", BGSM_COLOR_TO_GRAY);
@@ -69,8 +75,11 @@ BackgroundSubtractor::~BackgroundSubtractor()
 
 bool BackgroundSubtractor::process()
 {
+	//qDebug() << "enter process"; 
     CvMatData in = m_inInput->get();
-
+	cv::Mat& bgmat = m_backgroundGray;
+	//does not seem to return the actual depth
+	//qDebug() << "depth "<< m_background.depth() << "actualdetpth"<< m_background.depthToString(m_background.depth()) << "depth to string 1" << m_background.depthToString(1) << "depth to string 2" << m_background.depthToString(2) <<"depth to string 3" << m_background.depthToString(3);
     // m_reset is true on initialisation
     // so the background is always initialized
     // to the first frame received
@@ -105,41 +114,67 @@ bool BackgroundSubtractor::process()
             return false;
         }
 
-        if( m_method.getSelectedValue() == BGSM_GRAYSCALE )
+		
+        CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
+        CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+		cv::Mat& inmat = in;
+		cv::Mat& srcgmat = srcGray;
+		cv::Mat& distg = outGray;
+        cv::Mat& mbg = m_background;
+
+		if( m_method.getSelectedValue() == BGSM_GRAYSCALE )
         {
-            CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
-            CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+			////shouldn't be here
+   //         CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
+   //         CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+			//cv::Mat& inmat = in;
+			//cv::Mat& srcgmat = srcGray;
+			//cv::Mat& distg = outGray;
 
             if( in.channels() == 3 )
             {
-                cv::cvtColor( in, srcGray, CV_RGB2GRAY );
-            }
+               // cv::cvtColor( in, srcGray, CV_RGB2GRAY );
+				cv::cvtColor( inmat, srcgmat, CV_RGB2GRAY );
+			}
             else
             {
                 srcGray = in;
             }
-            cv::absdiff( srcGray, m_backgroundGray, outGray );
-            cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
-            m_outForeground->put(outGray);
+            //cv::absdiff( srcGray, m_backgroundGray, outGray );
+            cv::absdiff( srcgmat, bgmat, distg );
+			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
+            cv::threshold( distg , distg, m_threshold, m_replacement, CV_THRESH_BINARY );
+            
+
+			m_outForeground->put(outGray);
         }
         else if( m_method.getSelectedValue() == BGSM_COLOR_TO_GRAY )
         {
             CvMatData tmp = CvMatData::create(in.properties());
-            cv::absdiff( in, m_background, tmp );
-            cv::threshold( tmp, tmp, m_threshold, m_replacement, CV_THRESH_BINARY );
+            cv::Mat& tmpmat = tmp;
+			//cv::absdiff( in, m_background, tmp );
+            cv::absdiff( inmat, bgmat, tmpmat  );
+			//cv::threshold( tmp, tmp, m_threshold, m_replacement, CV_THRESH_BINARY );
+			cv::threshold( tmpmat, tmpmat, m_threshold, m_replacement, CV_THRESH_BINARY );
+
 
             CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
-            cv::cvtColor( tmp, outGray, CV_RGB2GRAY );
-            cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
-
+            //cv::cvtColor( tmp, outGray, CV_RGB2GRAY );
+            cv::cvtColor( tmpmat, distg, CV_RGB2GRAY );
+			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
+			cv::threshold( distg, distg, m_threshold, m_replacement, CV_THRESH_BINARY );
             m_outForeground->put(outGray);
         }
         else
         {
             CvMatData out = CvMatData::create(in.properties());
-            cv::absdiff( in, m_background, out );
-            cv::threshold( out, out, m_threshold, m_replacement, CV_THRESH_BINARY );
-            m_outForeground->put(out);
+			cv::Mat& dst2 = out;
+            //cv::absdiff( in, m_background, out );
+            cv::absdiff( inmat, mbg, dst2 );
+            
+			//cv::threshold( out, out, m_threshold, m_replacement, CV_THRESH_BINARY );
+            cv::threshold( dst2 , dst2 , m_threshold, m_replacement, CV_THRESH_BINARY );
+			m_outForeground->put(out);
         }
         m_outBackground->put(m_background);
     }
@@ -153,9 +188,13 @@ bool BackgroundSubtractor::process()
 void BackgroundSubtractor::setBackground(CvMatData& mat)
 {
     m_background = mat;
+	cv::Mat& mbg = m_background;
+	cv::Mat& bgmat = m_backgroundGray;
+
     if( m_background.channels() == 3 )
     {
-        cv::cvtColor(m_background, m_backgroundGray, CV_RGB2GRAY );
+		cv::cvtColor(mbg , bgmat, CV_RGB2GRAY );
+        //cv::cvtColor(m_background, m_backgroundGray, CV_RGB2GRAY );
     }
     else
     {
@@ -166,11 +205,25 @@ void BackgroundSubtractor::setBackground(CvMatData& mat)
 void BackgroundSubtractor::setThreshold(int t)
 {
     QMutexLocker lock(m_propertyMutex);
+	
+		
+	//if (m_inInput
+	if (m_background.depth() == 32)
+	{
 
-    if( t >= 0 && t <= 255 )
-    {
-        m_threshold = t;
-    }
+		//maxvalue int32 
+		if( t >= 0 && t <= 2,147,483,647 )
+		{
+	        m_threshold = t;
+		}
+	}
+	else 
+	{
+		if( t >= 0 && t <= 255 )
+		{
+	        m_threshold = t;
+		}
+	}
     emit thresholdChanged(m_threshold);
 }
 

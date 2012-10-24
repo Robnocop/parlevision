@@ -108,7 +108,7 @@ plv::Enum SaveImageToFile::getFileFormat() const
  */
 void SaveImageToFile::setDirectory(QString s)
 {
-    if( getState() > UNDEFINED )
+    if( getState() > PLUNDEFINED )
         return;
 
     QMutexLocker lock(m_propertyMutex);

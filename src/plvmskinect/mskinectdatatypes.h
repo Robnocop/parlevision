@@ -8,7 +8,8 @@
 #include <ole2.h>
 
 // Kinect header files
-#include <MSR_NuiApi.h>
+//#include <MSR_NuiApi.h>
+#include <NuiApi.h>
 #include <QSharedData>
 #include <QMetaType>
 

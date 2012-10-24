@@ -1,0 +1,13 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::VideoProducer">
+   <properties>
+    <filename>1.vob</filename>
+    <directory>D:/videos/work/Movies/Group2</directory>
+    <sceneCoordX>63</sceneCoordX>
+    <sceneCoordY>302</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>
