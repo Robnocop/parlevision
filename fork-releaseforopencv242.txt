@@ -1,0 +1,22 @@
+- changed the pipeline states to PL[statename] e.g. PLERROR, PLINITIALISE ... instead of ERROR INITIALISE etc, the other names seemed to be used by something or were being defined twice
+- the function copyto is removed for cvmattdata
+- the cv functions somehow no longer work on nthe cvmatdata ?maybe due to the copyto function or some reason why copyto no longer works
+--> I instead use cv::Mat& of the cvmatdata for the destination files and source files. This was only used in some other pipelinelements previously. 
+- Open CV now needs tbb (for certain functionalities) it seems, be sure to download it if your parlevision is not running correctly: 
+- parlevision can now be build with the provided binaries by opencv I used the x86 vc10 succesfully, anpother user confirmed using the qt binaries succesfully.
+- added a boolean in the plvgui/mainWindow.cpp that allows automatic opening of last opened pipeline: openPipelineOnStart(false). In a ditsributed/binary version delete your saved settings: log files etc. if the program crashed on opening a certain pipeline. If no recent pipelines are found it will not load them either.
+
+USER INSTRUCTIONS
+- be sure to change the setting files:
+src/plvmskinect/plvmskinect.pro
+common.pri
+parlevision-all.pro
+- be sure to include all needed files from e.g. Opencv, TBB and QT and qxt(only core?) in the path. 
+- set the vc++ directories (right click on a sub-project and edit the vc++ directories) also be sure the linker files in the vc project are set correctly. I think qt should have done this but might not have succeed in doing this for you. 
+
+KNOWN BUGS
+- the background subtractor is broken, needs a fix
+- blobtracker will fail in optimal solution in some cases, yet unknown why. The setting between overlap and direction should be used carefully you might end up in extrapolating the worst case error.
+
+OPTIMALISATIONS
+- 

@@ -1,0 +1,20 @@
+The save image processor saves file as last int +1
+Viola Jones Processor- scale factor 
+	has a great impact on performance: a high scale factor may lead to fast but inaccurate detectors; a small scale factor increases accuracy at the cost of speed (typical value: 1.25).
+
+to add a plugin add a cpp and when neccesary a header file in a directory
+add the file (if in existing directory) to the .pro file in that directory.
+
+to apply changes to a processor it has to be rebuild not rerun only
+
+!!!!
+- g++ compiler does not work as it will not include the proper libraries somehow. 
+- somehow when using build--> run qmake it does work as it will then use the msvs2010
+
+or 
+- add a directory in src and add this directory in the src/src.pri file
+- add this directory in the parlevvision-all.pri file
+- pragmatic solution copy paste helloworld file and change the names into your own header files and classes etc.
+- only need to change the processor plugin deals with other kind of stuf
+- add a line to include the pipelinelement ub the proccesor of the plugin 
+ 
