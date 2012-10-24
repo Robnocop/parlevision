@@ -68,24 +68,39 @@ bool Average::process()
 
     CvMatData in = m_inputPin->get();
     const cv::Mat& src = in;
+	//test debug
+	//CvMatData& src =  in;
 
-    if( m_avg.width() != in.width() || m_avg.height() != in.height() || m_avg.channels() != in.channels() )
-    {
-        m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-        m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
-        src.convertTo(m_avg, m_avg.type());
-    }
-    cv::Mat& avg = m_avg;
+  //  if( m_avg.width() != in.width() || m_avg.height() != in.height() || m_avg.channels() != in.channels() )
+  //  {
+  //      m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+  //      m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+		//src.convertTo(m_avg, m_avg.type());
+  //  }
+    m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+    m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+
+	cv::Mat& avg = m_avg;
+	cv::Mat& mat2= m_out;
+	//cv::Mat mat2;
+    mat2.create( cv::Size(in.width(), in.height()), in.type() );
+    
 
     cv::accumulate(src, avg);
 
     if( m_total >= m_numFrames )
     {
-        avg.convertTo(m_out, m_out.type(), 1.0 / m_total );
-        m_outputPin->put(m_out);
+        //avg.convertTo(m_out, m_out.type(), 1.0 / m_total );
+		avg.convertTo(mat2, mat2.type(), 1.0 / m_total );
+		
+		//CvMatData out2 = CvMatData::create(widthpane,heightpane,16);
+		//cv::Mat& dst2 = out2;
+		
+		m_outputPin->put(m_out);
 
-        src.convertTo(m_avg, m_avg.type());
-        m_total = 0;
+       // src.convertTo(m_avg, m_avg.type());
+        src.convertTo(avg, avg.type());
+		m_total = 0;
     }
     ++m_total;
     return true;

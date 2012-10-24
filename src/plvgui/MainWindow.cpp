@@ -60,8 +60,9 @@ MainWindow::MainWindow(plv::Application* app, QWidget *parent) :
     m_application(app),
     m_ui(new Ui::MainWindow),
     m_documentChanged(false),
+	openPipelineOnStart(false),
     m_fileName("")
-{
+{ 
     setAttribute(Qt::WA_DeleteOnClose);
     initGUI();
 }
@@ -103,14 +104,15 @@ void MainWindow::initGUI()
     createRecentFileActs();
     // the welcome widget needs the recent file actions
     createWelcomeWidget();
+
     createLibraryWidget();
     createInspectorWidget();
     createLogWidget();
 
-    // Restore window geometry and state
+	// Restore window geometry and state
     loadSettings();
-
-    // register built in renderers
+  
+	// register built in renderers
     plvgui::RendererFactory::add<plv::CvMatData, plvgui::OpenCVImageRenderer>();
     plvgui::RendererFactory::add<QList<plv::CvMatData>, plvgui::OpenCVImageListRenderer>();
     plvgui::RendererFactory::add<plv::RectangleData, plvgui::RectangleDataRenderer>();
@@ -134,6 +136,66 @@ void MainWindow::initGUI()
     plvgui::RendererFactory::add<QTime,      plvgui::VariantDataRenderer>();
     plvgui::RendererFactory::add<unsigned int,       plvgui::VariantDataRenderer>();
     plvgui::RendererFactory::add<unsigned long long, plvgui::VariantDataRenderer>();
+
+	//directly open a certain file
+	openPipelineOnOpen();
+	
+}
+
+void MainWindow::openPipelineOnOpen()
+{
+	//qDebug() << m_openLastFile;
+	if (openPipelineOnStart && (m_openLastFile != "")) 
+	{
+		QFile bla = m_openLastFile;
+		if (bla.exists())
+		{
+			QString fileName = m_openLastFile;
+	
+			if( m_pipeline != 0 )
+			{
+				closePipeline();
+			}
+			
+			m_welcomeWidget->hide();
+			//m_scene->update();
+			//stupid quick and dirty solution as some of the welcome stuff is needed upto here
+			//remove welcomwidget
+
+			/*m_scene->reset();
+
+			m_ui->view->setAcceptDrops(false);
+			m_ui->view->setEnabled(false);
+			m_ui->view->hide();
+			m_ui->actionSave->setEnabled(false);
+			m_ui->actionSaveAs->setEnabled(false);
+			m_ui->actionStart->setEnabled(false);
+			m_ui->actionPause->setEnabled(false);
+			m_ui->actionStop->setEnabled(false);
+			m_ui->actionClosePipeline->setEnabled(false);
+
+			m_documentChanged = false;
+			m_pipeline.set(0);
+
+			setWindowTitle("ParleVision - no pipeline");
+			updateWindowTitle();
+		*/
+
+			//open pipeline
+			Pipeline* pl = new Pipeline();
+			pl->load(fileName);
+			setCurrentFile(fileName);
+			setPipeline(pl);
+			updateWindowTitle();
+			//start pipeline
+			pl->start();
+		}
+	} 
+	else
+	{
+		qDebug() << m_openLastFile << "is not a file";
+	}
+
 }
 
 void MainWindow::changeEvent(QEvent *e)
@@ -180,24 +242,30 @@ bool MainWindow::event(QEvent* event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if(m_documentChanged)
+	bool exit = true;
+	if(m_documentChanged)
     {
-        offerToSave();
+        exit = offerToSave();
     }
+	
+	//qDebug() << "incloseevent exit =" << exit;
 
-    if( m_pipeline.isNotNull() )
-    {
-        qDebug() << "Stopping pipeline...";
-        if(m_pipeline->isRunning())
-            m_pipeline->stop();
-        m_pipeline->clear();
-    }
-    QSettings settings;
-    qDebug() << "Saving geometry info to " << settings.fileName();
-    settings.setValue("MainWindow/geometry", saveGeometry());
-    settings.setValue("MainWindow/windowState", saveState());
+	if (exit)
+	{
+		if( m_pipeline.isNotNull() )
+		{
+			qDebug() << "Stopping pipeline...";
+			if(m_pipeline->isRunning())
+				m_pipeline->stop();
+			m_pipeline->clear();
+		}
+		QSettings settings;
+		qDebug() << "Saving geometry info to " << settings.fileName();
+		settings.setValue("MainWindow/geometry", saveGeometry());
+		settings.setValue("MainWindow/windowState", saveState());
 
-    QMainWindow::closeEvent(event);
+		QMainWindow::closeEvent(event);
+	}
 }
 
 void MainWindow::loadSettings()
@@ -323,14 +391,16 @@ void MainWindow::createRecentFileActs()
         connect(m_recentFileActs[i], SIGNAL(triggered()),
                 this, SLOT(openRecentFile()));
     }
-
+	
     updateRecentFileActions();
 }
 
 void MainWindow::createWelcomeWidget()
 {
+	m_openLastFile = "";
     Ui::WelcomeWidget* w = new Ui::WelcomeWidget();
     m_welcomeWidget = new QWidget(this);
+	
     w->setupUi(m_welcomeWidget);
 
     QSettings settings;
@@ -340,6 +410,7 @@ void MainWindow::createWelcomeWidget()
 
     for (int i = 0; i < numRecentFiles; ++i)
     {
+		
         QAction* recentFileAct = m_recentFileActs[i];
         assert(recentFileAct != 0);
         QPushButton* fileLink = new QPushButton(recentFileAct->data().toString(), m_welcomeWidget);
@@ -348,21 +419,27 @@ void MainWindow::createWelcomeWidget()
         connect(fileLink, SIGNAL(clicked()), recentFileAct, SIGNAL(triggered()));
         w->recentFilesColumn->addWidget(fileLink);
     }
+	
+	if (numRecentFiles>0)
+	{
+			m_openLastFile = m_recentFileActs[0]->data().toString();
+	}
 
     w->recentFilesColumn->addStretch();
     w->scrollArea->horizontalScrollBar()->setValue(w->scrollArea->horizontalScrollBar()->maximum());
 
     connect(w->newButton, SIGNAL(clicked()), m_ui->actionNew, SLOT(trigger()));
     connect(w->openButton, SIGNAL(clicked()), m_ui->actionLoad, SLOT(trigger()));
-
-    m_welcomeWidget->hide();
-
-    m_ui->topContainer->insertWidget(0, m_welcomeWidget);
+	
+	m_welcomeWidget->hide();
+	//opepipelineonopen
+	m_ui->topContainer->insertWidget(0, m_welcomeWidget);
 }
 
 void MainWindow::showWelcomeScreen()
 {
-    m_welcomeWidget->show();
+	if (!openPipelineOnStart)
+		m_welcomeWidget->show();
 }
 
 void MainWindow::openRecentFile()
@@ -384,6 +461,7 @@ void MainWindow::setPipeline(plv::Pipeline* pipeline)
     connect(m_scene, SIGNAL(selectionChanged()),
             this, SLOT(sceneSelectionChanged()));
 
+	//
     m_welcomeWidget->hide();
 
     m_ui->view->setScene(m_scene);
@@ -425,36 +503,48 @@ void MainWindow::setPipeline(plv::Pipeline* pipeline)
     m_documentChanged = false;
 }
 
-void MainWindow::closePipeline()
+bool MainWindow::closePipeline()
 {
     if( m_pipeline.isNull() )
-        return;
+        return true;
 
     if( m_pipeline->isRunning() )
         m_pipeline->stop();
-
-    if( m_documentChanged )
+	
+	bool exit = true;
+    
+	if( m_documentChanged )
     {
-        offerToSave();
+        //offerToSave();
+		exit = offerToSave();
     }
 
-    m_scene->reset();
+	//qDebug() << "in close pipeline exit =" << exit;
+	if (exit)
+	{
+		m_scene->reset();
 
-    m_ui->view->setAcceptDrops(false);
-    m_ui->view->setEnabled(false);
-    m_ui->view->hide();
-    m_ui->actionSave->setEnabled(false);
-    m_ui->actionSaveAs->setEnabled(false);
-    m_ui->actionStart->setEnabled(false);
-    m_ui->actionPause->setEnabled(false);
-    m_ui->actionStop->setEnabled(false);
-    m_ui->actionClosePipeline->setEnabled(false);
+		m_ui->view->setAcceptDrops(false);
+		m_ui->view->setEnabled(false);
+		m_ui->view->hide();
+		m_ui->actionSave->setEnabled(false);
+		m_ui->actionSaveAs->setEnabled(false);
+		m_ui->actionStart->setEnabled(false);
+		m_ui->actionPause->setEnabled(false);
+		m_ui->actionStop->setEnabled(false);
+		m_ui->actionClosePipeline->setEnabled(false);
 
-    m_documentChanged = false;
-    m_pipeline.set(0);
+		m_documentChanged = false;
+		m_pipeline.set(0);
 
-    setWindowTitle("ParleVision - no pipeline");
-    updateWindowTitle();
+		setWindowTitle("ParleVision - no pipeline");
+		updateWindowTitle();
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void MainWindow::pipelineStarted()
@@ -473,15 +563,18 @@ void MainWindow::pipelineStopped()
 
 void MainWindow::loadFile(QString fileName)
 {
+	bool exit = true;
     if( m_pipeline != 0 )
     {
-        closePipeline();
+        exit = closePipeline();
     }
-
-    Pipeline* pl = new Pipeline();
-    pl->load(fileName);
-    setCurrentFile(fileName);
-    setPipeline(pl);
+	if (exit)
+	{
+		Pipeline* pl = new Pipeline();
+		pl->load(fileName);
+		setCurrentFile(fileName);
+		setPipeline(pl);
+	}
 }
 
 MainWindow* MainWindow::newWindow()
@@ -608,11 +701,14 @@ void plvgui::MainWindow::on_actionSaveAs_triggered()
 
 void plvgui::MainWindow::on_actionNew_triggered()
 {
-    closePipeline();
-    setCurrentFile("");
-    setPipeline(new Pipeline());
-    m_documentChanged = false;
-    updateWindowTitle();
+    bool exit = closePipeline();
+    if (exit)
+	{
+		setCurrentFile("");
+		setPipeline(new Pipeline());
+		m_documentChanged = false;
+		updateWindowTitle();
+	}
 }
 
 void plvgui::MainWindow::on_actionClosePipeline_triggered()
@@ -622,12 +718,20 @@ void plvgui::MainWindow::on_actionClosePipeline_triggered()
 
 void plvgui::MainWindow::on_actionExit_triggered()
 {
+	bool exit = true;
     if( m_documentChanged )
     {
-        offerToSave();
+        //offerToSave();
+		exit = offerToSave();
     }
-    closePipeline();
-    QApplication::exit();
+	
+	//qDebug() << "on action exit triggered exit =" << exit;
+	if (exit)
+	{
+		closePipeline();
+		//extreme attempt and it is not here that cancel does not work
+		QApplication::exit();
+	}
 }
 
 void MainWindow::documentChanged()
@@ -741,24 +845,37 @@ void MainWindow::handleMessage(QtMsgType type, QString msg)
     }
 }
 
-void MainWindow::offerToSave()
+bool MainWindow::offerToSave()
 {
     if(m_pipeline.isNull())
-        return;
+        return true;
 
     QMessageBox msgBox(QMessageBox::Question,
                        QString("Save"),
                        tr("Would you like to save the changes before closing the pipeline?"),
-                       QMessageBox::Save | QMessageBox::Discard,
+                       QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
                        this);
     msgBox.setWindowModality(Qt::WindowModal);
 
     int result = msgBox.exec();
 
-    if(result == QDialog::Accepted)
+    //if(result == QDialog::Accepted)
+	if(result == QMessageBox::Save)
     {
         on_actionSave_triggered();
-    }
+		//qDebug() << result << "should be save 2048... and result in true";
+		return true;
+    } 
+	else if (result == QMessageBox::Discard)
+	{
+		//qDebug() << result << "should be discard 83... and result in true";
+		return true;
+	}
+	else
+	{
+		//qDebug() << result << "should be cancel 419.. and result in false";
+		return false;
+	}
 }
 
 

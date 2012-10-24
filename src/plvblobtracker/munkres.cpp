@@ -285,12 +285,14 @@ Munkres::solve(Matrix<double> &m) {
 #endif
 
   double highValue = 0;
+  //added comment: saves the highest cost in the matrix 
   for ( int row = 0 ; row < m.rows() ; row++ ) {
     for ( int col = 0 ; col < m.columns() ; col++ ) {
       if ( m(row,col) != INFINITY && m(row,col) > highValue )
         highValue = m(row,col);
     }
   }
+  //adds one to highest value so that the actual highest value is not as much as the 0 overlapping scores
   highValue++;
   
   for ( int row = 0 ; row < m.rows() ; row++ )

@@ -1,0 +1,153 @@
+<pipeline>
+ <elements>
+  <element id="0" name="TCPClientProducer">
+   <properties>
+    <port>1337</port>
+    <serverIP>192.168.1.101</serverIP>
+    <autoReconnect>true</autoReconnect>
+    <sceneCoordX>-1</sceneCoordX>
+    <sceneCoordY>246</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvmskinect::MSKinectProducer">
+   <properties>
+    <sceneCoordX>4</sceneCoordX>
+    <sceneCoordY>59</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::Stitch">
+   <properties>
+    <destinationWidth>1280</destinationWidth>
+    <destinationHeight>960</destinationHeight>
+    <in0X>0</in0X>
+    <in0Y>0</in0Y>
+    <in1X>0</in1X>
+    <in1Y>44</in1Y>
+    <in2X>28</in2X>
+    <in2Y>0</in2Y>
+    <in3X>0</in3X>
+    <in3Y>0</in3Y>
+    <blend>false</blend>
+    <sceneCoordX>413</sceneCoordX>
+    <sceneCoordY>164</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvmskinect::KinectThreshold">
+   <properties>
+    <threshold>1000</threshold>
+    <maxValue>2400</maxValue>
+    <sceneCoordX>526</sceneCoordX>
+    <sceneCoordY>163</sceneCoordY>
+   </properties>
+  </element>
+  <element id="4" name="plvblobtracker::BlobDetector">
+   <properties>
+    <minBlobSize>0</minBlobSize>
+    <sceneCoordX>816</sceneCoordX>
+    <sceneCoordY>156</sceneCoordY>
+   </properties>
+  </element>
+  <element id="5" name="plvblobtracker::VPBlobToStringConverter">
+   <properties>
+    <sceneCoordX>972</sceneCoordX>
+    <sceneCoordY>153</sceneCoordY>
+   </properties>
+  </element>
+  <element id="6" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>8</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>149</sceneCoordX>
+    <sceneCoordY>55</sceneCoordY>
+   </properties>
+  </element>
+  <element id="7" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>8</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>148</sceneCoordX>
+    <sceneCoordY>138</sceneCoordY>
+   </properties>
+  </element>
+  <element id="8" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>8</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>145</sceneCoordX>
+    <sceneCoordY>265</sceneCoordY>
+   </properties>
+  </element>
+  <element id="9" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>8</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>144</sceneCoordX>
+    <sceneCoordY>350</sceneCoordY>
+   </properties>
+  </element>
+  <element id="10" name="TCPServerProcessor">
+   <properties>
+    <port>7777</port>
+    <convertCvMatDataToQImage>false</convertCvMatDataToQImage>
+    <lossless>false</lossless>
+    <maxFramesInQueue>1</maxFramesInQueue>
+    <maxFramesInFlight>1</maxFramesInFlight>
+    <sceneCoordX>1129</sceneCoordX>
+    <sceneCoordY>150</sceneCoordY>
+   </properties>
+  </element>
+  <element id="11" name="plvopencv::ImageFlip">
+   <properties>
+    <method>flip around x and y-axis</method>
+    <sceneCoordX>268</sceneCoordX>
+    <sceneCoordY>261</sceneCoordY>
+   </properties>
+  </element>
+  <element id="12" name="plvopencv::DilateErode">
+   <properties>
+    <erosionIterations>6</erosionIterations>
+    <dilationIterations>15</dilationIterations>
+    <order>erode then delate</order>
+    <sceneCoordX>660</sceneCoordX>
+    <sceneCoordY>160</sceneCoordY>
+   </properties>
+  </element>
+  <element id="13" name="plvopencv::ImageFlip">
+   <properties>
+    <method>flip around x and y-axis</method>
+    <sceneCoordX>272</sceneCoordX>
+    <sceneCoordY>136</sceneCoordY>
+   </properties>
+  </element>
+  <element id="14" name="plvopencv::CropImage">
+   <properties>
+    <x1>50</x1>
+    <x2>100</x2>
+    <y1>100</y1>
+    <y2>150</y2>
+    <sceneCoordX>521</sceneCoordX>
+    <sceneCoordY>80</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>6</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

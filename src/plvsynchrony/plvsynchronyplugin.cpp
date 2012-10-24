@@ -4,7 +4,7 @@
 
 #include "plvsynchronyprocessor.h"
 #include "pixelsums.h"
-#include "gray2rgb.h"
+//#include "gray2rgb.h"
 
 using namespace plv;
 
@@ -23,7 +23,7 @@ void PlvSynchronyPlugin::onLoad()
     qDebug() << "PlvSynchrony onLoad";
     plvRegisterPipelineElement<PlvSynchronyProcessor>();
     plvRegisterPipelineElement<PixelSumS>();
-	plvRegisterPipelineElement<Gray2RGB>();
+	//plvRegisterPipelineElement<Gray2RGB>();
 }
 
 Q_EXPORT_PLUGIN2(plv_synchrony_plugin, PlvSynchronyPlugin)

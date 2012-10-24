@@ -1,0 +1,13 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::VideoProducer">
+   <properties>
+    <filename>showcase-rapper2.avi</filename>
+    <directory>D:/videos/work/</directory>
+    <sceneCoordX>199</sceneCoordX>
+    <sceneCoordY>322</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

@@ -4,6 +4,13 @@ Installation instructions will appear here.
 
 Requires libfreenect with all its dependencies; modify common.pri (especially the first 15 lines) to use your own builds of the dependent libraries.
 
+If you have a  Windows 7 PC and your are lucky you might suffice with using our binaries and installing the driver manually. The pro is that it can run alongside the MRKinect drivers. To install using our pre-build binaries: go to device manager in control panel, (set view to by connection), find your kinect(s) under your USB root, (rmb on it) select properties, go to driver, go to update driver,  select browse my computer, select let me pick from a list, select have disk, browse, go to 
+C:\libfreenect\platform\windows\inf\xbox nui motor select the Xbox_NUI_Motor.inf
+do the same for the other drivers (camera)
+somehow audio does not yet work, might come to that later.
+You also need to add the files in "C:\libfreenect\ms\lib\Release" to your path. 
+
+
 You will most probably have to build all libraries, including OpenCV (2.1.0 known to work), yourself using your own platform.
 
 HINTS

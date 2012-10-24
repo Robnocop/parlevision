@@ -63,10 +63,10 @@ namespace plvgui
         ~MainWindow();
 
         void setPipeline(plv::Pipeline* pipeline);
-        void closePipeline();
+        bool closePipeline();
         void loadFile(QString fileName);
-
-        virtual bool event(QEvent * event);
+		
+		virtual bool event(QEvent * event);
 
     public slots:
         void showViewersForElement(plv::RefPtr<plv::PipelineElement>);
@@ -96,10 +96,13 @@ namespace plvgui
         // set the file belonging to the active pipeline;
         // empty string means no file
         void setCurrentFile(QString fileName);
-        void offerToSave();
+        bool offerToSave();
         void save();
         void updateWindowTitle();
-        // create a new window
+		//added a function (that can be commented out) to automatically open the last opened file.
+		void openPipelineOnOpen();
+        
+		// create a new window
         MainWindow* newWindow();
 
         LibraryWidget* m_libraryWidget;
@@ -111,6 +114,9 @@ namespace plvgui
         PipelineScene* m_scene;
         bool m_documentChanged;
         QString m_fileName;
+		//to open last pipeline directly
+		QString m_openLastFile;
+		bool openPipelineOnStart;
 
         QAction* m_recentFilesSeparator;
         enum { MaxRecentFiles = 5 };

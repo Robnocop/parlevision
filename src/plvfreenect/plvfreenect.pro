@@ -15,6 +15,12 @@ QMAKE_LIBDIR += ../../libs/plugins
 
 include (../../common.pri)
 
+USB_PATH_GCC = C:/libfreenect/other/libusb-win32-bin-1.2.5.0
+PTHREADS_PATH_GCC = C:/libfreenect/other/phthreads/Pre-built.2
+GLUT_PATH_GCC = C:/libfreenect/other/glut-3.7.6
+FREENECT_PATH_GCC = c:/libfreenect
+FREENECT_BUILD_PATH_GCC = C:/libfreenect/ms
+
 #DESTDIR = ../parlevision/libs/plugins
 #INCLUDEPATH += ../parlevision/include
 #LIBS += -lplvcore
@@ -42,6 +48,59 @@ include (../../common.pri)
 #    QMAKE_LIBDIR += c:/OpenCV2.0/lib/Debug ../../libs ../../libs/plugins
 #    INCLUDEPATH += c:/OpenCV2.0/include
 #}
+
+win32-msvc2010 {
+	#added libs for freenect
+	INCLUDEPATH += $${USB_PATH_GCC}/include
+    QMAKE_LIBDIR += $${USB_PATH_GCC}/lib/gcc
+    LIBS += -L$${USB_PATH_GCC}/bin/x86
+
+    INCLUDEPATH += $${PTHREADS_PATH_GCC}/include
+    QMAKE_LIBDIR += $${PTHREADS_PATH_GCC}/lib
+    LIBS += -L$${PTHREADS_PATH_GCC}/lib
+
+    INCLUDEPATH += $${GLUT_PATH_GCC}/include
+    QMAKE_LIBDIR += $${GLUT_PATH_GCC}
+    LIBS += -L$${GLUT_PATH_GCC}/include
+
+    INCLUDEPATH += $${FREENECT_PATH_GCC}/include
+    INCLUDEPATH += $${FREENECT_PATH_GCC}/wrappers/cpp
+    #QMAKE_LIBDIR += $${FREENECT_BUILD_PATH_GCC}/lib
+	QMAKE_LIBDIR += $${FREENECT_BUILD_PATH_GCC}/lib/Release
+    LIBS += -L$${FREENECT_BUILD_PATH_GCC}/lib
+}
+
+win32 {
+    CONFIG(debug, debug|release) {
+        LIBS += -llibusb0 \
+                #-lpthreadGC1 \
+                -lpthreadVC2 \
+                -lfreenect \
+                -lfreenect_sync \
+                -lglut32 
+    }
+    CONFIG(release, debug|release) {
+
+        LIBS += -llibusb0 \
+                #-lpthreadGC1 \
+                -lpthreadVC2 \
+                -lfreenect \
+                -lfreenect_sync \
+                -lglut32 
+    }
+
+    !contains(QMAKE_HOST.arch, x86_64) {
+        message("x86 build")
+
+        ## Windows x86 (32bit) specific build here
+
+    } else {
+        message("x86_64 build")
+
+        ## Windows x64 (64bit) specific build here
+
+    }
+}
 
 DEFINES += LIBFREENECT_PLUGIN_LIBRARY
 

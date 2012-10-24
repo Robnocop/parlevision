@@ -144,7 +144,8 @@ void SkeletonDataViewer::drawSkeleton( QPainter& painter, const NUI_SKELETON_DAT
 
     for(int i = 0; i < NUI_SKELETON_POSITION_COUNT; ++i)
     {
-        NuiTransformSkeletonToDepthImageF( pSkel->SkeletonPositions[i], &fx, &fy );
+		// NuiTransformSkeletonToDepthImageF( pSkel->SkeletonPositions[i], &fx, &fy );
+        NuiTransformSkeletonToDepthImage( pSkel->SkeletonPositions[i], &fx, &fy );
         m_points[i].setX( (int) ( fx * scaleX + 0.5f ) );
         m_points[i].setY( (int) ( fy * scaleY + 0.5f ) );
     }

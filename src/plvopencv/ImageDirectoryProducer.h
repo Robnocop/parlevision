@@ -44,6 +44,11 @@ namespace plvopencv
         Q_CLASSINFO("description", "A producer that loads all the images in a directory.");
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
+		Q_PROPERTY( plv::Enum sortType READ getSortType WRITE setSortType NOTIFY sortTypeChanged )
+		Q_PROPERTY( int startNumber READ getStartNumber WRITE setStartNumber NOTIFY startNumberChanged )
+		Q_PROPERTY( int endNumber READ getEndNumber WRITE setEndNumber NOTIFY endNumberChanged )
+		Q_PROPERTY( int wantedFPS READ getWantedFPS WRITE setWantedFPS NOTIFY wantedFPSChanged )
+		Q_PROPERTY( bool loopIt READ getLoopIt WRITE setLoopIt NOTIFY loopItChanged )
 
         /** required standard method declaration for plv::PipelineElement */
         PLV_PIPELINE_PRODUCER
@@ -52,28 +57,72 @@ namespace plvopencv
         ImageDirectoryProducer();
         virtual ~ImageDirectoryProducer();
 
-        virtual bool init();
+		/** propery methods */
+        plv::Enum getSortType() { return m_sort; }
+		int getStartNumber() {return m_start;}
+		int getEndNumber() {return m_end;}
+		int getWantedFPS() {return m_fps;}
+		bool getLoopIt() {return m_loop;}
+		//is the mutexlocker needed here?
+		QString getDirectory() {QMutexLocker lock( m_propertyMutex ); return m_directory; };
+
+		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
+		int ByName;
+		int ByTime;
+		int BySize;
+		int ByType;
+		int ByUnsorted;
+		int ByNoSort;
+		int ByDirsFirst;
+		int ByDirsLast;
+		int ByReversed;
+		int ByIgnoreCase;
+		int ByLocaleAware;
+		
+		//another solution
+		int WithNumbers;
+        
+		virtual bool init();
         virtual bool deinit() throw ();
 
-        QString getDirectory();
-        void updateDirectory(const QString& s){ setDirectory(s); directoryChanged(s); }
+        
+        //is this used??
+		//void updateDirectory(const QString& s){ setDirectory(s); directoryChanged(s); }
 
     signals:
         void directoryChanged(const QString& newValue);
+		void sortTypeChanged(plv::Enum newValue);
+		void startNumberChanged(int i);
+		void endNumberChanged(int i);
+		void wantedFPSChanged(int i);
+		void loopItChanged (bool b);
 
     public slots:
-        void setDirectory(const QString& directory);
+		//???void setDirectory(const QString& newDir); dont know the results 
+		void setDirectory(const QString& newValue);
+		void setSortType(plv::Enum e);
+		void setStartNumber(int i) {m_start = i; emit (startNumberChanged(i)); } //init();
+		void setEndNumber(int i) {m_end = i; emit (endNumberChanged(i)); } //init();
+		void setWantedFPS(int i) {m_fps = i; emit (wantedFPSChanged(i));}
+		void setLoopIt(bool b) {m_loop = b; emit (loopItChanged(b));}
 
     protected:
         plv::CvMatData m_loadedImage;
         plv::CvMatDataOutputPin* m_imgOutputPin;
         plv::OutputPin<QString>* m_fileNameOutputPin;
         plv::OutputPin<QString>* m_filePathOutputPin;
+		plv::Enum m_sort;
 
     private:
+		QTime m_timeSinceLastFPSCalculation;
         QString m_directory;
         QFileInfoList m_entryInfoList;
         int m_idx;
+		unsigned int m_nr;
+		int m_start;
+		int m_end;
+		int m_fps;
+		bool m_loop;
     };
 }
 

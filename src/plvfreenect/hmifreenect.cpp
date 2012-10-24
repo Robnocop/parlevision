@@ -36,23 +36,26 @@
 using namespace plvfreenect;
 
     QMutex KinectMutex::m_hmifreenectMutex;
-
-    HmiFreenectDevice::HmiFreenectDevice(freenect_context *_ctx, int _index) :
+	
+	HmiFreenectDevice::HmiFreenectDevice(freenect_context *_ctx, int _index) :
         m_new_video_frame(false),
         m_new_depth_frame(false),
         depthMat(cv::Size(640,480),CV_16UC1),
-        videoMat(cv::Size(640,480),CV_8UC3,cv::Scalar(0))
-
+        //videoMat(cv::Size(640,480),CV_8UC3,cv::Scalar(0))
+		videoMat(cv::Size(640,488),CV_8UC1,cv::Scalar(0))
     {
             //no lock, called inside HmiFreenect createdevice
             if(freenect_open_device(_ctx, &m_dev, _index) < 0) throw std::runtime_error("Cannot open Kinect");
             freenect_set_user(m_dev, this);
-            freenect_set_video_mode(m_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
+            //freenect_set_video_mode(m_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB));
+			//CHANGE TO IR
+			freenect_set_video_mode(m_dev, freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_IR_8BIT));
             freenect_set_depth_mode(m_dev, freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT));
             freenect_set_depth_callback(m_dev, freenect_depth_callback);
             freenect_set_video_callback(m_dev, freenect_video_callback);
             //freenect_set_log_callback(_ctx,freenect_log_callback);
     }
+   
     HmiFreenectDevice::~HmiFreenectDevice() {
             //no lock, called inside HmiFreenect deletedevice
             if(freenect_close_device(m_dev) < 0){} //FN_WARNING("Device did not shutdown in a clean fashion");
