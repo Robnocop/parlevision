@@ -23,9 +23,6 @@ SOURCES += plvblobtracker_plugin.cpp \
            matrix.cpp \
 		   VPBlobToStringConverter.cpp \
 		   TouchBlobAndStringConverter.cpp \
-		   NaoBlob.cpp \
-		   LedBlobTrack.cpp \
-		   LedBlobTracker.cpp \ 
 		   TrackToStringConverter.cpp
 
 HEADERS +=  plvblobtracker_plugin.h \
@@ -38,7 +35,4 @@ HEADERS +=  plvblobtracker_plugin.h \
             matrix.h \
 			VPBlobToStringConverter.h \
 			TouchBlobAndStringConverter.h \
-			NaoBlob.h \
-			LedBlobTracker.h \
-			LedBlobTrack.h \
 			TrackToStringConverter.h
