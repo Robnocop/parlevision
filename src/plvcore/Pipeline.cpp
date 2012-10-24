@@ -475,10 +475,11 @@ void Pipeline::stop()
         {
             PipelineElement* element = m_runQueue.at(i).getElement();
             PipelineElement::State state = element->getState();
-            if( state == PipelineElement::PLSTARTED || state == PipelineElement::PLERROR )
+            if( state == PipelineElement::PLE_STARTED || 
+				state == PipelineElement::PLE_ERROR )
             {
                 m_runQueue.removeAt(i);
-                element->setState(PipelineElement::PLSTARTED);
+                element->setState(PipelineElement::PLE_STARTED);
             }
         }
     }
