@@ -272,7 +272,7 @@ void MSKinectProducer::newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonF
 void MSKinectProducer::kinectFinished( int deviceIndex )
 {
 	qDebug() << "kinectFinished signal"; 
-    if( getState() > PLINITIALIZED )
+    if( getState() > PLE_INITIALIZED )
     {
         setError( PlvNonFatalError, tr("Kinect with ID %1 quit unexpectedly.").arg(deviceIndex) );
         emit onError( PlvNonFatalError, this );
