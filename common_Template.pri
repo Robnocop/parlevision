@@ -10,13 +10,15 @@ OPENCV_PATH_GCC = D:/ddevelop/OpenCV242/opencv/build/x86/mingw/
 
 QXT_PATH = C:/Qt/Qxt
 #if done correctly this shouldn't be needed, check the mkspecs/features directory if the qxt.prf and qxtvars.prf have been put there after installing qxt (run configure in a command window (windows startbutton->cmd, go to dir)
+#INCLUDEPATH += $${QXT_PATH}/src/core
+#INCLUDEPATH += $${QXT_PATH}/src/gui
 QMAKE_LIBDIR += C:/Qt/Qxt/lib
 
 #makes opencv openable
-INCLUDEPATH += D:/ddevelop/OpenCV242/opencv/build/include
 #D:/ddevelop/OpenCV242/opencv/build/x86/vc10
 #name convention changes sometimes people use include <opencv/cv.h> other times include cv.h etc, ugly and safe way to go for now seems
 INCLUDEPATH += D:/ddevelop/OpenCV242/opencv/build/include/opencv
+INCLUDEPATH += D:/ddevelop/OpenCV242/opencv/build/include
 
 #Library path relative to where source is located
 #Do NOT use trailing slashes in the libdir, this will make the linker choke
@@ -44,8 +46,8 @@ win32-msvc2010 {
 	INCLUDEPATH += $${OPENCV_PATH_VS2010}/include
 	INCLUDEPATH += $${OPENCV_PATH_VS2010}/bin
 	LIBS += -L$${OPENCV_PATH_VS2010}/lib
-	LIBS += -L$${OPENCV_PATH_VS2010}/bin
 	LIBS += -L$${QXT_PATH}/lib
+	LIBS += -L$${QXT_PATH}/bin
 }
 
 #-lopencv_imgproc242d \
