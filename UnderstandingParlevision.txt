@@ -1,3 +1,6 @@
+the common.pri files should set all the include stuff correctly if it doesn't please check the project files. 
+the common.pri file is based on personal very PC dependend settings please to not include it in any git version. Instead i used a template file that can help to make your common file work if you made some wrong choices or things during install.
+
 The save image processor saves file as last int +1
 Viola Jones Processor- scale factor 
 	has a great impact on performance: a high scale factor may lead to fast but inaccurate detectors; a small scale factor increases accuracy at the cost of speed (typical value: 1.25).
@@ -5,7 +8,7 @@ Viola Jones Processor- scale factor
 to add a plugin add a cpp and when neccesary a header file in a directory
 add the file (if in existing directory) to the .pro file in that directory.
 
-to apply changes to a processor it has to be rebuild not rerun only
+to apply changes to a processor it has to be rebuild and this can be done project wise so it will save a lot of time when compared to building an entire solution
 
 !!!!
 - g++ compiler does not work as it will not include the proper libraries somehow. 
