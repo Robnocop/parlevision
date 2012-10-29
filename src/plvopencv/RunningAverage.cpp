@@ -47,27 +47,28 @@ RunningAverage::~RunningAverage()
 {
 }
 
+
 bool RunningAverage::process()
 {
     CvMatData in = m_inputPin->get();
     const cv::Mat& src = in;
 
-	m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+	//m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
 	cv::Mat& avgmat = m_avg;
-    m_tmp = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-	cv::Mat& avgtmp = m_tmp;
+    // m_tmp = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+//	cv::Mat& tmpmat = m_tmp;
     m_out = CvMatData::create( in.width(), in.height(), in.type(), in.channels() );
 	cv::Mat& dst = m_out;
 
     if( m_avg.width() != in.width() || m_avg.height() != in.height() || in.type() != m_out.type() )
     {
-    /*    m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-		cv::Mat& avgmat = m_avg;
+        //need to set this only once but when receiving an empty frame it wont thus the program will crash most likely or will not work
+		m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+		//cv::Mat& avgmat = m_avg;
         m_tmp = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-		cv::Mat& avgtmp = m_tmp;
-        m_out = CvMatData::create( in.width(), in.height(), in.type(), in.channels() );
-*/
-
+		//cv::Mat& avgtmp = m_tmp;
+        //m_out = CvMatData::create( in.width(), in.height(), in.type(), in.channels() );
+		
 
         if( src.depth() == CV_8U )
         {
@@ -88,21 +89,25 @@ bool RunningAverage::process()
 			m_conversionFactor = 1.0;
         }
     }
+	/*else
+	{
+		qDebug() << m_avg.depth();
+	}*/
     cv::Mat& tmp = m_tmp;
 
     // convert src to 32F
     //src.convertTo(m_tmp, m_tmp.type(), 1.0 / m_conversionFactor);
-    src.convertTo(avgtmp, avgtmp.type(), 1.0 / m_conversionFactor);
+    src.convertTo(tmp, m_tmp.type(), 1.0 / m_conversionFactor);
 //	cv::accumulateWeighted(m_tmp, m_avg, m_weight);
-	cv::accumulateWeighted(tmp, avgtmp, m_weight);
-
-
+	
     // convert avg back to src type
-    const cv::Mat& avg = m_avg;
-//    avg.convertTo(m_out, m_out.type(), m_conversionFactor );
-    avg.convertTo(dst, dst.type(), m_conversionFactor );
+    //const cv::Mat& avg = m_avg;
+	cv::accumulateWeighted(tmp, avgmat, m_weight);
 
-    m_outputPin->put(m_out);
+//    avg.convertTo(m_out, m_out.type(), m_conversionFactor );
+    avgmat.convertTo(dst, dst.type(), m_conversionFactor );
+
+    m_outputPin->put(dst);
     return true;
 }
 

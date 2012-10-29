@@ -72,7 +72,7 @@ namespace plvopencv
         plv::CvMatData m_tmp;
         plv::CvMatData m_out;
 
-        double m_weight;
+	    double m_weight;
         double m_conversionFactor;
     };
 }
