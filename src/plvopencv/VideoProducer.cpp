@@ -137,7 +137,7 @@ bool VideoProducer::init()
 	//if(!m_capture->open(path2))
 	if(!m_capture->isOpened())
     {
-        setError(PlvPipelineInitError, tr("Failed to open video, check type of lossless avi %1").arg(pathorg));
+        setError(PlvPipelineInitError, tr("Failed to open video, check type of avi of %1 reencode if neccesary we advise winff or ffmpeg").arg(pathorg));
         return false;
     }
 
@@ -172,7 +172,6 @@ bool VideoProducer::produce()
 	//m_capture->query(m_frame); 
 	//not opencv 2.1 : http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=videocapture#VideoCapture::VideoCapture
 
-	qDebug()<< "producing";
 	if( !m_capture->grab() )
     {
         setError(PlvPipelineInitError, tr("Failed to grab frame"));
