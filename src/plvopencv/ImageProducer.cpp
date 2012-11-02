@@ -32,7 +32,9 @@
 using namespace plv;
 using namespace plvopencv;
 
-ImageProducer::ImageProducer() : m_putImage(true)
+ImageProducer::ImageProducer() : 
+	m_putImage(true),
+	m_keepSending(true)
 {
     //create the output pin
     m_outputPin = createCvMatDataOutputPin("image_output", this );
@@ -156,15 +158,39 @@ bool ImageProducer::deinit() throw()
 
 bool ImageProducer::readyToProduce() const
 {
+	if (!m_loadedImage.isValid())
+	{
+		qDebug() << "loaded image was not valid";
+	}
     return m_loadedImage.isValid();
 }
 
 bool ImageProducer::produce()
 {
+	bool keepsending = getKeepSending();
     if( m_putImage )
     {
         m_outputPin->put( m_loadedImage );
         m_putImage = false;
     }
+	else if ( keepsending )
+	{
+		m_outputPin->put( m_loadedImage );
+		qDebug() << "i keep sending";
+	}
     return true;
 }
+
+bool ImageProducer::getKeepSending() const
+{
+    QMutexLocker lock( m_propertyMutex );
+    return m_keepSending;
+}
+
+void ImageProducer::setKeepSending(bool b)
+{
+    QMutexLocker lock( m_propertyMutex );
+    m_keepSending = b;
+    emit keepSendingChanged(b);
+}
+
