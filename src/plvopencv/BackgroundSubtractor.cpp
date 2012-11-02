@@ -75,112 +75,143 @@ BackgroundSubtractor::~BackgroundSubtractor()
 
 bool BackgroundSubtractor::process()
 {
-	//qDebug() << "enter process"; 
     CvMatData in = m_inInput->get();
-	cv::Mat& bgmat = m_backgroundGray;
+	//added
+	//cv::Mat& bgmat = m_backgroundGray;
+	
 	//does not seem to return the actual depth
 	//qDebug() << "depth "<< m_background.depth() << "actualdetpth"<< m_background.depthToString(m_background.depth()) << "depth to string 1" << m_background.depthToString(1) << "depth to string 2" << m_background.depthToString(2) <<"depth to string 3" << m_background.depthToString(3);
-    // m_reset is true on initialisation
+    
+	// m_reset is true on initialisation
     // so the background is always initialized
     // to the first frame received
     if( m_reset )
     {
-        setBackground(in);
+        //added
+		CvMatData inbg = m_inBackground->get();
+		//renamed instead of in use inbg right?
+		setBackground(inbg);
         setReset(false);
     }
 
     if( m_inBackground->isConnected() && m_inBackground->hasData() )
     {
-        CvMatData inbg = m_inBackground->get();
+		//this will always be true (in most cases ;) )qDebug() << "i am connected and have data";
+        //TODO add a selection whether to reset the background every frame, waste of processing and memory in most cases
+		CvMatData inbg = m_inBackground->get();
         setBackground(inbg);
     }
 
     if( m_inReset->isConnected() && m_inReset->hasData() )
     {
+		qDebug() << "i am reset and reset is supposed to have data";
         bool value = m_inReset->get();
         if( value )
         {
-            setBackground(in);
+			CvMatData inbg = m_inBackground->get();
+			setBackground(inbg);
+            //setBackground(in);
         }
     }
+
+	//due some strange changes ?I? made opencv function need a cv::mat instead of cvmatdata.
+	cv::Mat& inmat = in;
 
     //check format of images
     if( !m_background.isEmpty() )
     {
-        if( in.width() != m_background.width() || in.height() != m_background.height() )
+		if( in.width() != m_background.width() || in.height() != m_background.height() )
         {
-            QString msg = tr("Images do not have same number of channels.");
-            setError(PlvPipelineRuntimeError, msg);
-            return false;
+            qDebug() << "images do not have the same size" ;
+			//maybe TODO add a selection to indicate whether resizing the background image is prefered
+			cv::Mat& resize = m_background;
+			cv::Mat resizedist = inmat;
+			//interpolation is kept on default setting, resize background based on the input frame 
+			cv::resize(resize, resizedist, inmat.size(), 0, 0);
+			CvMatData resized = CvMatData::create(resizedist.rows, resizedist.cols, 1);
+			resized = resizedist;
+			setBackground(resized);
         }
 
-		
-        CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
-        CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
-		cv::Mat& inmat = in;
-		cv::Mat& srcgmat = srcGray;
-		cv::Mat& distg = outGray;
-        cv::Mat& mbg = m_background;
+		//check if resizing worked if the function of resizing becomes optional so does this, now it is needed and should throw a stop pipeline.
+		if( in.width() != m_background.width() || in.height() != m_background.height() )
+		{
+            QString msg = tr("Images do still not have the same size.");
+			setError(PlvPipelineRuntimeError, msg);
+			
+			return false;
+		}
 
 		if( m_method.getSelectedValue() == BGSM_GRAYSCALE )
         {
+			CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
+			CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+			
+			cv::Mat& srcGraymat = srcGray;
+			cv::Mat& distGray = outGray;
+			//cv::Mat& mbg = m_background;
+			
 			////shouldn't be here
-   //         CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
-   //         CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
-			//cv::Mat& inmat = in;
-			//cv::Mat& srcgmat = srcGray;
-			//cv::Mat& distg = outGray;
-
             if( in.channels() == 3 )
             {
                // cv::cvtColor( in, srcGray, CV_RGB2GRAY );
-				cv::cvtColor( inmat, srcgmat, CV_RGB2GRAY );
+				cv::cvtColor( inmat, srcGraymat, CV_RGB2GRAY );
 			}
             else
             {
-                srcGray = in;
+                srcGraymat = in;
             }
             //cv::absdiff( srcGray, m_backgroundGray, outGray );
-            cv::absdiff( srcgmat, bgmat, distg );
+			//changed m_backgroundgray to cv::mat
+            cv::absdiff( srcGraymat, m_backgroundGray, distGray );
 			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
-            cv::threshold( distg , distg, m_threshold, m_replacement, CV_THRESH_BINARY );
+            cv::threshold( distGray , distGray, m_threshold, m_replacement, CV_THRESH_BINARY );
             
-
-			m_outForeground->put(outGray);
+			//m_outForeground->put(outGray);
+			m_outForeground->put(distGray);
         }
         else if( m_method.getSelectedValue() == BGSM_COLOR_TO_GRAY )
         {
             CvMatData tmp = CvMatData::create(in.properties());
             cv::Mat& tmpmat = tmp;
+			//MBG is incorrect
+			//bgmat is 
+			cv::Mat& mbg = m_background;
+			cv::Mat& bgmat = m_backgroundGray;
 			//cv::absdiff( in, m_background, tmp );
-            cv::absdiff( inmat, bgmat, tmpmat  );
+            //not cv::absdiff( inmat, bgmat, tmpmat  );
+			cv::absdiff( inmat, mbg, tmpmat  );
 			//cv::threshold( tmp, tmp, m_threshold, m_replacement, CV_THRESH_BINARY );
 			cv::threshold( tmpmat, tmpmat, m_threshold, m_replacement, CV_THRESH_BINARY );
-
-
+			
             CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+			cv::Mat& distGray = outGray;
             //cv::cvtColor( tmp, outGray, CV_RGB2GRAY );
-            cv::cvtColor( tmpmat, distg, CV_RGB2GRAY );
+            cv::cvtColor( tmpmat, distGray, CV_RGB2GRAY );
 			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
-			cv::threshold( distg, distg, m_threshold, m_replacement, CV_THRESH_BINARY );
-            m_outForeground->put(outGray);
+			cv::threshold( distGray, distGray, m_threshold, m_replacement, CV_THRESH_BINARY );
+            m_outForeground->put(distGray);
         }
         else
         {
             CvMatData out = CvMatData::create(in.properties());
 			cv::Mat& dst2 = out;
+			cv::Mat& mbg = m_background;
             //cv::absdiff( in, m_background, out );
             cv::absdiff( inmat, mbg, dst2 );
-            
+            //isn't neceesary ??
+			//m_background = mbg;
 			//cv::threshold( out, out, m_threshold, m_replacement, CV_THRESH_BINARY );
             cv::threshold( dst2 , dst2 , m_threshold, m_replacement, CV_THRESH_BINARY );
-			m_outForeground->put(out);
+			m_outForeground->put(dst2);
         }
+		//
         m_outBackground->put(m_background);
     }
     else
     {
         m_outForeground->put(in);
+		m_outBackground->put(m_background);
     }
     return true;
 }
@@ -195,10 +226,14 @@ void BackgroundSubtractor::setBackground(CvMatData& mat)
     {
 		cv::cvtColor(mbg , bgmat, CV_RGB2GRAY );
         //cv::cvtColor(m_background, m_backgroundGray, CV_RGB2GRAY );
+		//try to save it to mbg
+		m_background = mbg;
+		m_backgroundGray = bgmat; 
     }
     else
     {
-        m_backgroundGray = m_background;
+        m_backgroundGray = mat;
+		m_background = mbg;
     }
 }
 

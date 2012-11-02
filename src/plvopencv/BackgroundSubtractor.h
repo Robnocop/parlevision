@@ -79,7 +79,8 @@ namespace plvopencv
         plv::CvMatDataOutputPin* m_outForeground;
         plv::CvMatDataOutputPin* m_outBackground;
         plv::CvMatData m_background;
-        plv::CvMatData m_backgroundGray;
+        //plv::CvMatData m_backgroundGray;
+		cv::Mat m_backgroundGray;
         int m_threshold;
         int m_replacement;
         plv::Enum m_method;
