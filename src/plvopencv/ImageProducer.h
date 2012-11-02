@@ -41,6 +41,7 @@ namespace plvopencv
         Q_CLASSINFO("description", "This producer loads a single image with the given name and path."
                     "and forwards this same image every time this producer is called." );
 
+		Q_PROPERTY( bool keepSending READ getKeepSending WRITE setKeepSending NOTIFY keepSendingChanged  )
         Q_PROPERTY( QString filename READ getFilename WRITE setFilename NOTIFY filenameChanged )
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
 
@@ -60,10 +61,14 @@ namespace plvopencv
 
         QString getDirectory();
         void updateDirectory(const QString& s){ setDirectory(s); directoryChanged(s); }
+		
+		//gui
+		bool getKeepSending() const;
 
     signals:
         void filenameChanged(const QString& newValue);
         void directoryChanged(const QString& newValue);
+		void keepSendingChanged(bool b);
 
     protected:
         plv::CvMatData m_loadedImage;
@@ -72,6 +77,7 @@ namespace plvopencv
     public slots:
         void setFilename(const QString& filename);
         void setDirectory(const QString& directory);
+		 void setKeepSending(bool b);
 
     private:
         QString m_filename;  /** the filename of the image to load */
@@ -82,6 +88,7 @@ namespace plvopencv
           * accepted extensions for images by OpenCV. See:
           * http://opencv.willowgarage.com/documentation/c/reading_and_writing_images_and_video.html */
         static bool validateExtension(const QString& filename);
+		bool m_keepSending;
     };
 }
 
