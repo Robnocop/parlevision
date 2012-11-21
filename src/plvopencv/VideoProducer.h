@@ -26,6 +26,9 @@
 #include <plvcore/Pin.h>
 #include <plvcore/CvMatData.h>
 
+//used for fps reduction to fit actual fps
+#include <QTime>
+
 namespace plv
 {
     class CvMatDataOutputPin;
@@ -47,6 +50,7 @@ namespace plvopencv
 
         Q_PROPERTY( QString filename READ getFilename WRITE setFilename NOTIFY filenameChanged )
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
+		Q_PROPERTY( bool fpsLimit READ getFpsLimit WRITE setFpsLimit NOTIFY fpsLimitChanged )
 
         /** required standard method declaration for Producer */
         PLV_PIPELINE_PRODUCER
@@ -65,13 +69,18 @@ namespace plvopencv
         QString getDirectory();
         void updateDirectory(const QString& s){ setDirectory(s); directoryChanged(s); }
 
+		//GUI controlled settings
+		bool getFpsLimit() {return fpsLimit;}
+
     signals:
         void filenameChanged(const QString& newValue);
         void directoryChanged(const QString& newValue);
+		void fpsLimitChanged (bool b);
 
     public slots:
         void setFilename(const QString& filename);
         void setDirectory(const QString& directory);
+		void setFpsLimit(bool b) {fpsLimit = b; emit (fpsLimitChanged(b));}
 
     private:
         QString m_filename;  /** the filename of the image to load */
@@ -80,6 +89,9 @@ namespace plvopencv
         long m_posMillis; /** Film current position in milliseconds or video capture timestamp */
         double m_ratio; /** Relative position of the video file (0 - start of the film, 1 - end of the film) */
         int m_fps; /** frame rate of the video */
+		
+		QTime m_fpstimer;
+		int m_prevtime;
 
         plv::CvMatData m_frame;
         plv::CvMatDataOutputPin* m_outputPin;
@@ -88,6 +100,9 @@ namespace plvopencv
         plv::OutputPin<double>* m_outRatio;
         plv::OutputPin<int>* m_outFps;
         cv::VideoCapture* m_capture;
+
+		//GUI controlled settings
+		bool fpsLimit;
 
         /** This method checks whether the extension of the filename is one of the
           * accepted extensions for images by OpenCV. See:

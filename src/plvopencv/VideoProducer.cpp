@@ -24,6 +24,7 @@
 #include <QMutexLocker>
 #include <QDebug>
 
+
 #include <opencv/highgui.h>
 #include <string>
 #include <plvcore/CvMatDataPin.h>
@@ -33,7 +34,7 @@ using namespace plv;
 using namespace plvopencv;
 
 VideoProducer::VideoProducer() :
-    m_filename(""), m_directory(""), m_frameCount(0), m_posMillis(0), m_ratio(0), m_fps(0)
+    m_filename(""), m_directory(""), m_frameCount(0), m_posMillis(0), m_ratio(0), m_fps(0), m_prevtime(0)
 {
     //create the output pin
     m_outputPin = createCvMatDataOutputPin("image_output", this );
@@ -104,11 +105,12 @@ bool VideoProducer::init()
 {
     //create the m_capture here
 	m_capture =  new cv::VideoCapture(); 
-	
+	m_fpstimer.start();	
+	m_prevtime = 0;
 	QString pathorg = getDirectory();
 	pathorg.append(m_filename);
 	QFile testfile = pathorg;
-
+	
 	const std::string path = pathorg.toStdString(); //"D:/videos/work/showcase-rapper2.avi";
 	const char * path2 = path.c_str();
 
@@ -137,7 +139,8 @@ bool VideoProducer::init()
 	//if(!m_capture->open(path2))
 	if(!m_capture->isOpened())
     {
-        setError(PlvPipelineInitError, tr("Failed to open video, check type of avi of %1 reencode if neccesary we advise winff or ffmpeg").arg(pathorg));
+        qDebug() <<"Failed to open video during init";
+		setError(PlvPipelineInitError, tr("Failed to open video, check type of avi of %1 reencode if neccesary we advise winff or ffmpeg").arg(pathorg));
         return false;
     }
 
@@ -154,7 +157,7 @@ bool VideoProducer::init()
 bool VideoProducer::deinit() throw()
 {
     m_capture->release();
-    return true;
+	return true;
 }
 
 bool VideoProducer::readyToProduce() const
@@ -174,14 +177,24 @@ bool VideoProducer::produce()
 
 	if( !m_capture->grab() )
     {
-        setError(PlvPipelineInitError, tr("Failed to grab frame"));
-        return false;
+		//it is an expected error
+		
+        setError(PlvPipelineRuntimeError, tr("Failed to grab frame"));
+        qDebug() <<"Failed to grab frame";
+		setState(PLE_ERROR);
+		//added to stop after last frame?
+		this->__stop();
+		return false;
     }
 
     if( !m_capture->retrieve(m_frame) ) //, 0
     {
-        setError(PlvPipelineInitError, tr("Failed to retrieve frame"));
-        return false;
+        setError(PlvPipelineRuntimeError, tr("Failed to retrieve frame"));
+        qDebug() << "Failed to retrieve frame";
+		//stop();
+		setState(PLE_ERROR);
+		this->__stop();
+		return false;
     }
 	
 	//Why does it need to be copied? ahh it may not be altered!
@@ -195,10 +208,29 @@ bool VideoProducer::produce()
     m_ratio = m_capture->get(CV_CAP_PROP_POS_AVI_RATIO);
     m_fps = (int)m_capture->get(CV_CAP_PROP_FPS);
 
+	int serial = getProcessingSerial();
+	
     m_outFrameCount->put(m_frameCount);
     m_outPositionMillis->put(m_posMillis);
     m_outRatio->put(m_ratio);
     m_outFps->put(m_fps);
+		
+	//if(boolean limit fps)
+	if(m_fps>0 && fpsLimit)
+	{
+		//empiracly about 2-4 milliseconds needed for remaining calculations, might depend on system?
+		while ((m_fpstimer.elapsed()-m_prevtime) < 1000/m_fps)
+		{
+			//qDebug() << "elaps-prev" << m_fpstimer.elapsed()-m_prevtime << "boolean is " << (m_fpstimer.elapsed()-m_prevtime < 1/m_fps);
+		}
+	}
+	m_prevtime = m_fpstimer.elapsed() ;
+	
+	//test if pipeline can be stopped not with this->__stop();
+	//if (m_fpstimer.elapsed()>3000)
+	//{
+	//	this->__stop();
+	//}
 
     return true;
 }
