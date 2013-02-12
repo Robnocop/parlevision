@@ -253,7 +253,11 @@ bool MSKinectProducer::start()
 	for( int i = 0; i < m_deviceCount; ++i )
     {
         m_kinects.at(i)->start();
-		setAngleKinect1((int) getAngleKinect(1));
+		if (i==1) setAngleKinect1((int) getAngleKinect(i));
+		if (i==2) setAngleKinect2((int) getAngleKinect(i));
+		if (i==3) setAngleKinect3((int) getAngleKinect(i));
+		if (i==4) setAngleKinect4((int) getAngleKinect(i));
+		//setAngleKinect1((int) getAngleKinect(1));
     }
     return true;
 }
@@ -642,7 +646,7 @@ void MSKinectProducer::setAngleKinect1(int angle)
 	QMutexLocker lock(m_propertyMutex);
 	m_angleKinect1 = angle;
 	angleKinect1Changed(m_angleKinect1);
-	qDebug() << "actual angle" << getAngleKinect(1);
+	qDebug() << "actual angle" << getAngleKinect(0);
 }
 
 void MSKinectProducer::setAngleKinect2(int angle)
@@ -650,7 +654,7 @@ void MSKinectProducer::setAngleKinect2(int angle)
 	QMutexLocker lock(m_propertyMutex);
 	m_angleKinect2 = angle;
 	angleKinect2Changed(m_angleKinect2);
-	qDebug() << "actual angle" << getAngleKinect(2);
+	qDebug() << "actual angle" << getAngleKinect(1);
 }
 
 void MSKinectProducer::setAngleKinect3(int angle)
@@ -658,7 +662,7 @@ void MSKinectProducer::setAngleKinect3(int angle)
 	QMutexLocker lock(m_propertyMutex);
 	m_angleKinect3 = angle;
 	angleKinect3Changed(m_angleKinect3);
-	qDebug() << "actual angle" << getAngleKinect(3);
+	qDebug() << "actual angle" << getAngleKinect(2);
 }
 
 void MSKinectProducer::setAngleKinect4(int angle)
@@ -666,13 +670,14 @@ void MSKinectProducer::setAngleKinect4(int angle)
 	QMutexLocker lock(m_propertyMutex);
 	m_angleKinect4 = angle;
 	angleKinect4Changed(m_angleKinect4);
-	qDebug() << "actual angle" << getAngleKinect(4);
+	qDebug() << "actual angle" << getAngleKinect(3);
 }
 
 //seperate method to get actual angle by sensor
 int MSKinectProducer::getAngleKinect(int device)
 {
-	if (device>-1 && device <m_deviceCount)
+	//???
+	if (device>0 && device <m_deviceCount)
 	{
  		return m_kinects.at(device)->getAngle();
 	}

@@ -1164,10 +1164,19 @@ RGBQUAD KinectDevice::Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s )
 
 int KinectDevice::getAngle()
 {
-	long angle;
+	long angle = 0;
 	//new way of initialisation due to depth requires new way of this as well
 	//m_nuiInstance->NuiCameraElevationGetAngle(&angle);
-	m_nuiInstance->NuiCameraElevationGetAngle(&angle);
+	HRESULT hr = m_nuiInstance->NuiCameraElevationGetAngle(&angle);
+	if ( hr == E_NUI_DEVICE_NOT_READY)
+	{
+		qDebug() << "Kinect has not been initialized in getAngle() of kinect.";
+	}
+	else if ( hr == E_POINTER)
+	{
+		qDebug() << "Pointer error in getAngle() of kinect.";
+	}
+
 	//NuiCameraElevationGetAngle(&angle);
 	//TEMP also send the vecotr 4 values
 	//Vector4 gravityvector;
