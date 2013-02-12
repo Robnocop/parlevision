@@ -35,18 +35,40 @@ namespace plvmskinect
 					"The cutx, cuty, cutz values are in mm and define the distance to the left, right, or back from the Kinect that will be cut away"
 					"This is implemented inside this device to speed it up by excluding non intersting pixels.")
 		
+		//hmmm the neede property inspector is even to big now :), need to find a solution for that
 		Q_PROPERTY( bool realWorldCoord READ getRealWorldCoord WRITE setRealWorldCoord NOTIFY realWorldCoordChanged  )
 		Q_PROPERTY( bool infrared READ getInfrared WRITE setInfrared NOTIFY infraredChanged  )
         Q_PROPERTY( bool highres READ getHighres WRITE setHighres NOTIFY highresChanged  ) //highresColour
+		
+		Q_PROPERTY( bool rotateKinect1 READ getRotateKinect1 WRITE setRotateKinect1 NOTIFY rotateKinect1Changed  )
+		Q_PROPERTY( int angleKinect1 READ getAngleKinect1 WRITE setAngleKinect1 NOTIFY angleKinect1Changed  )
+
 		Q_PROPERTY( int cutXL READ getCutXL WRITE setCutXL NOTIFY cutXChangedL  )
 		Q_PROPERTY( int cutXR READ getCutXR WRITE setCutXR NOTIFY cutXChangedR  )
 		Q_PROPERTY( int cutYU READ getCutYU WRITE setCutYU NOTIFY cutYChangedU  )
 		Q_PROPERTY( int cutYD READ getCutYD WRITE setCutYD NOTIFY cutYChangedD  )
 		Q_PROPERTY( int cutZ READ getCutZ WRITE setCutZ NOTIFY cutZChanged  )
 
+		Q_PROPERTY( int cutXL1 READ getCutXL1 WRITE setCutXL1 NOTIFY cutXChangedL1  )
+		Q_PROPERTY( int cutXR1 READ getCutXR1 WRITE setCutXR1 NOTIFY cutXChangedR1  )
+		Q_PROPERTY( int cutYU1 READ getCutYU1 WRITE setCutYU1 NOTIFY cutYChangedU1  )
+		Q_PROPERTY( int cutYD1 READ getCutYD1 WRITE setCutYD1 NOTIFY cutYChangedD1  )
+		Q_PROPERTY( int cutZ1 READ getCutZ1 WRITE setCutZ1 NOTIFY cutZChanged1  )
+
+		Q_PROPERTY( int cutXL2 READ getCutXL2 WRITE setCutXL2 NOTIFY cutXChangedL2  )
+		Q_PROPERTY( int cutXR2 READ getCutXR2 WRITE setCutXR2 NOTIFY cutXChangedR2  )
+		Q_PROPERTY( int cutYU2 READ getCutYU2 WRITE setCutYU2 NOTIFY cutYChangedU2  )
+		Q_PROPERTY( int cutYD2 READ getCutYD2 WRITE setCutYD2 NOTIFY cutYChangedD2  )
+		Q_PROPERTY( int cutZ2 READ getCutZ2 WRITE setCutZ2 NOTIFY cutZChanged2  )
+
+		Q_PROPERTY( int cutXL3 READ getCutXL3 WRITE setCutXL3 NOTIFY cutXChangedL3  )
+		Q_PROPERTY( int cutXR3 READ getCutXR3 WRITE setCutXR3 NOTIFY cutXChangedR3  )
+		Q_PROPERTY( int cutYU3 READ getCutYU3 WRITE setCutYU3 NOTIFY cutYChangedU3  )
+		Q_PROPERTY( int cutYD3 READ getCutYD3 WRITE setCutYD3 NOTIFY cutYChangedD3  )
+		Q_PROPERTY( int cutZ3 READ getCutZ3 WRITE setCutZ3 NOTIFY cutZChanged3  )
+
 		//angle of Kinect needs to be separte there is a maximum of 4Kinects per PC , todo I could not add GUI elements on initialisation, it is possible however
-		Q_PROPERTY( bool rotateKinect1 READ getRotateKinect1 WRITE setRotateKinect1 NOTIFY rotateKinect1Changed  )
-		Q_PROPERTY( int angleKinect1 READ getAngleKinect1 WRITE setAngleKinect1 NOTIFY angleKinect1Changed  )
+		
 		//2
 		Q_PROPERTY( bool rotateKinect2 READ getRotateKinect2 WRITE setRotateKinect2 NOTIFY rotateKinect2Changed  )
 		Q_PROPERTY( int angleKinect2 READ getAngleKinect2 WRITE setAngleKinect2 NOTIFY angleKinect2Changed  )
@@ -77,25 +99,25 @@ namespace plvmskinect
 		bool getCutYD() { return m_cutyd; };
 		
 		//TODO independent cutable Kinects!!
-		//bool getCutXL1() { return m_cutxl1; };
-		//bool getCutXR1() { return m_cutxr1; };
-		//bool getCutYU1() { return m_cutyu1; };
-		//bool getCutYD1() { return m_cutyd1; };
-		//
-		//bool getCutXL2() { return m_cutxl2; };
-		//bool getCutXR2() { return m_cutxr2; };
-		//bool getCutYU2() { return m_cutyu2; };
-		//bool getCutYD2() { return m_cutyd2; };
-		//
-		//bool getCutXL3() { return m_cutxl3; };
-		//bool getCutXR3() { return m_cutxr3; };
-		//bool getCutYU3() { return m_cutyu3; };
-		//bool getCutYD3() { return m_cutyd3; };
+		bool getCutXL1() { return m_cutxl1; };
+		bool getCutXR1() { return m_cutxr1; };
+		bool getCutYU1() { return m_cutyu1; };
+		bool getCutYD1() { return m_cutyd1; };
+		
+		bool getCutXL2() { return m_cutxl2; };
+		bool getCutXR2() { return m_cutxr2; };
+		bool getCutYU2() { return m_cutyu2; };
+		bool getCutYD2() { return m_cutyd2; };
+		
+		bool getCutXL3() { return m_cutxl3; };
+		bool getCutXR3() { return m_cutxr3; };
+		bool getCutYU3() { return m_cutyu3; };
+		bool getCutYD3() { return m_cutyd3; };
 
 		bool getCutZ() { return m_cutz; };
-		/*bool getCutZ1() { return m_cutz; };
-		bool getCutZ2() { return m_cutz; };
-		bool getCutZ3() { return m_cutz; };*/
+		bool getCutZ1() { return m_cutz1; };
+		bool getCutZ2() { return m_cutz2; };
+		bool getCutZ3() { return m_cutz3; };
 
 		int getAngleKinect(int device);
 		//the actual activator
@@ -105,11 +127,32 @@ namespace plvmskinect
 		void realWorldCoordChanged(bool newValue);
 		void infraredChanged(bool newValue);
 		void highresChanged(bool newValue);
+		
+		void cutZChanged(int value);
+
 		void cutXChangedL(int value);
 		void cutXChangedR(int value);
 		void cutYChangedU(int value);
 		void cutYChangedD(int value);
-		void cutZChanged(int value);
+
+		void cutXChangedL1(int value);
+		void cutXChangedR1(int value);
+		void cutYChangedU1(int value);
+		void cutYChangedD1(int value);
+		void cutZChanged1(int value);
+
+		void cutXChangedL2(int value);
+		void cutXChangedR2(int value);
+		void cutYChangedU2(int value);
+		void cutYChangedD2(int value);
+		
+		void cutZChanged2(int value);
+
+		void cutXChangedL3(int value);
+		void cutXChangedR3(int value);
+		void cutYChangedU3(int value);
+		void cutYChangedD3(int value);
+		void cutZChanged3(int value);		
 
 		void rotateKinect1Changed(bool newValue);
 		void angleKinect1Changed(int newIntValue);
@@ -136,16 +179,34 @@ namespace plvmskinect
 		void setCutYD(int value);
 		void setCutZ(int value);
 
+		void setCutXL1(int value);
+		void setCutXR1(int value);
+		void setCutYU1(int value);
+		void setCutYD1(int value);
+		void setCutZ1(int value);
+
+		void setCutXL2(int value);
+		void setCutXR2(int value);
+		void setCutYU2(int value);
+		void setCutYD2(int value);
+		void setCutZ2(int value);
+
+		void setCutXL3(int value);
+		void setCutXR3(int value);
+		void setCutYU3(int value);
+		void setCutYD3(int value);
+		void setCutZ3(int value);
+
 		//this setting can't be altered in realtime
 		void setInfrared(bool b) {m_infrared = b; qDebug()<< "restart pipeline to incorporate change"; emit(infraredChanged(b));}
 		void setHighres(bool b) {m_highres = b; qDebug()<< "restart pipeline to incorporate res change"; emit(highresChanged(b));}
 		
 
 		//kinect activatoronly set once that is why i is used, acctually does not else than run rotate
-		void setRotateKinect1(bool i) {!i ? rotateKinect(1,m_angleKinect1): i=true; emit (rotateKinect1Changed(true));}
-		void setRotateKinect2(bool i) {!i ? rotateKinect(2,m_angleKinect2): i=true; emit (rotateKinect2Changed(true));}
-		void setRotateKinect3(bool i) {!i ? rotateKinect(3,m_angleKinect3): i=true; emit (rotateKinect3Changed(true));}
-		void setRotateKinect4(bool i) {!i ? rotateKinect(4,m_angleKinect4): i=true; emit (rotateKinect4Changed(true));}
+		void setRotateKinect1(bool i) {!i ? rotateKinect(0,m_angleKinect1): i=true; emit (rotateKinect1Changed(true));}
+		void setRotateKinect2(bool i) {!i ? rotateKinect(1,m_angleKinect2): i=true; emit (rotateKinect2Changed(true));}
+		void setRotateKinect3(bool i) {!i ? rotateKinect(2,m_angleKinect3): i=true; emit (rotateKinect3Changed(true));}
+		void setRotateKinect4(bool i) {!i ? rotateKinect(3,m_angleKinect4): i=true; emit (rotateKinect4Changed(true));}
 		
 		//set angle in GUI
 		void setAngleKinect1(int alpha);
@@ -164,6 +225,24 @@ namespace plvmskinect
 		int m_cutyu;
 		int m_cutyd;
 		int m_cutz;
+		
+		int m_cutxl1;
+		int m_cutxr1;
+		int m_cutyu1;
+		int m_cutyd1;
+		int m_cutz1;
+
+		int m_cutxl2;
+		int m_cutxr2;
+		int m_cutyu2;
+		int m_cutyd2;
+		int m_cutz2;
+
+		int m_cutxl3;
+		int m_cutxr3;
+		int m_cutyu3;
+		int m_cutyd3;
+		int m_cutz3;
 
 		//kinect activator bool and int
 		bool m_rotateKinect1;

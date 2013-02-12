@@ -1167,7 +1167,7 @@ int KinectDevice::getAngle()
 	long angle;
 	//new way of initialisation due to depth requires new way of this as well
 	//m_nuiInstance->NuiCameraElevationGetAngle(&angle);
-	NuiCameraElevationGetAngle(&angle);
+	m_nuiInstance->NuiCameraElevationGetAngle(&angle);
 	//NuiCameraElevationGetAngle(&angle);
 	//TEMP also send the vecotr 4 values
 	//Vector4 gravityvector;
@@ -1187,7 +1187,8 @@ void KinectDevice::setAngle(int angle)
 	//To reduce wear, your application should change the elevation angle no more than once per second. 
 	//In addition, you must allow at least 20 seconds of rest after 15 consecutive changes. 
 	//If your application exceeds these limits, the tilt motor may experience a lock period during which attempting to set the elevation angle will result in an error code.
-	HRESULT kinectmove = NuiCameraElevationSetAngle(tempanglelong);
+	//HRESULT kinectmove = NuiCameraElevationSetAngle(tempanglelong);
+	HRESULT kinectmove = m_nuiInstance->NuiCameraElevationSetAngle(tempanglelong);
 
 	if (kinectmove == ERROR_RETRY)
 	{

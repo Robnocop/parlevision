@@ -37,7 +37,7 @@ namespace plvmskinect
         Q_DISABLE_COPY( KinectDevice )
 
     public:
-
+		//odd two times publice definition 2nd one seems better
         /** Possible camera states */
         enum KinectState {
             KINECT_UNINITIALIZED,
@@ -53,12 +53,12 @@ namespace plvmskinect
         bool deinit();
 
         void setState( KinectState state );
-        void setAngle(int angle);
+        
 		KinectState getState() const;
         int getId() const;
 		int width() const;
         int height() const;
-		int getAngle();
+		
 		//settings
 		int m_infrared;
 		int m_highres;
@@ -149,6 +149,8 @@ namespace plvmskinect
 		void setCutYU(int change) {m_cutyu = change;};
 		void setCutYD(int change) {m_cutyd = change;};
 		void setCutZ(int change) {m_cutz = change;};
+		int getAngle();
+		void setAngle(int angle);
 		
     };
 	////callback in plvm

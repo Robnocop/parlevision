@@ -15,6 +15,21 @@ MSKinectProducer::MSKinectProducer() :
 	m_cutyu(0),
 	m_cutyd(0),
 	m_cutz(0),
+	m_cutxl1(0),  //I am ashamed to have this ugly solution array or something would be better
+	m_cutxr1(0),
+	m_cutyu1(0),
+	m_cutyd1(0),
+	m_cutz1(0),
+	m_cutxl2(0),
+	m_cutxr2(0),
+	m_cutyu2(0),
+	m_cutyd2(0),
+	m_cutz2(0),
+	m_cutxl3(0),
+	m_cutxr3(0),
+	m_cutyu3(0),
+	m_cutyd3(0),
+	m_cutz3(0),
 	m_angleKinect1(0),
 	m_angleKinect2(0),
 	m_angleKinect3(0),
@@ -182,11 +197,37 @@ bool MSKinectProducer::init()
 		else
 		{
 			m_kinects.at(i)->setRealWorldCoord(m_realWorldCoord);
-			m_kinects.at(i)->setCutXL(m_cutxl);
-			m_kinects.at(i)->setCutXR(m_cutxr);
-			m_kinects.at(i)->setCutYU(m_cutyu);
-			m_kinects.at(i)->setCutYD(m_cutyd);
-			m_kinects.at(i)->setCutZ(m_cutz);
+			//sorry again for the ugliness
+			switch(i) {
+				case 0:
+					m_kinects.at(i)->setCutXL(m_cutxl);
+					m_kinects.at(i)->setCutXR(m_cutxr);
+					m_kinects.at(i)->setCutYU(m_cutyu);
+					m_kinects.at(i)->setCutYD(m_cutyd);
+					m_kinects.at(i)->setCutZ(m_cutz);
+					break;
+				case 1:
+					m_kinects.at(i)->setCutXL(m_cutxl1);
+					m_kinects.at(i)->setCutXR(m_cutxr1);
+					m_kinects.at(i)->setCutYU(m_cutyu1);
+					m_kinects.at(i)->setCutYD(m_cutyd1);
+					m_kinects.at(i)->setCutZ(m_cutz1);
+					break;
+				case 2:
+					m_kinects.at(i)->setCutXL(m_cutxl2);
+					m_kinects.at(i)->setCutXR(m_cutxr2);
+					m_kinects.at(i)->setCutYU(m_cutyu2);
+					m_kinects.at(i)->setCutYD(m_cutyd2);
+					m_kinects.at(i)->setCutZ(m_cutz2);
+					break;
+				case 3:
+					m_kinects.at(i)->setCutXL(m_cutxl3);
+					m_kinects.at(i)->setCutXR(m_cutxr3);
+					m_kinects.at(i)->setCutYU(m_cutyu3);
+					m_kinects.at(i)->setCutYD(m_cutyd3);
+					m_kinects.at(i)->setCutZ(m_cutz3);
+					break;
+			}
 		}
     }
 	
@@ -308,7 +349,10 @@ void MSKinectProducer::setCutXL(int value)
 	m_cutxl = value; 
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setCutXL(value);
+		if(i ==0)
+		{
+			m_kinects.at(i)->setCutXL(value);
+		}
 	}
 	emit (cutXChangedL(value));
 }
@@ -319,7 +363,10 @@ void MSKinectProducer::setCutXR(int value)
 	m_cutxr = value; 
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setCutXR(value);
+		if(i ==0)
+		{
+			m_kinects.at(i)->setCutXR(value);
+		}
 	}
 	emit (cutXChangedR(value));
 }
@@ -330,7 +377,10 @@ void MSKinectProducer::setCutYU(int value)
 	m_cutyu = value; 
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setCutYU(value);
+		if(i ==0)
+		{
+			m_kinects.at(i)->setCutYU(value);
+		}
 	}
 	emit (cutYChangedU(value));
 }
@@ -341,7 +391,10 @@ void MSKinectProducer::setCutYD(int value)
 	m_cutyd = value; 
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setCutYD(value);
+		if(i ==0)
+		{
+			m_kinects.at(i)->setCutYD(value);
+		}
 	}
 	emit (cutYChangedD(value));
 }
@@ -353,10 +406,235 @@ void MSKinectProducer::setCutZ(int value)
 	m_cutz = value; 
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setCutZ(value);
+		if(i ==0)
+		{
+			m_kinects.at(i)->setCutZ(value);
+		}
 	}
 	emit (cutZChanged(value));
 }
+
+////KINECT 2
+
+void MSKinectProducer::setCutXL1(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxl1 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==1)
+		{
+			m_kinects.at(i)->setCutXL(value);
+		}
+	}
+	emit (cutXChangedL1(value));
+}
+
+void MSKinectProducer::setCutXR1(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxr1 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==1)
+		{
+			m_kinects.at(i)->setCutXR(value);
+		}
+	}
+	emit (cutXChangedR1(value));
+}
+
+void MSKinectProducer::setCutYU1(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyu1 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==1)
+		{
+			m_kinects.at(i)->setCutYU(value);
+		}
+	}
+	emit (cutYChangedU1(value));
+}
+
+void MSKinectProducer::setCutYD1(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyd1 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==1)
+		{
+			m_kinects.at(i)->setCutYD(value);
+		}
+	}
+	emit (cutYChangedD1(value));
+}
+
+
+void MSKinectProducer::setCutZ1(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutz1 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==1)
+		{
+			m_kinects.at(i)->setCutZ(value);
+		}
+	}
+	emit (cutZChanged1(value));
+}
+
+///KINECT 3
+void MSKinectProducer::setCutXL2(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxl2 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==2)
+		{
+			m_kinects.at(i)->setCutXL(value);
+		}
+	}
+	emit (cutXChangedL2(value));
+}
+
+void MSKinectProducer::setCutXR2(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxr2 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==2)
+		{
+			m_kinects.at(i)->setCutXR(value);
+		}
+	}
+	emit (cutXChangedR2(value));
+}
+
+void MSKinectProducer::setCutYU2(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyu2 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==2)
+		{
+			m_kinects.at(i)->setCutYU(value);
+		}
+	}
+	emit (cutYChangedU2(value));
+}
+
+void MSKinectProducer::setCutYD2(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyd2 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==2)
+		{
+			m_kinects.at(i)->setCutYD(value);
+		}
+	}
+	emit (cutYChangedD2(value));
+}
+
+
+void MSKinectProducer::setCutZ2(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutz2 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==2)
+		{
+			m_kinects.at(i)->setCutZ(value);
+		}
+	}
+	emit (cutZChanged2(value));
+}
+
+//KINECT 4
+void MSKinectProducer::setCutXL3(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxl3 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==3)
+		{
+			m_kinects.at(i)->setCutXL(value);
+		}
+	}
+	emit (cutXChangedL3(value));
+}
+
+void MSKinectProducer::setCutXR3(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxr3 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==3)
+		{
+			m_kinects.at(i)->setCutXR(value);
+		}
+	}
+	emit (cutXChangedR3(value));
+}
+
+void MSKinectProducer::setCutYU3(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyu3 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==3)
+		{
+			m_kinects.at(i)->setCutYU(value);
+		}
+	}
+	emit (cutYChangedU3(value));
+}
+
+void MSKinectProducer::setCutYD3(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyd3 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==3)
+		{
+			m_kinects.at(i)->setCutYD(value);
+		}
+	}
+	emit (cutYChangedD3(value));
+}
+
+
+void MSKinectProducer::setCutZ3(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutz3 = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		if(i ==3)
+		{
+			m_kinects.at(i)->setCutZ(value);
+		}
+	}
+	emit (cutZChanged3(value));
+}
+
+
+
+
+
 
 //might want to add a limitation e.g no more than 2*27 degrees
 void MSKinectProducer::setAngleKinect1(int angle)
@@ -394,7 +672,7 @@ void MSKinectProducer::setAngleKinect4(int angle)
 //seperate method to get actual angle by sensor
 int MSKinectProducer::getAngleKinect(int device)
 {
-	if (device>0 && device <m_deviceCount+1)
+	if (device>-1 && device <m_deviceCount)
 	{
  		return m_kinects.at(device)->getAngle();
 	}
@@ -407,18 +685,20 @@ int MSKinectProducer::getAngleKinect(int device)
 
 void MSKinectProducer::rotateKinect(int device, int angle)
 {
-	if (device>0 && device <m_deviceCount+1)
+	qDebug() << device;
+	//? -1 or 0
+	if (device>-1 && device <m_deviceCount)
 	{
 		qDebug() << "trying to rotate the kinect to the set value";
 		//you can't know what the relative angle is as you do not know if it is tilted or not!
-		if ( abs(angle-getAngleKinect(1))<56 )
+		if ( abs(angle-getAngleKinect(device))<56 )
 		{
 			m_kinects.at(device)->setAngle(angle);
 			qDebug() << "new set angle" << getAngleKinect(device);
 		}
 		else
 		{
-			qDebug() << "can't rotate that much" << ", the current angle is" << getAngleKinect(1);
+			qDebug() << "can't rotate that much" << ", the current angle is" << getAngleKinect(device);
 		}
 	}
 	else
