@@ -6,17 +6,30 @@ using namespace plvmskinect;
 
 MSKinectProducer::MSKinectProducer() : 
 	m_deviceCount( 0 ),
-	m_realWorldCoord(true)
+	m_realWorldCoord(true),
+	m_rotateKinect1(true),
+	m_infrared(false),
+	m_highres(false),
+	m_cutxl(0),
+	m_cutxr(0),
+	m_cutyu(0),
+	m_cutyd(0),
+	m_cutz(0),
+	m_angleKinect1(0),
+	m_angleKinect2(0),
+	m_angleKinect3(0),
+	m_angleKinect4(0)
 {
     //NUIAPI HRESULT MSR_NUIGetDeviceCount( int * pCount ); // note capitalization
     //NUIAPI HRESULT MSR_NuiCreateInstanceByIndex( int Index, INuiInstance ** ppInstance );
     //NUIAPI void    MSR_NuiDestroyInstance( INuiInstance * pInstance );
-
+	
+	//Set kinect
+	setAngleKinect1(0);
     //MSR_NUIGetDeviceCount( &m_deviceCount );
 	qDebug() << "getting count";
 	NuiGetSensorCount( &m_deviceCount );
-	qDebug() << "I do set device callback"; 
-	//seems to create two statuscallbacks (runs twice
+	
 	//NuiSetDeviceStatusCallback(KinectStatusProc,&m_deviceCount);
 	NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 
@@ -78,12 +91,7 @@ MSKinectProducer::~MSKinectProducer()
 void  CALLBACK  MSKinectProducer::KinectStatusProc(HRESULT hr, const OLECHAR* instanceName, const OLECHAR* deviceName, void * pUserData)
 {   
 	// a Kinect has been plugged or unplugged
-	//TODO give feedback using the pUserData for pointing to a device number
-	//int* pint ;
-	//pint = (int*) pUserData;
-	//qDebug() << tr("Kinect has been plugged or uplugged").arg(blabla);
 	qDebug() << "Kinect has been plugged or uplugged";
-	//qDebug() << tr("sensor count %1 ").arg(m_deviceCount);
 	reinterpret_cast<MSKinectProducer *>(pUserData)->Nui_StatusProc( hr, instanceName, deviceName );
 }
 
@@ -111,7 +119,7 @@ void CALLBACK MSKinectProducer::Nui_StatusProc( HRESULT hrStatus, const OLECHAR*
 		}
 		else
 		{
-			qDebug() << "please reconnect Kinect, replace MSKinectProducer or restart Parlevision, you somehow wtill seem to have no devices left";
+			qDebug() << "please reconnect Kinect, replace MSKinectProducer or restart Parlevision, you somehow still seem to have no devices";
 		}
 
 
@@ -146,6 +154,7 @@ void CALLBACK MSKinectProducer::Nui_StatusProc( HRESULT hrStatus, const OLECHAR*
 
 bool MSKinectProducer::init()
 {	
+	setAngleKinect1(0);
 	//qDebug() << "I do set device callback"; 
 	//NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 	for( int i = 0; i < m_deviceCount; ++i )
@@ -153,6 +162,12 @@ bool MSKinectProducer::init()
 		//NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 		//NuiSetDeviceStatusCallback((NuiStatusProc)&KinectStatusProc, NULL);
 		//declared as QVector< KinectDevice* > m_kinects;
+		
+		//the infrared//color input can not be switched during the process so should be set in the init or start;
+		m_kinects.at(i)->m_infrared=getInfrared();
+		m_kinects.at(i)->m_highres=getHighres();
+		
+
         if( !m_kinects.at(i)->init() )
         {
 		    setError( PlvPipelineInitError, tr("Kinect with id %1 failed to initialise").arg(m_kinects.at(i)->getId()) );
@@ -167,8 +182,14 @@ bool MSKinectProducer::init()
 		else
 		{
 			m_kinects.at(i)->setRealWorldCoord(m_realWorldCoord);
+			m_kinects.at(i)->setCutXL(m_cutxl);
+			m_kinects.at(i)->setCutXR(m_cutxr);
+			m_kinects.at(i)->setCutYU(m_cutyu);
+			m_kinects.at(i)->setCutYD(m_cutyd);
+			m_kinects.at(i)->setCutZ(m_cutz);
 		}
     }
+	
     return true;
 }
 
@@ -191,6 +212,7 @@ bool MSKinectProducer::start()
 	for( int i = 0; i < m_deviceCount; ++i )
     {
         m_kinects.at(i)->start();
+		setAngleKinect1((int) getAngleKinect(1));
     }
     return true;
 }
@@ -222,6 +244,7 @@ bool MSKinectProducer::produce()
             m_skeletonFrames[i] = SkeletonFrame();
         }
     }
+
     return true;
 }
 
@@ -233,19 +256,8 @@ bool MSKinectProducer::readyToProduce() const
     {
         ready = m_depthFrames.at(i).isValid() && m_videoFrames.at(i).isValid();
     }
+		
     return ready;
-}
-
-void MSKinectProducer::setRealWorldCoord(bool change)
-{
-	QMutexLocker lock(m_propertyMutex);
-	m_realWorldCoord = change; 
-	qDebug() << "restart pipeline to incorporate realworldcoord changes"; 
-	for (int i=0;i<m_deviceCount;i++)
-	{
-		m_kinects.at(i)->setRealWorldCoord(change);
-	}
-	emit (realWorldCoordChanged(change));
 }
 
 void MSKinectProducer::newDepthFrame( int deviceIndex, plv::CvMatData depth )
@@ -277,4 +289,140 @@ void MSKinectProducer::kinectFinished( int deviceIndex )
         setError( PlvNonFatalError, tr("Kinect with ID %1 quit unexpectedly.").arg(deviceIndex) );
         emit onError( PlvNonFatalError, this );
     }
+}
+
+void MSKinectProducer::setRealWorldCoord(bool change)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_realWorldCoord = change; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setRealWorldCoord(change);
+	}
+	emit (realWorldCoordChanged(change));
+}
+
+void MSKinectProducer::setCutXL(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxl = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setCutXL(value);
+	}
+	emit (cutXChangedL(value));
+}
+
+void MSKinectProducer::setCutXR(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutxr = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setCutXR(value);
+	}
+	emit (cutXChangedR(value));
+}
+
+void MSKinectProducer::setCutYU(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyu = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setCutYU(value);
+	}
+	emit (cutYChangedU(value));
+}
+
+void MSKinectProducer::setCutYD(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutyd = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setCutYD(value);
+	}
+	emit (cutYChangedD(value));
+}
+
+
+void MSKinectProducer::setCutZ(int value)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_cutz = value; 
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setCutZ(value);
+	}
+	emit (cutZChanged(value));
+}
+
+//might want to add a limitation e.g no more than 2*27 degrees
+void MSKinectProducer::setAngleKinect1(int angle)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_angleKinect1 = angle;
+	angleKinect1Changed(m_angleKinect1);
+	qDebug() << "actual angle" << getAngleKinect(1);
+}
+
+void MSKinectProducer::setAngleKinect2(int angle)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_angleKinect2 = angle;
+	angleKinect2Changed(m_angleKinect2);
+	qDebug() << "actual angle" << getAngleKinect(2);
+}
+
+void MSKinectProducer::setAngleKinect3(int angle)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_angleKinect3 = angle;
+	angleKinect3Changed(m_angleKinect3);
+	qDebug() << "actual angle" << getAngleKinect(3);
+}
+
+void MSKinectProducer::setAngleKinect4(int angle)
+{
+	QMutexLocker lock(m_propertyMutex);
+	m_angleKinect4 = angle;
+	angleKinect4Changed(m_angleKinect4);
+	qDebug() << "actual angle" << getAngleKinect(4);
+}
+
+//seperate method to get actual angle by sensor
+int MSKinectProducer::getAngleKinect(int device)
+{
+	if (device>0 && device <m_deviceCount+1)
+	{
+ 		return m_kinects.at(device)->getAngle();
+	}
+	else
+	{
+		qDebug() << "you requested/set a Kinect angle that is unavailable";
+		return 0;
+	}
+}
+
+void MSKinectProducer::rotateKinect(int device, int angle)
+{
+	if (device>0 && device <m_deviceCount+1)
+	{
+		qDebug() << "trying to rotate the kinect to the set value";
+		//you can't know what the relative angle is as you do not know if it is tilted or not!
+		if ( abs(angle-getAngleKinect(1))<56 )
+		{
+			m_kinects.at(device)->setAngle(angle);
+			qDebug() << "new set angle" << getAngleKinect(device);
+		}
+		else
+		{
+			qDebug() << "can't rotate that much" << ", the current angle is" << getAngleKinect(1);
+		}
+	}
+	else
+	{
+		qDebug() << "you requested to rotate a Kinect device that is unavailable";
+	}
 }

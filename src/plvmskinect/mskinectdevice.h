@@ -24,7 +24,7 @@
 
 #include "mskinectplugin_global.h"
 #include "mskinectdatatypes.h"
-
+#include "D:\ddevelop\mrKinectSDK\inc\NuiSensor.h"
 #include <QThread>
 #include <plvcore/CvMatData.h>
 #include <QMutex>
@@ -53,10 +53,18 @@ namespace plvmskinect
         bool deinit();
 
         void setState( KinectState state );
-        KinectState getState() const;
+        void setAngle(int angle);
+		KinectState getState() const;
         int getId() const;
-        int width() const;
+		int width() const;
         int height() const;
+		int getAngle();
+		//settings
+		int m_infrared;
+		int m_highres;
+		int m_xcutoff;
+		int m_ycutoff;
+		int m_zcutoff;
 
         virtual void run();
 		//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);
@@ -64,6 +72,11 @@ namespace plvmskinect
     private:
         int         m_id;
 		bool m_realcoord;
+		int m_cutxl;
+		int m_cutxr;
+		int m_cutyu;
+		int m_cutyd;
+		int m_cutz;
 		KinectState m_state;
         //old INuiInstance* m_nuiInstance;
         INuiSensor*	m_nuiInstance;
@@ -81,7 +94,9 @@ namespace plvmskinect
         HANDLE      m_hNextVideoFrameEvent;
         HANDLE      m_hNextSkeletonEvent;
         HANDLE      m_pDepthStreamHandle;
-        HANDLE      m_pVideoStreamHandle;
+        //full depth
+		HANDLE		m_pDepthStreamHandle2; 
+		HANDLE      m_pVideoStreamHandle;
 //        HFONT       m_hFontFPS;
 
 //        HDC         m_SkeletonDC;
@@ -101,9 +116,19 @@ namespace plvmskinect
         void Nui_GotVideoAlert();
         void Nui_GotSkeletonAlert();
 		RGBQUAD Nui_ShortToQuad_DepthAndPlayerIndex( USHORT s );
-		BYTE Nui_ShortToIntensity( USHORT s); 
+		//BYTE Nui_ShortToIntensity( USHORT s); 
 		bool getRealWorldCoord() {return m_realcoord;};
-		void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint);
+		int getCutXL() {return m_cutxl;};
+		int getCutXR() {return m_cutxr;};
+		int getCutYU() {return m_cutyu;};
+		int getCutYD() {return m_cutyd;};
+		int getCutZ() {return m_cutz;};
+
+		void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint, int cxl, int cxr,int cyu ,int cyd, int cz);
+		//void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord);
+		Vector4 TransformationToRealworldEucledianPoints(int x,int y, USHORT z);
+		int TransformationToRealworldEucledianPointX(int x, USHORT z);
+		int TransformationToRealworldEucledianPointY(int x, USHORT z);
 
     signals:
         void newDepthFrame( int deviceIndex, plv::CvMatData frame );
@@ -119,6 +144,11 @@ namespace plvmskinect
 	//temps solution
 	public:		
 		void setRealWorldCoord(bool change) {m_realcoord= change;};
+		void setCutXL(int change) {m_cutxl = change;};
+		void setCutXR(int change) {m_cutxr = change;};
+		void setCutYU(int change) {m_cutyu = change;};
+		void setCutYD(int change) {m_cutyd = change;};
+		void setCutZ(int change) {m_cutz = change;};
 		
     };
 	////callback in plvm
