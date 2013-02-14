@@ -13,6 +13,7 @@ SRC_SUBDIRS += plvtest
 SRC_SUBDIRS += plvsynchrony
 SRC_SUBDIRS += plvfreenect
 SRC_SUBDIRS += plvmskinect
+SRC_SUBDIRS += plvadvancedtracking
 
 SUBDIRS += $$SRC_SUBDIRS
 

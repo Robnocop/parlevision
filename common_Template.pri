@@ -51,7 +51,7 @@ win32-msvc2010 {
 }
 
 #-lopencv_imgproc242d \
-
+#the original common.pri uses a more sufficticated solution that would diminish the work to change this.
 win32 {
     CONFIG(release,debug|release){
     LIBS += -lopencv_calib3d242 \
