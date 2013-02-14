@@ -80,13 +80,13 @@ namespace plvopencv
         plv::CvMatDataOutputPin* m_outBackground;
         plv::CvMatData m_background;
         //plv::CvMatData m_backgroundGray;
-		cv::Mat m_backgroundGray;
+		//more logical cv::Mat m_backgroundGray;
         int m_threshold;
         int m_replacement;
         plv::Enum m_method;
         bool m_reset;
 
-        void setBackground(plv::CvMatData& mat);
+        void setBackground(plv::CvMatData& mat, int depthorg);
     };
 }
 #endif // BackgroundSubtractor_H

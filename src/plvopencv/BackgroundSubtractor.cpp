@@ -76,6 +76,9 @@ BackgroundSubtractor::~BackgroundSubtractor()
 bool BackgroundSubtractor::process()
 {
     CvMatData in = m_inInput->get();
+	int depthoforg = in.depth();
+	//qDebug() << "depth"<< in.depth() << "tostring" << in.depthToString(in.depth());
+	
 	//added
 	//cv::Mat& bgmat = m_backgroundGray;
 	
@@ -85,21 +88,22 @@ bool BackgroundSubtractor::process()
 	// m_reset is true on initialisation
     // so the background is always initialized
     // to the first frame received
-    if( m_reset )
+    if( m_reset && m_inBackground->hasData())
     {
         //added
+		
 		CvMatData inbg = m_inBackground->get();
 		//renamed instead of in use inbg right?
-		setBackground(inbg);
-        setReset(false);
+		qDebug() << "depthbackground" << inbg.depthToString(inbg.depth()) << "not tostring" << inbg.depth() ;
+		setBackground(inbg, depthoforg);
+		setReset(false);
     }
-
-    if( m_inBackground->isConnected() && m_inBackground->hasData() )
+	else if( m_inBackground->isConnected() && m_inBackground->hasData() )
     {
 		//this will always be true (in most cases ;) )qDebug() << "i am connected and have data";
         //TODO add a selection whether to reset the background every frame, waste of processing and memory in most cases
 		CvMatData inbg = m_inBackground->get();
-        setBackground(inbg);
+        setBackground(inbg, depthoforg);
     }
 
     if( m_inReset->isConnected() && m_inReset->hasData() )
@@ -109,7 +113,7 @@ bool BackgroundSubtractor::process()
         if( value )
         {
 			CvMatData inbg = m_inBackground->get();
-			setBackground(inbg);
+			setBackground(inbg, depthoforg);
             //setBackground(in);
         }
     }
@@ -117,9 +121,10 @@ bool BackgroundSubtractor::process()
 	//due some strange changes ?I? made opencv function need a cv::mat instead of cvmatdata.
 	cv::Mat& inmat = in;
 
-    //check format of images
+    
     if( !m_background.isEmpty() )
     {
+		//check format of images
 		if( in.width() != m_background.width() || in.height() != m_background.height() )
         {
             qDebug() << "images do not have the same size" ;
@@ -130,7 +135,7 @@ bool BackgroundSubtractor::process()
 			cv::resize(resize, resizedist, inmat.size(), 0, 0);
 			CvMatData resized = CvMatData::create(resizedist.rows, resizedist.cols, 1);
 			resized = resizedist;
-			setBackground(resized);
+			setBackground(resized, depthoforg);
         }
 
 		//check if resizing worked if the function of resizing becomes optional so does this, now it is needed and should throw a stop pipeline.
@@ -142,6 +147,8 @@ bool BackgroundSubtractor::process()
 			return false;
 		}
 
+		// TODO reattach the difference either absdiff over grayscale or over colour pics see org code!
+		//STILL does't work!
 		if( m_method.getSelectedValue() == BGSM_GRAYSCALE )
         {
 			CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
@@ -149,21 +156,52 @@ bool BackgroundSubtractor::process()
 			
 			cv::Mat& srcGraymat = srcGray;
 			cv::Mat& distGray = outGray;
-			//cv::Mat& mbg = m_background;
+			cv::Mat& mbg = m_background;
 			
-			////shouldn't be here
+		
+			////?shouldn't be here
             if( in.channels() == 3 )
             {
                // cv::cvtColor( in, srcGray, CV_RGB2GRAY );
+				//src,dst,coler code conversion ,dstcn
 				cv::cvtColor( inmat, srcGraymat, CV_RGB2GRAY );
 			}
             else
             {
-                srcGraymat = in;
-            }
+				srcGraymat = in;
+			}
+
+				//a CV_16U ==2 
+			// converttto( dstmat. desttype, optional scale, optional delta
+			if (depthoforg ==2)
+			{
+				//cv::Mat depth32;
+				//float scaleFactor = 1.0;
+				//srcGraymat.convertTo(depth32, CV_32F, scaleFactor);
+				//will this work? no it doesnt apparently
+				//srcGraymat = depth32;
+				//TODO change back to a float scaling as it throws away valuable info at the moment. however the float scaling did not work yet. this does 
+				CvMatData depthTypeChange;
+				depthTypeChange = CvMatData::create(srcGraymat.cols, srcGraymat.rows, CV_8U, 1);
+				cv::Mat& dTC = depthTypeChange;
+				cv::convertScaleAbs(srcGraymat, dTC, 0.00390625, 0);
+				srcGraymat = dTC;
+				//qDebug() << "depth is " << srcGraymat.depth() << "no? "<< depthoforg;
+			}
+			else if (depthoforg != 0)
+			{
+				cv::Mat depth8u;
+				srcGraymat.convertTo(depth8u, CV_8U);
+				//will this work?
+				srcGraymat = depth8u;
+			}
+
             //cv::absdiff( srcGray, m_backgroundGray, outGray );
 			//changed m_backgroundgray to cv::mat
-            cv::absdiff( srcGraymat, m_backgroundGray, distGray );
+            //this seems more logical cv::absdiff( srcGraymat, m_backgroundGray, distGray );
+			cv::absdiff( srcGraymat, mbg, distGray );
+			
+			//this function only takes eight bit unsigned or 32_F arrays
 			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
             cv::threshold( distGray , distGray, m_threshold, m_replacement, CV_THRESH_BINARY );
             
@@ -174,21 +212,19 @@ bool BackgroundSubtractor::process()
         {
             CvMatData tmp = CvMatData::create(in.properties());
             cv::Mat& tmpmat = tmp;
-			//MBG is incorrect
-			//bgmat is 
+
 			cv::Mat& mbg = m_background;
-			cv::Mat& bgmat = m_backgroundGray;
-			//cv::absdiff( in, m_background, tmp );
-            //not cv::absdiff( inmat, bgmat, tmpmat  );
+			//never used
+			//cv::Mat& bgmat = m_backgroundGray;
+			
 			cv::absdiff( inmat, mbg, tmpmat  );
-			//cv::threshold( tmp, tmp, m_threshold, m_replacement, CV_THRESH_BINARY );
 			cv::threshold( tmpmat, tmpmat, m_threshold, m_replacement, CV_THRESH_BINARY );
 			
             CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
 			cv::Mat& distGray = outGray;
-            //cv::cvtColor( tmp, outGray, CV_RGB2GRAY );
+            
             cv::cvtColor( tmpmat, distGray, CV_RGB2GRAY );
-			//cv::threshold( outGray, outGray, m_threshold, m_replacement, CV_THRESH_BINARY );
+			
 			cv::threshold( distGray, distGray, m_threshold, m_replacement, CV_THRESH_BINARY );
             m_outForeground->put(distGray);
         }
@@ -197,11 +233,7 @@ bool BackgroundSubtractor::process()
             CvMatData out = CvMatData::create(in.properties());
 			cv::Mat& dst2 = out;
 			cv::Mat& mbg = m_background;
-            //cv::absdiff( in, m_background, out );
             cv::absdiff( inmat, mbg, dst2 );
-            //isn't neceesary ??
-			//m_background = mbg;
-			//cv::threshold( out, out, m_threshold, m_replacement, CV_THRESH_BINARY );
             cv::threshold( dst2 , dst2 , m_threshold, m_replacement, CV_THRESH_BINARY );
 			m_outForeground->put(dst2);
         }
@@ -216,23 +248,47 @@ bool BackgroundSubtractor::process()
     return true;
 }
 
-void BackgroundSubtractor::setBackground(CvMatData& mat)
+void BackgroundSubtractor::setBackground(CvMatData& mat, int depthorg)
 {
     m_background = mat;
 	cv::Mat& mbg = m_background;
-	cv::Mat& bgmat = m_backgroundGray;
+	//more logical cv::Mat& bgmat = m_backgroundGray;
+
+	if (m_background.depth() == CV_16U)
+	{
+		//CV_8U ==0, CV_16U ==2 
+		//impossible right ==0  so changed to ==1 ?cv_32_f
+		if(depthorg == CV_32F)
+		{
+			cv::Mat depth32;
+			float scaleFactor = 1.0;
+			mbg.convertTo(depth32, CV_8U, scaleFactor);
+		} else 
+		{
+			CvMatData depthTypeChange;
+			depthTypeChange = CvMatData::create(mbg.cols, mbg.rows, CV_8U, 1);
+			cv::Mat& dTC = depthTypeChange;
+			//1/2^8
+			cv::convertScaleAbs(mbg, dTC, 0.00390625,0.0);
+			mbg = dTC;
+			qDebug() << "depth of background is " << mbg.depth() << "no? "<< depthorg;
+
+			/*cv::Mat depth32;
+			float scaleFactor = 1.0;
+			mbg.convertTo(depth32, CV_32F, scaleFactor);*/
+		}
+	}
 
     if( m_background.channels() == 3 )
     {
+		cv::Mat bgmat;
 		cv::cvtColor(mbg , bgmat, CV_RGB2GRAY );
-        //cv::cvtColor(m_background, m_backgroundGray, CV_RGB2GRAY );
-		//try to save it to mbg
-		m_background = mbg;
-		m_backgroundGray = bgmat; 
+      	m_background = bgmat;
+		//more logical m_backgroundGray = bgmat; 
     }
     else
     {
-        m_backgroundGray = mat;
+        //more logical m_backgroundGray = mat;
 		m_background = mbg;
     }
 }
