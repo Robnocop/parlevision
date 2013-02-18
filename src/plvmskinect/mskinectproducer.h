@@ -93,31 +93,32 @@ namespace plvmskinect
 		bool getRealWorldCoord() { return m_realWorldCoord; };
 		bool getInfrared() { return m_infrared; };
 		bool getHighres() { return m_highres; };
-		bool getCutXL() { return m_cutxl; };
-		bool getCutXR() { return m_cutxr; };
-		bool getCutYU() { return m_cutyu; };
-		bool getCutYD() { return m_cutyd; };
+
+		int getCutXL() { return m_cutxl; };
+		int getCutXR() { return m_cutxr; };
+		int getCutYU() { return m_cutyu; };
+		int getCutYD() { return m_cutyd; };
 		
 		//TODO independent cutable Kinects!!
-		bool getCutXL1() { return m_cutxl1; };
-		bool getCutXR1() { return m_cutxr1; };
-		bool getCutYU1() { return m_cutyu1; };
-		bool getCutYD1() { return m_cutyd1; };
+		int getCutXL1() { return m_cutxl1; };
+		int getCutXR1() { return m_cutxr1; };
+		int getCutYU1() { return m_cutyu1; };
+		int getCutYD1() { return m_cutyd1; };
 		
-		bool getCutXL2() { return m_cutxl2; };
-		bool getCutXR2() { return m_cutxr2; };
-		bool getCutYU2() { return m_cutyu2; };
-		bool getCutYD2() { return m_cutyd2; };
+		int getCutXL2() { return m_cutxl2; };
+		int getCutXR2() { return m_cutxr2; };
+		int getCutYU2() { return m_cutyu2; };
+		int getCutYD2() { return m_cutyd2; };
 		
-		bool getCutXL3() { return m_cutxl3; };
-		bool getCutXR3() { return m_cutxr3; };
-		bool getCutYU3() { return m_cutyu3; };
-		bool getCutYD3() { return m_cutyd3; };
+		int getCutXL3() { return m_cutxl3; };
+		int getCutXR3() { return m_cutxr3; };
+		int getCutYU3() { return m_cutyu3; };
+		int getCutYD3() { return m_cutyd3; };
 
-		bool getCutZ() { return m_cutz; };
-		bool getCutZ1() { return m_cutz1; };
-		bool getCutZ2() { return m_cutz2; };
-		bool getCutZ3() { return m_cutz3; };
+		int getCutZ() { return m_cutz; };
+		int getCutZ1() { return m_cutz1; };
+		int getCutZ2() { return m_cutz2; };
+		int getCutZ3() { return m_cutz3; };
 
 		int getAngleKinect(int device);
 		//the actual activator
@@ -129,7 +130,6 @@ namespace plvmskinect
 		void highresChanged(bool newValue);
 		
 		void cutZChanged(int value);
-
 		void cutXChangedL(int value);
 		void cutXChangedR(int value);
 		void cutYChangedU(int value);
@@ -145,7 +145,6 @@ namespace plvmskinect
 		void cutXChangedR2(int value);
 		void cutYChangedU2(int value);
 		void cutYChangedD2(int value);
-		
 		void cutZChanged2(int value);
 
 		void cutXChangedL3(int value);
@@ -244,6 +243,9 @@ namespace plvmskinect
 		int m_cutyd3;
 		int m_cutz3;
 
+		int m_maxScaleX;
+		int m_maxScaleY;
+
 		//kinect activator bool and int
 		bool m_rotateKinect1;
 		int m_angleKinect1;
@@ -287,7 +289,10 @@ namespace plvmskinect
 	//   void CALLBACK           Nui_StatusProc( HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName );
 		static void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName, void* pUserData);
 		void CALLBACK           Nui_StatusProc( HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName );
+
+		void setMaxScale ();
     };
+
 }
 
 #endif // MSKINECTPRODUCER_H

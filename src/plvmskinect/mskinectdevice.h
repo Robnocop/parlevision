@@ -77,6 +77,9 @@ namespace plvmskinect
 		int m_cutyu;
 		int m_cutyd;
 		int m_cutz;
+		int m_maxscalex;
+		int m_maxscaley;
+
 		KinectState m_state;
         //old INuiInstance* m_nuiInstance;
         INuiSensor*	m_nuiInstance;
@@ -124,7 +127,10 @@ namespace plvmskinect
 		int getCutYD() {return m_cutyd;};
 		int getCutZ() {return m_cutz;};
 
-		void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint, int cxl, int cxr,int cyu ,int cyd, int cz);
+		int getMaxScaleX() {return m_maxscalex;};
+		int getMaxScaleY() {return m_maxscaley;};
+
+		void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint, int cxl, int cxr,int cyu ,int cyd);
 		//void FrontalImage(cv::Mat& projection, Vector4 realWorldCoord);
 		Vector4 TransformationToRealworldEucledianPoints(int x,int y, USHORT z);
 		int TransformationToRealworldEucledianPointX(int x, USHORT z);
@@ -152,6 +158,7 @@ namespace plvmskinect
 		void setCutZ(int change) {m_cutz = change;};
 		int getAngle();
 		void setAngle(int angle);
+		void setMaxScale(int x, int y);
 
     };
 	////callback in plvm

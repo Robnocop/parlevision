@@ -46,6 +46,8 @@ KinectDevice::KinectDevice(int id, QObject* parent) :
 	m_cutyu = 0;
 	m_cutyd = 0;
 	m_cutz = 0;
+	m_maxscalex= 8960;
+	m_maxscaley= 6726;
 	m_infrared = false;
 	m_highres = false;
     connect( this, SIGNAL( finished()), this, SLOT( threadFinished()) );
@@ -589,7 +591,8 @@ void KinectDevice::Nui_GotDepthAlert()
 						//assume it is actual depth in mm
 						//j = y*width+x
 						//realz = pBuffer[j].depth>>1;
-						realz = pBuffer[y*width+x].depth>>1;
+						realz = pBuffer[y*width+x].depth; 
+						//based on emperical results with cutz value a cz would cut image after 2m 
 						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
 						{
 							//KINECT realpoint transformation just give it up!
@@ -633,7 +636,7 @@ void KinectDevice::Nui_GotDepthAlert()
 								qDebug() << "check y" << realPoints.y << "kinecty " << realPointsKinect.y << "mapped" << realPointsKinect2.y *1000 << "int y" << realy << "z "<< realz; 
 							}*/
 							
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd,cz);
+							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
 						}
 					
 						/*if (realPoints.x < minx)
@@ -674,14 +677,14 @@ void KinectDevice::Nui_GotDepthAlert()
 					for( int x = width/2 ; x > 0; x-- )	
 					{
 						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth>>1;
+						realz = pBuffer[y*width+x].depth;
 						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
 						{
 							test.x = x;
 							test.y = y;
 							test.depth = pBuffer[y*width+x].depth;
 							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd,cz);
+							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
 						}
 						//j++;
 					}
@@ -692,14 +695,14 @@ void KinectDevice::Nui_GotDepthAlert()
 					for( int x = width/2 ; x<width; x++ )	
 					{
 						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth>>1;
+						realz = pBuffer[y*width+x].depth;
 						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
 						{
 							test.x = x;
 							test.y = y;
 							test.depth = pBuffer[y*width+x].depth;
 							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd,cz);
+							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
 						}
 						//j++;
 					}
@@ -707,14 +710,14 @@ void KinectDevice::Nui_GotDepthAlert()
 					for( int x = width/2 ; x > 0; x-- )	
 					{
 						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth>>1;
+						realz = pBuffer[y*width+x].depth;
 						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
 						{
 							test.x = x;
 							test.y = y;
 							test.depth = pBuffer[y*width+x].depth;
 							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd,cz);
+							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
 						}
 						//j++;
 					}
@@ -798,6 +801,14 @@ void KinectDevice::Nui_GotDepthAlert()
 	//NuiImageStreamReleaseFrame( m_pDepthStreamHandle, pImageFrame );
 }
 
+void KinectDevice::setMaxScale(int x, int y)
+{
+	m_maxscalex = x;
+	m_maxscaley = y;
+	qDebug() << "set scale in device" << m_maxscalex << "y is " <<m_maxscaley;
+}
+
+
 //z-depth is planar distance so always zreal in eucleudian distances,
 //fov vertical is 45.6 and 58.5 horizontal for depth according to API constant http://msdn.microsoft.com/en-us/library/hh855368
 //half is 29.25 22.8
@@ -848,7 +859,7 @@ int KinectDevice::TransformationToRealworldEucledianPointY(int y, USHORT z)
 //odd cutxl and cutxt seem to be switched. 
 //TODO x is also mirrored so simplest solution is to switch the values here for the time being
 //int cutxr, int cutxl
-void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint, int cutxr, int cutxl, int cutyu, int cutyd, int cutz)
+void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USHORT bufferpoint, int cutxr, int cutxl, int cutyu, int cutyd)
 //void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord)
 {
 	//is a coordinate mapper faster: http://msdn.microsoft.com/en-us/library/nuisensor.nuicreatecoordinatemapperfromparameters.aspx
@@ -891,7 +902,7 @@ void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USH
 	}
 	
 	bufferpoint = bufferpoint << 3;
-	cutz = cutz << 4; //one bitshift smaller makes m so three makes it maximum visibility so 4 to get from depth to 
+	//cutz = cutz << 4; //one bitshift smaller makes m so three makes it maximum visibility so 4 to get from depth to 
 
 	//temp solution
 	realWorldCoord.x  = realWorldCoord.x*1000;
@@ -910,11 +921,11 @@ void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USH
 		//if (cutz == 0 || ((cutz>0) && (bufferpoint<cutz)) )
 		//{
 			//int y= (int) ((realWorldCoord.y+ maxy)* 240/maxy);
-			int y= (int) ((realWorldCoord.y+ actualcutyd)* 480/(actualcutyu+actualcutyd));
+			int y= (int) ((realWorldCoord.y+ actualcutyd)* 480/(getMaxScaleY())); //actualcutyu+actualcutyd
 			if (y>-1 && y<480)
 			{
 				//int x= (int) ((realWorldCoord.x+ 2.2f)* (640/4.4f));
-				int x= (int) ((realWorldCoord.x+ actualcutxl)* 640/(actualcutxl+actualcutxr));
+				int x= (int) ((realWorldCoord.x+ actualcutxl)* 640/(getMaxScaleX()));
 				if (x>-1 && x<640)
 				{
 					//flipped???? why does the SDK continu to do this, strange!

@@ -30,6 +30,8 @@ MSKinectProducer::MSKinectProducer() :
 	m_cutyu3(0),
 	m_cutyd3(0),
 	m_cutz3(0),
+	m_maxScaleX(8960),
+	m_maxScaleY(6726),
 	m_angleKinect1(0),
 	m_angleKinect2(0),
 	m_angleKinect3(0),
@@ -334,6 +336,185 @@ void MSKinectProducer::kinectFinished( int deviceIndex )
     }
 }
 
+void MSKinectProducer::setMaxScale()
+{
+	int templ;
+	int tempr;
+	int tempu;
+	int tempd;
+	m_maxScaleX =0;
+	m_maxScaleY =0;
+
+	//need to ttest all the values every time one changes
+	if (m_cutxl>0)
+	{
+		templ = m_cutxl;
+	}
+	else
+	{
+		templ = 4480;
+	}
+	
+	if (m_cutxr>0)
+	{
+		tempr = m_cutxr;
+	}
+	else {
+		tempr = 4480;
+	}
+
+	if (m_cutyu>0)
+	{
+		tempu = m_cutyu;
+	}
+	else
+	{
+		tempu = 3363;
+	}
+
+	if (m_cutyd>0)
+	{
+		tempd = m_cutyd;
+	}
+	else
+	{
+		tempd = 3363;
+	}
+	
+	if ((templ+tempr)>m_maxScaleX) {m_maxScaleX=templ+tempr;};
+	if ((tempu+tempd)>m_maxScaleY) {m_maxScaleY=tempu+tempd;};
+
+	if (m_cutxl1>0)
+	{
+		templ = m_cutxl1;
+	}
+	else
+	{
+		templ = 4480;
+	}
+	
+	if (m_cutxr1>0)
+	{
+		tempr = m_cutxr1;
+	}
+	else {
+		tempr = 4480;
+	}
+
+	if (m_cutyu1>0)
+	{
+		tempu = m_cutyu1;
+	}
+	else
+	{
+		tempu = 3363;
+	}
+
+	if (m_cutyd1>0)
+	{
+		tempd = m_cutyd1;
+	}
+	else
+	{
+		tempd = 3363;
+	}
+
+	if ( m_deviceCount>1)
+	{
+		if ((templ+tempr)>m_maxScaleX) m_maxScaleX=templ+tempr;
+		if ((tempu+tempd)>m_maxScaleY) m_maxScaleY=tempu+tempd;
+	}
+
+	if (m_cutxl2>0)
+	{
+		templ = m_cutxl2;
+	}
+	else
+	{
+		templ = 4480;
+	}
+	
+	if (m_cutxr2>0)
+	{
+		tempr = m_cutxr2;
+	}
+	else {
+		tempr = 4480;
+	}
+
+	if (m_cutyu2>0)
+	{
+		tempu = m_cutyu2;
+	}
+	else
+	{
+		tempu = 3363;
+	}
+
+	if (m_cutyd2>0)
+	{
+		tempd = m_cutyd2;
+	}
+	else
+	{
+		tempd = 3363;
+	}
+
+	if ( m_deviceCount>2)
+	{
+		if ((templ+tempr)>m_maxScaleX) m_maxScaleX=templ+tempr;
+		if ((tempu+tempd)>m_maxScaleY) m_maxScaleY=tempu+tempd;
+	}
+
+	if (m_cutxl3>0)
+	{
+		templ = m_cutxl3;
+	}
+	else
+	{
+		templ = 4480;
+	}
+	
+	if (m_cutxr3>0)
+	{
+		tempr = m_cutxr3;
+	}
+	else {
+		tempr = 4480;
+	}
+
+	if (m_cutyu3>0)
+	{
+		tempu = m_cutyu3;
+	}
+	else
+	{
+		tempu = 3363;
+	}
+
+	if (m_cutyd3>0)
+	{
+		tempd = m_cutyd3;
+	}
+	else
+	{
+		tempd = 3363;
+	}
+	
+	if ( m_deviceCount>3)
+	{
+		if ((templ+tempr)>m_maxScaleX) m_maxScaleX=templ+tempr;
+		if ((tempu+tempd)>m_maxScaleY) m_maxScaleY=tempu+tempd;
+	}
+
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		m_kinects.at(i)->setMaxScale(m_maxScaleX,m_maxScaleY);
+		qDebug() << "set scale in producer" << m_maxScaleX << "y is "<< m_maxScaleY;
+	}
+
+}
+
 void MSKinectProducer::setRealWorldCoord(bool change)
 {
 	QMutexLocker lock(m_propertyMutex);
@@ -356,6 +537,7 @@ void MSKinectProducer::setCutXL(int value)
 			m_kinects.at(i)->setCutXL(value);
 		}
 	}
+	setMaxScale();
 	emit (cutXChangedL(value));
 }
 
@@ -371,6 +553,7 @@ void MSKinectProducer::setCutXR(int value)
 		}
 	}
 	emit (cutXChangedR(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYU(int value)
@@ -385,6 +568,7 @@ void MSKinectProducer::setCutYU(int value)
 		}
 	}
 	emit (cutYChangedU(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYD(int value)
@@ -399,6 +583,7 @@ void MSKinectProducer::setCutYD(int value)
 		}
 	}
 	emit (cutYChangedD(value));
+	setMaxScale();
 }
 
 
@@ -414,6 +599,7 @@ void MSKinectProducer::setCutZ(int value)
 		}
 	}
 	emit (cutZChanged(value));
+	
 }
 
 ////KINECT 2
@@ -430,6 +616,7 @@ void MSKinectProducer::setCutXL1(int value)
 		}
 	}
 	emit (cutXChangedL1(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutXR1(int value)
@@ -444,6 +631,7 @@ void MSKinectProducer::setCutXR1(int value)
 		}
 	}
 	emit (cutXChangedR1(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYU1(int value)
@@ -458,6 +646,7 @@ void MSKinectProducer::setCutYU1(int value)
 		}
 	}
 	emit (cutYChangedU1(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYD1(int value)
@@ -472,6 +661,7 @@ void MSKinectProducer::setCutYD1(int value)
 		}
 	}
 	emit (cutYChangedD1(value));
+	setMaxScale();
 }
 
 
@@ -487,6 +677,7 @@ void MSKinectProducer::setCutZ1(int value)
 		}
 	}
 	emit (cutZChanged1(value));
+
 }
 
 ///KINECT 3
@@ -502,6 +693,7 @@ void MSKinectProducer::setCutXL2(int value)
 		}
 	}
 	emit (cutXChangedL2(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutXR2(int value)
@@ -516,6 +708,7 @@ void MSKinectProducer::setCutXR2(int value)
 		}
 	}
 	emit (cutXChangedR2(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYU2(int value)
@@ -530,6 +723,7 @@ void MSKinectProducer::setCutYU2(int value)
 		}
 	}
 	emit (cutYChangedU2(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYD2(int value)
@@ -544,6 +738,7 @@ void MSKinectProducer::setCutYD2(int value)
 		}
 	}
 	emit (cutYChangedD2(value));
+	setMaxScale();
 }
 
 
@@ -574,6 +769,7 @@ void MSKinectProducer::setCutXL3(int value)
 		}
 	}
 	emit (cutXChangedL3(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutXR3(int value)
@@ -588,6 +784,7 @@ void MSKinectProducer::setCutXR3(int value)
 		}
 	}
 	emit (cutXChangedR3(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYU3(int value)
@@ -602,6 +799,7 @@ void MSKinectProducer::setCutYU3(int value)
 		}
 	}
 	emit (cutYChangedU3(value));
+	setMaxScale();
 }
 
 void MSKinectProducer::setCutYD3(int value)
@@ -616,6 +814,7 @@ void MSKinectProducer::setCutYD3(int value)
 		}
 	}
 	emit (cutYChangedD3(value));
+	setMaxScale();
 }
 
 
@@ -632,11 +831,6 @@ void MSKinectProducer::setCutZ3(int value)
 	}
 	emit (cutZChanged3(value));
 }
-
-
-
-
-
 
 //might want to add a limitation e.g no more than 2*27 degrees
 void MSKinectProducer::setAngleKinect1(int angle)
