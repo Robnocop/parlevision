@@ -15,7 +15,7 @@ using namespace plvmskinect;
 //TODO reset plvcore and plvgui as dependencies unset to debug faster using only rebuild instead of rebuild project only.
 MSKinectFakeColor::MSKinectFakeColor() :
         m_someInt(800),
-        m_someInt2(4000),
+        m_someInt2(8000),
         m_someBool(true)
 {
     m_inputPin = createCvMatDataInputPin("input", this);
