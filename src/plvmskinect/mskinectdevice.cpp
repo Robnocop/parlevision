@@ -33,6 +33,7 @@ using namespace plvmskinect;
 //TODO add newer high resolution for the kinect for windows unit.
 //
 
+
 KinectDevice::KinectDevice(int id, QObject* parent) :
     QThread(parent)
 {
@@ -131,7 +132,7 @@ bool KinectDevice::init()
 	//    hr = NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX |
 	//                        NUI_INITIALIZE_FLAG_USES_SKELETON |
 	//                        NUI_INITIALIZE_FLAG_USES_COLOR );
-	
+
     //hr = m_nuiinstance->nuiinitialize( nui_initialize_flag_uses_depth
     //                    // | nui_initialize_flag_uses_skeleton
     //                     | nui_initialize_flag_uses_color
@@ -260,7 +261,6 @@ bool KinectDevice::init()
 	//	//from some code http://forum.libcinder.org/topic/kinect-sdk-block mSensor->NuiImageStreamSetImageFrameFlags(mDepthStreamHandle,NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE | NUI_IMAGE_STREAM_FLAG_DISTINCT_OVERFLOW_DEPTH_VALUES);
 	//	m_nuiInstance->NuiImageStreamSetImageFrameFlags(&m_pDepthStreamHandle,NUI_IMAGE_STREAM_FLAG_DISTINCT_OVERFLOW_DEPTH_VALUES);
 	//}
-
 
 	// In the skeletalviewer example the following lines will start the Nui processing thread 
 	// We did and will not do this here as it should be handled by Qt efficiently
@@ -497,7 +497,7 @@ void KinectDevice::Nui_GotDepthAlert()
 	//INuiFrameTexture *  pTexture = pImageFrame->pFrameTexture;
 
 	NUI_LOCKED_RECT LockedRect;
-
+   
 	//full depth
     pTexture->LockRect( 0, &LockedRect, NULL, 0 );
     //instead of 
@@ -842,6 +842,7 @@ int KinectDevice::TransformationToRealworldEucledianPointY(int y, USHORT z)
 	y = (int) z* tan(PI*(y-240)/180 * 228/2400);
 	return y;
 }
+
 
 //need to make this function absolute by "painitng the bitmap from the inside outward
 //odd cutxl and cutxt seem to be switched. 

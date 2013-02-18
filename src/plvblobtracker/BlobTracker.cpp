@@ -43,6 +43,7 @@ using namespace plvblobtracker;
 BlobTracker::BlobTracker() :  
 	m_idCounter(0),
 	m_averagePixelValue(false),
+
 	//why here and not in init?
 	m_thresholdremove(65534), //should be linked to diethreshold? & <UINT_MAX is also important for the cycle speed of 
 	m_thresholdFramesMaxNrOfBlobs(10),
@@ -70,7 +71,6 @@ BlobTracker::BlobTracker() :
 	//m_outputImage5 = createCvMatDataOutputPin( "above threshold in blob image", this);
 
 	m_outputBlobTracks = createOutputPin< QList<plvblobtracker::BlobTrack> >("tracks", this);
-
 }
 
 BlobTracker::~BlobTracker()
@@ -79,7 +79,6 @@ BlobTracker::~BlobTracker()
 
 bool BlobTracker::init()
 {
-	//qDebug() << "init"; //init preceeds start
 	m_timeSinceLastFPSCalculation.start();
     m_fps = 30.0; //to prevent using fps before it is set, 30 is the most likely framerate for kinect and normal cameras.  
 	
@@ -105,7 +104,7 @@ bool BlobTracker::start()
 		m_idPool.push_back(i);
 	}
 	//m_maxNrOfTrackedBlobs = 9;
-    return true;
+	return true;
 }
 
 bool BlobTracker::stop()
@@ -367,14 +366,14 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				expectedx = (int) cos(track.getAvgDirection()-180 * PI / 180) *(track.getAvgVelocity()*timesinceupdate/1000) + track.getLastMeasurement().getCenterOfGravity().x ;
 				expectedy = (int) sin(track.getAvgDirection()-180 * PI / 180) *(track.getAvgVelocity()*timesinceupdate/1000) + track.getLastMeasurement().getCenterOfGravity().y ;
 				//abs should noot be neccesary btw as a root square cant be negative:
-				distance = (double) abs(sqrt((expectedx-blob.getCenterOfGravity().x)*(expectedx-blob.getCenterOfGravity().x)   +   (expectedy-blob.getCenterOfGravity().y)*(expectedy-blob.getCenterOfGravity().y)));
+				distance = (double) sqrt((expectedx-blob.getCenterOfGravity().x)*(expectedx-blob.getCenterOfGravity().x)   +   (expectedy-blob.getCenterOfGravity().y)*(expectedy-blob.getCenterOfGravity().y));
 				//temp check
 				//distance = (double) track.getLastMeasurement().getCenterOfGravity().x-blob.getCenterOfGravity().x;
 			} 
-			else 
-			{
-				//this one of the problem qDebug() << "there is the problem tracks:" << tracks.size() << "blobs" << blobs.size();
-			}
+			//else 
+			//{
+				//this would indicate one of the problems qDebug() << "there is the problem tracks:" << tracks.size() << "blobs" << blobs.size();
+			//}
 			//temp check
 			//distance = (double) abs(track.getLastMeasurement().getCenterOfGravity().x-blob.getCenterOfGravity().x);
 
@@ -397,7 +396,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	
 	//think this will star it before even entering the munkres algortihm, munkres is ment for non-negative however
     //maxScore = maxScore - 1.0;
-	//i think it is better if are to be costs to actually have all elements non-zero and non negative as is this the proper defenition of costs
+	//i think it is better if it are to be costs to actually have all elements non-zero and non negative as is this the proper defenition of costs
 	//maxScore = maxScore + 1.0;
 	//qDebug() << "the closest prediction distance : is " << minScorePrediction << "maxscore is" << maxScore << "tracks:" << tracks.size() << "blobs" << blobs.size() ;
 	//TODO
@@ -420,7 +419,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
     //int blobsSize = blobs.size();
 
 	//removed the if=0 -ed out stuff
-
+	
 	//in the previous version there was a slight preference for creating a new track if one was not found.
     // matrix (track,blob);
     int matrixSize = tracks.size() > blobs.size() ? tracks.size() : blobs.size();
@@ -438,7 +437,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	int factoroverlay= getFactorDirOverlap();
 	int factordistance = 100-getFactorDirOverlap();
 	//TODO if no overlap still plays a roll if the blob is near or further away, 
-	//we could do infinity-distance, but this will make the processor slower, 
+	//we could do infinity-distance, but this might make the processor slower, 
 	//maybe only do this if the number of tracks and blobs do not agree and if the cog are within a certain area
     for( int i=0; i < tracks.size(); ++i )
     {
@@ -466,7 +465,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				expectedx = (int) cos(track.getAvgDirection()-180 * PI / 180) *(track.getAvgVelocity()*timesinceupdate/1000) + track.getLastMeasurement().getCenterOfGravity().x ;
 				expectedy = (int) sin(track.getAvgDirection()-180 * PI / 180) *(track.getAvgVelocity()*timesinceupdate/1000) + track.getLastMeasurement().getCenterOfGravity().y ;
 				//abs should noot be neccesary btw as a root square cant be negative:
-				distance = (double) abs(sqrt((expectedx-blob.getCenterOfGravity().x)*(expectedx-blob.getCenterOfGravity().x)   +   (expectedy-blob.getCenterOfGravity().y)*(expectedy-blob.getCenterOfGravity().y)));
+				distance = (double) sqrt((expectedx-blob.getCenterOfGravity().x)*(expectedx-blob.getCenterOfGravity().x)   +   (expectedy-blob.getCenterOfGravity().y)*(expectedy-blob.getCenterOfGravity().y));
 				//temp check
 				//distance = (double) track.getLastMeasurement().getCenterOfGravity().x-blob.getCenterOfGravity().x;
 			} 
@@ -523,6 +522,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
                 match = j;
         }
 		//if their are NOT less tracks than blobs; otherwise we can be certain that it is not -1 unless munkres had a bug
+
         if( match != -1 )
         {
 			const Blob& blob = blobs.at(match);
@@ -642,6 +642,15 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 					//nrOfNewNonMatched++;
 					//todo add time of update
 				}
+				Blob blob = blobs.at(j);
+				//TODO catch >65535 assigned IDS will give a crash
+				BlobTrack track( getNewId(), blob );
+				//on creation lastupdate will be zero so gives an enormous velocity at first, not here btw, only in the append 
+				track.setLastUpdate(m_timeSinceLastFPSCalculation.elapsed());
+				//approximation for first measurement
+				track.setTimeSinceLastUpdate((int) 1000/m_fps);
+				tracks.append(track);
+				//todo add time of update
 			}
 		}
 
@@ -710,3 +719,114 @@ void BlobTracker::setFactorDirOverlap(int num)
     }
     emit factorDirOverlapChanged(m_factor);
 }
+
+//dead pieces of code I might need later on, 
+
+//was placed in the loop in checking points of blob so after val==255:
+//switch(in.type())
+//{
+//	//GRAY
+//	case 0:
+//		orgimageval[0] = source.at<cv::Vec3b>(k,3)[j];
+//		orgimageval[1] = orgimageval[0];
+//		orgimageval[2] = orgimageval[0];
+//		//orgimagevector.push_back(source.at<cv::Vec3b>(k,3)[j]);
+//		qDebug() << "it was gray indeed";
+//		//save the points that are beyond a certain threshold within the blob
+//		if (orgimageval[0]>getThreshold())
+//		{
+//			areapoints_t.push_back(p);
+//		}
+//
+//		break;
+//
+//	//RGB
+//	case 16:
+//		//draw these points
+
+//		orgimageval[0] = source.at<cv::Vec3b>(k,j)[0];
+//		orgimageval[1] = source.at<cv::Vec3b>(k,j)[1];
+//		orgimageval[2] = source.at<cv::Vec3b>(k,j)[2];
+//		//orgimagevector.push_back(((orgimageval[0]+orgimageval[1]+orgimageval[2])/3));
+//									
+//		//save the points that are beyond a certain threshold within the blob
+//		//also need to draw them to do 
+//		if (((orgimageval[0]+orgimageval[1]+orgimageval[2])/3) >getThreshold())
+//		{
+//			areapoints_t.push_back(p);
+//
+//		}
+//																																								
+//		break;
+//	//RGBA
+//	case 24:
+//		//TODO fix for e.g. RGBA channels, it will only show 3/4th of the image.
+//		//val = (matin.at<cv::Vec3b>(y,x)[0]+matin.at<cv::Vec3b>(y,x)[1]+matin.at<cv::Vec3b>(y,x)[2])/3;
+//		areapoints_t.push_back(p);
+//		//orgimagevector.push_back(((orgimageval[0]+orgimageval[1]+orgimageval[2])/3));
+//		break;
+//}
+//
+////draw the image with the original incoming colour 
+////when it is the selected blob
+////	if (track.getId()==getBlobSelector())
+////	{
+////		qDebug() << "ID: " << (int) track.getId() << " #0 " << (int) track.getBit(0) << " #1 " << (int) track.getBit(1) << "#2: " << (int) track.getBit(2)<< " #3: " << (int) track.getBit(3) << " #4: " << (int) track.getBit(4) << " #5: " << (int) track.getBit(5);
+////		cv::circle(dst3, p, 0, orgimageval, 0, 8,0 );
+////	}
+
+
+//// draws the selected blob in birth and process(). 
+//		if ( track.getId()==getBlobSelector() )
+//		{
+			//draw the selected blob
+			//for( int l=0; l < areapoints.size(); ++l )
+			//{		
+			//	//qDebug() << "xvalues" << (int) areapoints.at(l).x;
+			//	orgimageval[0] = orgimagevector.at(l); orgimageval[1] = orgimagevector.at(l); orgimageval[2] = orgimagevector.at(l); 
+			//	cv::Point puntje = cv::Point(areapoints.at(l).x,areapoints.at(l).y);	
+			//	cv::circle(dst3, puntje, 0, orgimageval, 0, 8,0 );
+			//}
+			//qDebug() << "ID: " << (int) track.getId();
+
+//		}
+
+	//test to verify the table
+	//int testcode =	getThreshold();
+	//qDebug() << "value :" << testcode << "returns: " << getIDBySum(testcode);
+
+	
+//a start towards working with kmeans instead
+//http://tech.dir.groups.yahoo.com/group/OpenCV/message/77421 
+//double kmeans(const Mat& samples, int clusterCount, Mat& labels, TermCriteria termcrit, int attempts, int flags, Mat* centers)
+//cv::termCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0 )
+//cv::Mat samples = (cv::Mat_<float>(8, 1) << 31 , 2 , 10 , 11 , 25 , 27, 2, 1);
+//cv::Mat labels, centers;
+//cv::kmeans(dst4, 3, labels , cv::TermCriteria() ,2, cv::KMEANS_PP_CENTERS,  &centers);
+//
+//for(int m = 0; m < centers.rows; ++m)
+//{
+//	//int arg = static_cast<int> (centers.at<float>(0, m));
+//	//qDebug()<< "value of points" << arg; 
+//}
+
+
+//TODO accept the libfreenect input style
+//if( dst3.depth() == CV_16U )
+//{
+//	dst3.convertTo(dst3, CV_8U, 1.0 / std::numeric_limits<unsigned short>::max() );
+//}
+
+
+//temp we know j is supposed to be the top point
+//onex = abs(cogs.at(triangleids[0]).x - cogs.at(triangleids[1]).x); 
+//oney = abs(cogs.at(triangleids[0]).y - cogs.at(triangleids[1]).y);
+//qone = onex*onex+oney*oney; //a
+//			
+//twox = abs(cogs.at(triangleids[0]).x - cogs.at(triangleids[2]).x);
+//twoy = abs(cogs.at(triangleids[0]).y - cogs.at(triangleids[2]).y);
+//qtwo = twox*twox+twoy*twoy;	//b	
+
+//threex = abs(cogs.at(triangleids[1]).x - cogs.at(triangleids[2]).x);
+//threey = abs(cogs.at(triangleids[1]).y - cogs.at(triangleids[2]).y);
+//qthree = threex*threex+threey*threey; //c

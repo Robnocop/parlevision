@@ -65,8 +65,7 @@ namespace plvblobtracker
         int historySize;
         int trackSize;
 		int avgOver;
-		
-		
+			
 		/** the last LED bit measurements */
 		//std::vector< bool > bitseq; 
 		////should these actually be public I doubt it
@@ -80,6 +79,7 @@ namespace plvblobtracker
 		unsigned int velocity;
 		unsigned int avgvelocity;
 		unsigned int avgdirection;
+
 		unsigned int timesincelastmeasurement;
 
 		//for time since last update
@@ -89,6 +89,7 @@ namespace plvblobtracker
 		cv::Point centroid;
 
 	    PlvOpenCVBlobTrackState state;
+
 
         QList<Blob>        history; /** the history of this blob (track) */
         QVector<cv::Point> track;   /** the actual route this blob has followed */
@@ -135,6 +136,10 @@ namespace plvblobtracker
 		inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }
 		inline unsigned int getAveragePixel() const {return d->averagepixel; }
 
+		//inline unsigned int getLastUpdate() const { return d->lastUpdate; }
+		//inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }
+
+
         /** adds a measurement to this track */
         void addMeasurement( const Blob& blob );
 
@@ -147,6 +152,7 @@ namespace plvblobtracker
 		void setVelocity(std::vector< cv::Point > cogs);
 		void setLastUpdate(unsigned int updatetime);
 		void setTimeSinceLastUpdate(unsigned int amountoftimepast);
+
 		//void setAveragePixel(unsigned int pixelvalueofaveragez);
 		void setAveragePixelValue(unsigned int i) {d->averagepixel = i;}
 
@@ -156,6 +162,7 @@ namespace plvblobtracker
         /** returns last blob measurement */
         const Blob& getLastMeasurement() const;
 		const Blob& getAPreviousMeasurement(int previous) const;
+		const Blob& getAPreviousMeasurement(unsigned int previous) const;
 
         /** returns the size of the history */
         inline int getHistorySize() const { return d->history.size(); }

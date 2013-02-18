@@ -25,7 +25,7 @@ namespace plvmskinect
         Q_CLASSINFO("author", "Robby van Delden, org Richard Loos")
         Q_CLASSINFO("name", "MSKinectProducer")
         Q_CLASSINFO("description", "This producer produces data from the "
-                    "Microsoft Kinect using the MS Kinect SDK 1.0-1.6, infrared will not work for 1.0-1.5"
+                    "Microsoft Kinect using the MS Kinect SDK 1.0-1.6, infrared will not work for 1.0-1.5, the depth of 0-8m wont either"
 					"one can switch between infrared and colour only when the pipeline is not running, on request this choice can be made per Kinect"
 					"the tilt motor contains some errors due to limited API, only -27-27 degree tilt with regard to base is possible"
 					"However, the sensor is in the top so we can't know this relative angle, the absolute angle is given when angle is changed in gui"

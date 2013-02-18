@@ -43,6 +43,7 @@ const Blob& BlobTrack::getLastMeasurement() const
     return d->history.last();
 }
 
+
 const Blob& BlobTrack::getAPreviousMeasurement(int prevsteps) const
 {
 	if (d->history.size() >prevsteps)
@@ -89,7 +90,6 @@ void BlobTrack::setVelocity(std::vector< cv::Point > cogs)
 	//d->velocity = (int) (sqrt(qone));
 	//velocity per second ?? gettime is in milliseconds
 	d->velocity = (int) 1000*(sqrt(qone))/getTimeSinceLastMeasurement();
-	
 }
 
 void BlobTrack::setLastUpdate(unsigned int lastupdate)
@@ -157,6 +157,7 @@ void BlobTrack::addMeasurement( const Blob& blob )
 	}
 
 	//TODO average value over history don't take two random recent values only
+
 	//doensn't need to be 5 anymore as we average it lateron
 	//if (d->age>5)
 	//{
@@ -179,7 +180,10 @@ void BlobTrack::addMeasurement( const Blob& blob )
 		setVelocity(cogstoset);
 	}
 
+
 		//d->direction = (int) (d->direction + tempdirection /2);
+
+
 
 	if (getDirection() >360)
 	{
@@ -261,8 +265,6 @@ void BlobTrack::addMeasurement( const Blob& blob )
 
 		//qDebug() << "average dir" << d->direction << "velocity actual" << d->rotation[d->rotation.size()-1];
 	}
-
-
 
 	//check if the dead has come to live
 	if (d->state == BlobTrackDead)

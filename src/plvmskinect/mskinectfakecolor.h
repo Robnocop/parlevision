@@ -59,7 +59,7 @@ namespace plvmskinect
 		void someIntChanged(int newValue);
 		void someInt2Changed(int newValue);
 		void someBoolChanged(bool newValue);
-		
+
 
 	public slots:
 		//
@@ -71,7 +71,7 @@ namespace plvmskinect
 		plv::CvMatDataInputPin* m_inputPin;
 		plv::CvMatDataOutputPin* m_outputPin;
 		plv::CvMatDataOutputPin* m_outputPin2;
-
+	
 		int m_someInt;
 		int m_someInt2;
 		bool m_someBool;

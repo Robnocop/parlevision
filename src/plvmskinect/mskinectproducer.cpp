@@ -47,7 +47,6 @@ MSKinectProducer::MSKinectProducer() :
 	
 	//NuiSetDeviceStatusCallback(KinectStatusProc,&m_deviceCount);
 	NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
-
     if( m_deviceCount == 0 )
     {
 
@@ -182,7 +181,6 @@ bool MSKinectProducer::init()
 		m_kinects.at(i)->m_infrared=getInfrared();
 		m_kinects.at(i)->m_highres=getHighres();
 		
-
         if( !m_kinects.at(i)->init() )
         {
 		    setError( PlvPipelineInitError, tr("Kinect with id %1 failed to initialise").arg(m_kinects.at(i)->getId()) );

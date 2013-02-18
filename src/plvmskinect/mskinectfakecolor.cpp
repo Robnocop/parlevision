@@ -66,7 +66,6 @@ bool MSKinectFakeColor::process()
     CvMatData in = m_inputPin->get();
 	const cv::Mat& matin = in;
 
-
 	//qDebug() << tr("type %1").arg(in.type());
 	//qDebug() << tr("type %1 %2 in %3 %4").arg(matin.cols).arg(matin.rows).arg(in.width()).arg(in.height());
 	

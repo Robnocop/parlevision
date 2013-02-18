@@ -129,6 +129,7 @@ namespace plvmskinect
 		Vector4 TransformationToRealworldEucledianPoints(int x,int y, USHORT z);
 		int TransformationToRealworldEucledianPointX(int x, USHORT z);
 		int TransformationToRealworldEucledianPointY(int x, USHORT z);
+		BYTE Nui_ShortToIntensity( USHORT s);
 
     signals:
         void newDepthFrame( int deviceIndex, plv::CvMatData frame );
@@ -151,7 +152,7 @@ namespace plvmskinect
 		void setCutZ(int change) {m_cutz = change;};
 		int getAngle();
 		void setAngle(int angle);
-		
+
     };
 	////callback in plvm
 	//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);

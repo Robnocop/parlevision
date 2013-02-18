@@ -49,11 +49,13 @@ namespace plvblobtracker
 		Q_PROPERTY( int factorDirOverlap READ getFactorDirOverlap WRITE setFactorDirOverlap NOTIFY factorDirOverlapChanged )
 		Q_PROPERTY( bool averagePixelValue READ getAveragePixelValue WRITE setAveragePixelValue NOTIFY averagePixelValueChanged  )
 
+
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
 		
 		int getBlobSelector() const;
 		int getFactorDirOverlap() const;
+
 		bool getAveragePixelValue() {return m_averagePixelValue;}
 	
 	public slots:
@@ -67,7 +69,7 @@ namespace plvblobtracker
 		void factorDirOverlapChanged (int s);
 		void averagePixelValueChanged(bool value);
 
-    public:
+	public:
         BlobTracker();
         virtual ~BlobTracker();
 

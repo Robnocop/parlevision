@@ -30,7 +30,7 @@ BlobProducer::BlobProducer() :
     m_width(640),
     m_height(480),
 	m_blobSize(50),
-    m_maxStep(1), //10
+	m_maxStep(1), //10
     m_numBlobs(3),//10
 	m_pixelShift(0)
 {
@@ -136,7 +136,6 @@ bool BlobProducer::produce()
 					cv::circle(img, cv::Point(pos.x-30+getPixelShift()*2,pos.y-10), 5, cv::Scalar(m_colorp,m_colorp,m_colorp), CV_FILLED, CV_AA );
 				}
 			}
-
 		}
 		//pos.x =pos.x -20;
 		//cv::circle(img, pos, 10, cv::Scalar(m_colorp,m_colorp,m_colorp), CV_FILLED, CV_AA );

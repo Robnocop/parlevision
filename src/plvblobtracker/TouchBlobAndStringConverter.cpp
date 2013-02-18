@@ -217,8 +217,8 @@ bool TouchBlobAndStringConverter::process()
 			ry = averagey;
 			r.z = averagez; //src.at<int>(p.x,p.y) >> 8; //bitshift
 			rz = averagez;
-			//cv::circle(dst2, cv::Point(b.getCenterOfGravity().x *widthpane  / src.cols, b.getCenterOfGravity().y*heightpane/ src.rows), 20, cv::Scalar(255,0,0), -1, 8,0 ); //draw the center of gravity
-			
+			//cv::circle(dst2, cv::Point(b.getCenterOfGravity().x *widthpane  / src.cols, b.getCenterOfGravity().y*heightpane/ src.rows), 20, cv::Scalar(255,0,0), -1, 8,0 ); //draw the center of gravity			
+		
 		}
 				
 		//save to map
