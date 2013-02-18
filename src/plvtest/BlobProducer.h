@@ -15,7 +15,7 @@ public:
     Q_CLASSINFO("description", "A producer which generates an image with blobs.")
     Q_PROPERTY( int maxStep READ getMaxStep WRITE setMaxStep NOTIFY maxStepChanged )
     Q_PROPERTY( int numBlobs READ getNumBlobs WRITE setNumBlobs NOTIFY numBlobsChanged )
-	Q_PROPERTY( int pixelShift READ getPixelShift WRITE setPixelShift NOTIFY pixelShiftChanged 
+	Q_PROPERTY( int pixelShift READ getPixelShift WRITE setPixelShift NOTIFY pixelShiftChanged )
 	Q_PROPERTY( int blobSize READ getBlobSize WRITE setBlobSize NOTIFY blobSizeChanged )
 
     /** required standard method declaration for plv::PipelineProcessor */
