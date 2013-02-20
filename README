@@ -95,3 +95,6 @@ http://doc.qt.nokia.com/qtcreator-snapshot/creator-debugger-engines.html
 ICONSET
 Icons: Symbolize Icon Set, version 1.0
 http://dryicons.com/free-icons/preview/symbolize-icons-set/
+
+OPENCV242 PROBLEMS
+In oreder to run the parlevision version for opencv242 it is needed to include tbb and for debug tbb_debug in your path or include it manually in your libs dir. The dependency of qxt might also lead to problems, to be sure one could inlcude qxtcore qxtgui and their debug versions (build with configure -debug, followed by make command in the libqxt dir). To run on a computer withour VS installed be sure to include the vcredist package files.
