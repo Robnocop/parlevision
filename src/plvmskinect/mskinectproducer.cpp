@@ -42,7 +42,7 @@ MSKinectProducer::MSKinectProducer() :
     //NUIAPI void    MSR_NuiDestroyInstance( INuiInstance * pInstance );
 	
 	//Set kinect
-	setAngleKinect1(0);
+	//setAngleKinect1(0);
     //MSR_NUIGetDeviceCount( &m_deviceCount );
 	qDebug() << "getting count";
 	NuiGetSensorCount( &m_deviceCount );
@@ -170,7 +170,7 @@ void CALLBACK MSKinectProducer::Nui_StatusProc( HRESULT hrStatus, const OLECHAR*
 
 bool MSKinectProducer::init()
 {	
-	setAngleKinect1(0);
+	//setAngleKinect1(0);
 	//qDebug() << "I do set device callback"; 
 	//NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 	for( int i = 0; i < m_deviceCount; ++i )
@@ -253,11 +253,11 @@ bool MSKinectProducer::start()
 	for( int i = 0; i < m_deviceCount; ++i )
     {
         m_kinects.at(i)->start();
-		if (i==1) setAngleKinect1((int) getAngleKinect(i));
+		/*if (i==1) setAngleKinect1((int) getAngleKinect(i));
 		if (i==2) setAngleKinect2((int) getAngleKinect(i));
 		if (i==3) setAngleKinect3((int) getAngleKinect(i));
 		if (i==4) setAngleKinect4((int) getAngleKinect(i));
-		//setAngleKinect1((int) getAngleKinect(1));
+		*///setAngleKinect1((int) getAngleKinect(1));
     }
     return true;
 }
@@ -868,8 +868,8 @@ void MSKinectProducer::setAngleKinect4(int angle)
 //seperate method to get actual angle by sensor
 int MSKinectProducer::getAngleKinect(int device)
 {
-	//???
-	if (device>0 && device <m_deviceCount)
+	//???-1 or 0 TODO fix this tempfix, it would now be undoable to rotate the first kinect.
+	if (false) //(device>0 && device <m_deviceCount)
 	{
  		return m_kinects.at(device)->getAngle();
 	}
@@ -884,7 +884,7 @@ void MSKinectProducer::rotateKinect(int device, int angle)
 {
 	qDebug() << device;
 	//? -1 or 0
-	if (device>-1 && device <m_deviceCount)
+	if (false)//(device>0 && device <m_deviceCount)
 	{
 		qDebug() << "trying to rotate the kinect to the set value";
 		//you can't know what the relative angle is as you do not know if it is tilted or not!
