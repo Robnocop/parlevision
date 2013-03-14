@@ -22,14 +22,12 @@ namespace plvblobtracker
         inline BlobTrackData( unsigned int _id,
                               Blob& _blob,
                               int _birthThreshold,
-                              int _birthWindow,
                               int _dieThreshold,
                               int _historySize,
                               int _trackSize,
 							  int _avgOver) :
             id(_id),
             birthThreshold( _birthThreshold ),
-            birthWindow( _birthWindow ),
             dieThreshold( _dieThreshold ),
             historySize(_historySize),
             trackSize(_trackSize),
@@ -42,6 +40,7 @@ namespace plvblobtracker
 			avgvelocity(0),
 			avgdirection(0),
 			state(BlobTrackBirth),
+			merged(false),
 			centroid(cv::Point(0,0))
         {
             assert(_blob.isValid());
@@ -84,6 +83,8 @@ namespace plvblobtracker
 
 		//for time since last update
 		unsigned int lastUpdate;
+
+		bool merged;
 		
 		//last measured centroid of the three leds
 		cv::Point centroid;
@@ -108,12 +109,11 @@ namespace plvblobtracker
     public:
         BlobTrack(unsigned int id,
                   Blob& blob,
-                  int birthThreshold=3,
-				  int birthWindow=9, //equaled 10 <=  historysize sounds ok
-                  int dieThreshold=400, //?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
-                  int historySize=10, //10 number of complete blobs in the vector that can be recalled
-                  int trackSize=90,
-				  int avgOver= 40); //1000 tail length, speed size
+                  int birthThreshold=3, //legacy naming, actually number of frames a previous dead frame has been given a value before it seen as a normal track again, //number of frames before a track is added is set in BlobTracker.cpp now
+				  int dieThreshold=30, //number of frames a track has not been updated before it is removed from the list was 400, ?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
+                  int historySize=10, //10 number of complete blobs in the track vector that can be recalled
+                  int trackSize=90, //drawn and saved tail length also arraysize of recallable speed and rotation values
+				  int avgOver= 5); //value over which the direction and speed are averaged, now set to 5 suiting
 
         virtual ~BlobTrack();
 
@@ -139,6 +139,21 @@ namespace plvblobtracker
 		//inline unsigned int getLastUpdate() const { return d->lastUpdate; }
 		//inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }
 
+		/** returns last blob measurement */
+        const Blob& getLastMeasurement() const;
+		const Blob& getAPreviousMeasurement(int previous) const;
+		const Blob& getAPreviousMeasurement(unsigned int previous) const;
+
+        /** returns the size of the history */
+        inline int getHistorySize() const { return d->history.size(); }
+		//this is not the proper way to get the last framenr, this is the first framenumber from the history
+        //inline unsigned int getLastFrameNr() const { return d->history[0].getFrameNr(); }
+		//this is not really a useable framenumber for tracking, as it depends on the blob detector
+		inline unsigned int getLastFrameNr() const { return d->history[d->history.size()].getFrameNr(); }
+
+		inline int getAge() const { return d->age; }
+
+        inline PlvOpenCVBlobTrackState getState() const { return d->state; }
 
         /** adds a measurement to this track */
         void addMeasurement( const Blob& blob );
@@ -156,31 +171,17 @@ namespace plvblobtracker
 		//void setAveragePixel(unsigned int pixelvalueofaveragez);
 		void setAveragePixelValue(unsigned int i) {d->averagepixel = i;}
 
+		//an attempt to send when a blob is merged, this will only hold for as long as it is overlapping with an non-dead track.
+		void setMerged(bool b) {d->merged = b;}
+
+
 		/** call when track is not matched */
         void notMatched(  unsigned int frameNumber );
-
-        /** returns last blob measurement */
-        const Blob& getLastMeasurement() const;
-		const Blob& getAPreviousMeasurement(int previous) const;
-		const Blob& getAPreviousMeasurement(unsigned int previous) const;
-
-        /** returns the size of the history */
-        inline int getHistorySize() const { return d->history.size(); }
 
         /** draws the blob, its track and prediction. Target must have depth CV_8U. */
         void draw( cv::Mat& target ) const;
 
 		int matches( const Blob& blob ) const;
-
-		//this is not the proper way to get the last framenr, this is the first framenumber from the history
-        //inline unsigned int getLastFrameNr() const { return d->history[0].getFrameNr(); }
-		//this is not really a useable framenumber for tracking, as it depends on the blob detector
-		inline unsigned int getLastFrameNr() const { return d->history[d->history.size()].getFrameNr(); }
-
-
-        inline int getAge() const { return d->age; }
-
-        inline PlvOpenCVBlobTrackState getState() const { return d->state; }
 
 		//resets state of a reborn blob 
 		//void setState(const PlvOpenCVBlobTrackState statename);

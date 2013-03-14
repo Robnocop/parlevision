@@ -9,20 +9,18 @@ using namespace plvblobtracker;
 BlobTrack::BlobTrack(unsigned int id,
                      Blob& blob,
                      int birthThreshold,
-                     int birthWindow,
                      int dieThreshold,
                      int historySize,
                      int trackSize,
 					 int avgOver)
 {
-    d = new BlobTrackData(id, blob, birthThreshold, birthWindow, dieThreshold, historySize, trackSize, avgOver);
+    d = new BlobTrackData(id, blob, birthThreshold, dieThreshold, historySize, trackSize, avgOver);
 
     d->id = id;
     d->historySize = historySize;
     d->trackSize = trackSize;
 	d->avgOver = avgOver;
-    d->birthWindow = birthWindow;
-	//not really neccesary for age, direction and velocity i guess
+    //not really neccesary for age, direction and velocity i guess
 	d->age = 0;
 	d->averagepixel = 0;
 	d->direction = 361; //(361)
@@ -127,14 +125,13 @@ void BlobTrack::setDirection(std::vector< cv::Point > cogs)
 		//qDebug() << "jawel size is 2" << onex;
 
 
-	} else 
+	} 
+	else 
 	{
 		//atan2 gives a value of -PI upto PI so *180/PI +180 makes it from 0 to 360.
 		//d->direction = (int) (atan2(side,bottom)*180/PI +180); 
 		d->direction = (int) 0;
 	}
-		
-
 }
 //void BlobTrack::setState(PlvOpenCVBlobTrackState statename)
 //{
@@ -146,10 +143,10 @@ void BlobTrack::setDirection(std::vector< cv::Point > cogs)
 /** adds a measurement to this track */
 void BlobTrack::addMeasurement( const Blob& blob )
 {
-    //might run out of scop of uint 
+    //might run out of scope of uint 
 	if (d->age >65000)
 	{
-		qDebug() << "age is about to explode";
+		//qDebug() << "age is about to explode";
 	}
 	else
 	{	
@@ -181,14 +178,13 @@ void BlobTrack::addMeasurement( const Blob& blob )
 	}
 
 
-		//d->direction = (int) (d->direction + tempdirection /2);
-
-
-
+	//d->direction = (int) (d->direction + tempdirection /2);
+	//should only be possible if !age>1
 	if (getDirection() >360)
 	{
-		qDebug() << "somehow the direction washigher than 360";
-		d->direction = getDirection() % 360;
+		//qDebug() << "somehow the direction washigher than 360";
+		if (d->age!=0)
+			d->direction = getDirection() % 360;
 	}
 
     d->history.append(blob);
@@ -240,18 +236,49 @@ void BlobTrack::addMeasurement( const Blob& blob )
 		//qDebug() << "average speed" << d->velocity << "velocity actual" << d->speed[d->speed.size()-1];
 
 		//for direction we should take into account rapid changes in direction
-		double difference = 0;
+		double differencetemp = 0;
+		//double difference = 0;
 		int j = 0;
 		int i = 1;
 		//while ((difference <45) && i<(averageover+1))
 		//TODO create a MERGED blob condition in this case you do not use the last measurements of the blobs but use measurements untill the blob was merged.
 		//TODO incorporate 360=0 it is not a fair comparison now, changes around 0 will be way more extreme and not averaged
-		while ((difference <60) && i<(averageover+1))
+		while (i<(averageover+1))
 		{
 			j = d->rotation.size()-i; 
 			//whatever explicit cast
-			difference = (int) abs((double) (d->rotation[j] - d->rotation[d->rotation.size()]));
-			totaldir= totaldir+d->rotation[j];
+			differencetemp = (int) abs((double) (d->rotation[j] - d->rotation[d->rotation.size()]));
+			if (differencetemp >60)
+			{
+				//TODO probablyy negative and >361 will give better results for averaging than brute shortcutting it
+				if ((d->rotation[j] - (d->rotation[d->rotation.size()]+360)) <60)
+				{
+					if (d->avgdirection >300)
+					{
+						totaldir= totaldir+360;
+					}
+				}
+				else if ((d->rotation[j]+360) - d->rotation[d->rotation.size()] <60)
+				{
+					if (d->avgdirection >300)
+					{
+						totaldir= totaldir+360;
+					}
+					/*else //totaldir= totaldir +0;
+					{
+						totaldir= totaldir;
+					}*/
+				}
+				else
+				{
+					break;
+				}
+
+			}
+			else
+			{
+				totaldir= totaldir+d->rotation[j];
+			}
 			i++;
 		}
 
@@ -261,8 +288,14 @@ void BlobTrack::addMeasurement( const Blob& blob )
 		}*/
 		
 		//d->direction = totaldir/i; 
-		d->avgdirection = totaldir/i; 
-
+		if (i>1)
+		{
+			d->avgdirection = totaldir/(i-1); 
+		}
+		else
+		{
+			d->avgdirection = getDirection(); 
+		}
 		//qDebug() << "average dir" << d->direction << "velocity actual" << d->rotation[d->rotation.size()-1];
 	}
 
@@ -278,14 +311,13 @@ void BlobTrack::addMeasurement( const Blob& blob )
 
     if( d->state == BlobTrackBirth )
     {
-		//does not make sense!
+   //does not make sense!
    //     int from = d->history.size() - d->birthWindow;
    //     from = from > 0 ? from : 0;
 
    //     unsigned int count = 0;
    //     for( int i = from; i < d->history.size(); ++i )
    //     {
-			////added results in count always 3 so birthwindow is 3
 			//count++;
    //     }
    //     if( count >= d->birthThreshold )
@@ -297,11 +329,14 @@ void BlobTrack::addMeasurement( const Blob& blob )
     }
 }
 
+//odd trail: matches --> blob.matchingArea(&blob) -->(blob.)overlappingAreaRect( &blob, area ) -->  overlappingArea
 int BlobTrack::matches( const Blob& blob ) const
 {
     if( d->state == BlobTrackDead )
         return 0;
     const Blob& last = getLastMeasurement();
+	//seems to be the actual overlapping pixels, as it uses both the blob and track
+	//qDebug()<< "matching area" << blob.matchingArea(last) << "id" << d->id;
     return blob.matchingArea(last);
 }
 
@@ -332,7 +367,7 @@ void BlobTrack::draw( cv::Mat& target ) const
     b.drawContour(target, green, true);
     b.drawCenterOfGravity(target, blue);
     b.drawBoundingRect(target,red);
-    QString info = QString("ID: %1 D: %2 V: %3").arg(d->id).arg(getDirection()).arg(d->avgvelocity);
+	QString info = QString("ID: %1 D: %2 V: %3 M: %4 Z: %5").arg(d->id).arg(getDirection()).arg(d->avgvelocity).arg(d->merged).arg(getAveragePixel());
     b.drawString(target, info);
 
     // draw track

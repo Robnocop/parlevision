@@ -42,32 +42,39 @@ namespace plvblobtracker
     {
         Q_OBJECT
         Q_DISABLE_COPY( BlobTracker )
-        Q_CLASSINFO("author", "Richard")
+        Q_CLASSINFO("author", "Richard, changed a lot by Roberdus")
         Q_CLASSINFO("name", "Blob Tracker")
-        Q_CLASSINFO("description", "Tracks blobs, blobselector can be used to see one blob by its ID, the factor can be set to have tracker respond on either its direction or its overlap, in a range of 0 to 100, zero indicating totaly based on direction 100 totaly based on overlap" )
+        Q_CLASSINFO("description", "Tracks blobs, blobselector can be used to see one blob by its ID, the factor can be set to have tracker respond on either its direction or its overlap, in a range of 0 to 100, zero indicating totaly based on direction 100 totaly based on overlap. For very fast moving tracking where ther might be no overlap one might select the boolean allow no overlap. This results in more noisy results (flickering back and forth positions). The orange colored blobs have not been updated in the particular frame and are thus not send over the tracks pin. They might for instance be not overlapping, or merged to another id. " )
+		Q_PROPERTY( int numberOfBlobsTracked READ getNumberOfBlobsTracked WRITE setNumberOfBlobsTracked  NOTIFY numberOfBlobsTrackedChanged  )
 		Q_PROPERTY( int blobSelector READ getBlobSelector WRITE setBlobSelector NOTIFY blobSelectorChanged )
 		Q_PROPERTY( int factorDirOverlap READ getFactorDirOverlap WRITE setFactorDirOverlap NOTIFY factorDirOverlapChanged )
 		Q_PROPERTY( bool averagePixelValue READ getAveragePixelValue WRITE setAveragePixelValue NOTIFY averagePixelValueChanged  )
-
+		Q_PROPERTY( bool allowNoOverlap READ getAllowNoOverlap WRITE setAllowNoOverlap NOTIFY allowNoOverlapChanged  )
 
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
 		
 		int getBlobSelector() const;
 		int getFactorDirOverlap() const;
-
+		int getNumberOfBlobsTracked() const;
+		//{return m_numberOfBlobsTracked;}
 		bool getAveragePixelValue() {return m_averagePixelValue;}
-	
+		bool getAllowNoOverlap() {return m_allowNoOverlap;}
+
 	public slots:
 		void setBlobSelector(int blobid);
 		void setFactorDirOverlap(int factor);
 		//his is the boolean deciding whether or not to average the values in the track
 		void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
-
+		void setAllowNoOverlap(bool b) {m_allowNoOverlap = b; emit (allowNoOverlapChanged(b));}
+		void setNumberOfBlobsTracked(int i) {m_numberOfBlobsTracked = i; emit (numberOfBlobsTrackedChanged(i));}
+		
 	signals:
 		void blobSelectorChanged (int s);
 		void factorDirOverlapChanged (int s);
 		void averagePixelValueChanged(bool value);
+		void numberOfBlobsTrackedChanged(int i);
+		void allowNoOverlapChanged(bool value);
 
 	public:
         BlobTracker();
@@ -94,6 +101,7 @@ namespace plvblobtracker
 		unsigned int m_blobSelector;
 		unsigned int m_factor;
 		bool m_averagePixelValue;
+		bool m_allowNoOverlap;
 
         void matchBlobs(QList<Blob>& newBlobs, QList<BlobTrack>& blobTracks);
 		unsigned int averagePixelsOfBlob(Blob blob,const cv::Mat& src);
@@ -104,7 +112,8 @@ namespace plvblobtracker
 		unsigned int m_iterations;
 		int m_biggerMaxCount;
 		int m_maxNrOfBlobs; //max nr of seen blobs
-		int m_maxNrOfTrackedBlobs; //needs to be adjustable if it works!
+		//int m_maxNrOfTrackedBlobs; //needs to be adjustable if it works!
+		unsigned int m_numberOfBlobsTracked;
 		int m_thresholdFramesMaxNrOfBlobs;
 		int m_thresholdremove;
         //inline unsigned int getNewId() { return ++m_idCounter; }
