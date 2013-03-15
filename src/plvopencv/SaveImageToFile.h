@@ -66,9 +66,9 @@ namespace plvopencv
         Q_OBJECT
         Q_DISABLE_COPY( SaveImageToFile )
 
-        Q_CLASSINFO("author", "Richard Loos")
+        Q_CLASSINFO("author", "Richard Loos, altered by Robby van Delden")
         Q_CLASSINFO("name", "Save Image")
-        Q_CLASSINFO("description", "A processor that takes an input and saves it.");
+        Q_CLASSINFO("description", "A processor that takes an input and saves it. Only 8-bit (or 16-bit in the case of PNG, JPEG 2000 and TIFF) single-channelor 3-channel (with ‘BGR’ channel order) images can be saved using this function.");
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
         Q_PROPERTY( plv::Enum fileFormat READ getFileFormat WRITE setFileFormat NOTIFY fileFormatChanged )
@@ -106,6 +106,7 @@ namespace plvopencv
         QString   m_directory;  /** directory to store the image. Default is empty */
         plv::Enum m_fileFormat; /** The file extention and thus the format in which the data is stored. */
 
+		int m_trailingnumber;
         /** Additional properties */
         QString m_fileExt;   /** The filename extension selected through m_fileFormat. */
     };

@@ -57,7 +57,8 @@ enum ImageFormat {
  */
 SaveImageToFile::SaveImageToFile() :
         m_directory(SAVEIMAGETOFILE_DEFAULT_DIR),
-        m_fileExt(".bmp")
+        m_fileExt(".bmp"),
+		m_trailingnumber(0)
 {
     m_inputImage    = createInputPin<CvMatData>("image", this, IInputPin::CONNECTION_OPTIONAL );
     m_inputImages   = createInputPin< QList<CvMatData> >("image list", this, IInputPin::CONNECTION_OPTIONAL );
@@ -79,6 +80,7 @@ SaveImageToFile::~SaveImageToFile()
 
 bool SaveImageToFile::init()
 {
+	m_trailingnumber = 0;
     //replace all '\' characters with '/' characters
     m_directory = m_directory.replace('\\','/');
     if(!m_directory.endsWith('/'))
@@ -113,6 +115,13 @@ void SaveImageToFile::setDirectory(QString s)
 
     QMutexLocker lock(m_propertyMutex);
     m_directory = s;
+	//added
+	m_directory = m_directory.replace('\\','/');
+    if(!m_directory.endsWith('/'))
+    {
+        m_directory.append('/');
+    }
+
     emit directoryChanged(m_directory);
 }
 
@@ -199,12 +208,20 @@ bool SaveImageToFile::process()
         else
         {
             qWarning() << "plv::opencv::SaveImageToFile::process() empty string received";
-            filenameBegin = QString::number(this->getProcessingSerial());
-        }
+            //filenameBegin = QString::number(this->getProcessingSerial());
+			filenameBegin = QString("%1").arg(this->getProcessingSerial(), 6, 10, QChar('0')).toUpper();
+		}
     }
     else
     {
-        filenameBegin = QString::number(this->getProcessingSerial());
+        //used to be, but without trailing zeros
+		//filenameBegin = QString::number(this->getProcessingSerial());
+		//arg ( int a, int fieldWidth = 0, int base = 10, const QChar & fillChar = QLatin1Char( ' ' ) ) const
+		//max filename in xp 255 so fieldwidth at least shorter than that, but also smaller than maximum number of files on a disk for windows 7 which is only 4,294,967,295
+		//http://stackoverflow.com/questions/265769/maximum-filename-length-in-ntfs-windows-xp-and-windows-vista
+		//http://answers.microsoft.com/en-us/windows/forum/windows_7-files/what-is-the-maximum-number-of-files-i-can-place/07b62caa-04c7-4c8a-92bb-6ac12b737beb
+		filenameBegin = QString("%1").arg(this->getProcessingSerial(), 6, 10, QChar('0')).toUpper();
+		//filenameBegin = QString::number(this->getProcessingSerial());
     }
 
     // if the trigger is connected, only
@@ -221,11 +238,15 @@ bool SaveImageToFile::process()
 
     bool success = false;
     bool multi_image = images.size() > 1;
-    for(int i=0; i<images.size(); ++i)
+	if (multi_image)
+		qDebug() << "multiimage";
+
+	//for some reason ++i was used i++ seems better
+    for(int i=0; i<images.size(); i++)
     {
         QString filename;
         if(multi_image)
-            filename = QString("%1%2_%3%4").arg(path).arg(filenameBegin).arg(i).arg(m_fileExt);
+            filename = QString("%1%2_%3%4").arg(path).arg(i).arg(filenameBegin).arg(m_fileExt);
         else
             filename = QString("%1%2%3").arg(path).arg(filenameBegin).arg(m_fileExt);
 
@@ -249,6 +270,49 @@ bool SaveImageToFile::process()
                 success = cv::imwrite(filename.toStdString(), mat);
             }
         }
+		else //if this file name allready exists
+		{
+			if(multi_image)
+				filename = QString("%1%2_%3_%4%5").arg(path).arg(i).arg(m_trailingnumber).arg(filenameBegin).arg(m_fileExt);
+			else
+				filename = QString("%1%2_%3%4").arg(path).arg(m_trailingnumber).arg(filenameBegin).arg(m_fileExt);
+			
+			file.setFileName(filename);
+			//dangerous operation?
+			while(file.exists())
+			{
+				filename = QString("%1%2_%3%4").arg(path).arg(m_trailingnumber).arg(filenameBegin).arg(m_fileExt);
+				file.setFileName(filename);
+				if (m_trailingnumber> 100 || !file.exists())
+				{
+					break;
+				}
+				else
+				{
+					m_trailingnumber++;
+				}
+			}
+
+			if( !file.exists() )
+			{
+				if( file.open(QIODevice::WriteOnly) )
+				{
+					file.close();
+					const cv::Mat& mat = images.at(i);
+
+					// The function imwrite saves the image to the specified file.
+					// The image format is chosen based on the filename extension,
+					// see imread for the list of extensions.
+					// Only 8-bit (or 16-bit in the case of PNG, JPEG 2000 and TIFF) single-channel
+					// or 3-channel (with ‘BGR’ channel order) images can be saved using this function.
+					// If the format, depth or channel order is different, use Mat::convertTo ,
+					// and cvtColor to convert it before saving, or use the universal XML I/O functions
+					// to save the image to XML or YAML format.
+
+					success = cv::imwrite(filename.toStdString(), mat);
+				}
+			}
+		}
 
         if( !success )
         {

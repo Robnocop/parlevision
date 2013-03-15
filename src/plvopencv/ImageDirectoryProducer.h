@@ -22,6 +22,20 @@
 #ifndef IMAGEDIRECTORYPRODUCER_H
 #define IMAGEDIRECTORYPRODUCER_H
 
+//set to caps:
+#define BYNAME 0
+#define BYTIME 1 
+#define BYSIZE 2  
+#define BYTYPE 3 
+#define BYUNSORTED 4 
+#define BYNOSORT 5 
+#define BYDIRSFIRST 6
+#define BYDIRSLAST 7
+#define BYREVERSED 8
+#define BYIGNORECASE 9
+#define BYLOCALEAWARE 10
+#define WITHNUMBERS 11
+
 #include <QMutex>
 #include <plvcore/PipelineProducer.h>
 #include <plvcore/Pin.h>
@@ -39,15 +53,16 @@ namespace plvopencv
     class ImageDirectoryProducer : public plv::PipelineProducer
     {
         Q_OBJECT
-        Q_CLASSINFO("author", "Richard Loos")
+        Q_CLASSINFO("author", "Richard Loos heavily rewritten by Robby")
         Q_CLASSINFO("name", "Image directory producer")
-        Q_CLASSINFO("description", "A producer that loads all the images in a directory.");
+        Q_CLASSINFO("description", "A producer that loads all the images in a directory. We recommend only to use the WithNumbers method for large directories of image files.");
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
 		Q_PROPERTY( plv::Enum sortType READ getSortType WRITE setSortType NOTIFY sortTypeChanged )
 		Q_PROPERTY( int startNumber READ getStartNumber WRITE setStartNumber NOTIFY startNumberChanged )
 		Q_PROPERTY( int endNumber READ getEndNumber WRITE setEndNumber NOTIFY endNumberChanged )
 		Q_PROPERTY( int wantedFPS READ getWantedFPS WRITE setWantedFPS NOTIFY wantedFPSChanged )
+		Q_PROPERTY( int trailingZeros READ getTrailingZeros WRITE setTrailingZeros NOTIFY trailingZerosChanged )
 		Q_PROPERTY( bool loopIt READ getLoopIt WRITE setLoopIt NOTIFY loopItChanged )
 
         /** required standard method declaration for plv::PipelineElement */
@@ -63,25 +78,13 @@ namespace plvopencv
 		int getEndNumber() {return m_end;}
 		int getWantedFPS() {return m_fps;}
 		bool getLoopIt() {return m_loop;}
+		int getTrailingZeros() {return m_trailingZeros;}
+		
 		//is the mutexlocker needed here?
 		QString getDirectory() {QMutexLocker lock( m_propertyMutex ); return m_directory; };
 
 		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
-		int ByName;
-		int ByTime;
-		int BySize;
-		int ByType;
-		int ByUnsorted;
-		int ByNoSort;
-		int ByDirsFirst;
-		int ByDirsLast;
-		int ByReversed;
-		int ByIgnoreCase;
-		int ByLocaleAware;
-		
-		//another solution
-		int WithNumbers;
-        
+
 		virtual bool init();
         virtual bool deinit() throw ();
 
@@ -96,15 +99,18 @@ namespace plvopencv
 		void endNumberChanged(int i);
 		void wantedFPSChanged(int i);
 		void loopItChanged (bool b);
+		void trailingZerosChanged(bool b);
 
     public slots:
 		//???void setDirectory(const QString& newDir); dont know the results 
 		void setDirectory(const QString& newValue);
 		void setSortType(plv::Enum e);
-		void setStartNumber(int i) {m_start = i; emit (startNumberChanged(i)); } //init();
+		//allows to reset the number, we now don't set it twice in init as it allows for a pause and return
+		void setStartNumber(int i) {m_start = i; m_nr = m_start; m_idx = m_start; emit (startNumberChanged(i)); } //init();
 		void setEndNumber(int i) {m_end = i; emit (endNumberChanged(i)); } //init();
 		void setWantedFPS(int i) {m_fps = i; emit (wantedFPSChanged(i));}
 		void setLoopIt(bool b) {m_loop = b; emit (loopItChanged(b));}
+		void setTrailingZeros(int i) {m_trailingZeros = i; emit (trailingZerosChanged(i));}
 
     protected:
         plv::CvMatData m_loadedImage;
@@ -122,7 +128,11 @@ namespace plvopencv
 		int m_start;
 		int m_end;
 		int m_fps;
+		int m_trailingZeros;
 		bool m_loop;
+		bool m_flagTimer;
+		bool m_flagpaused;
+		QString m_imgtype;
     };
 }
 
