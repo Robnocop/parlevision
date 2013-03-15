@@ -73,8 +73,13 @@ void ImageProducer::setDirectory(const QString& directory)
     QString directoryCopy = directory;
     directoryCopy.replace('\\','/');
 
+	if(!directoryCopy.endsWith('/'))
+    {
+        directoryCopy.append('/');
+    }
+
     //validate the directory
-    QDir dir(directory);
+    QDir dir(directoryCopy);
     if( dir.exists() )
     {
         QMutexLocker lock( m_propertyMutex );
@@ -176,7 +181,6 @@ bool ImageProducer::produce()
 	else if ( keepsending )
 	{
 		m_outputPin->put( m_loadedImage );
-		qDebug() << "i keep sending";
 	}
     return true;
 }
