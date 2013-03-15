@@ -47,7 +47,7 @@ namespace plvopencv
                     " Only passes an output value when numframes has been reached. Resets average after N frames.");
 
         Q_PROPERTY( int numFrames READ getNumFrames WRITE setNumFrames NOTIFY numFramesChanged )
-
+		Q_PROPERTY( bool altRunAvg READ getAltRunAvg WRITE setAltRunAvg NOTIFY altRunAvgChanged )
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
 
@@ -58,12 +58,15 @@ namespace plvopencv
         virtual bool start();
 
         int getNumFrames() const;
+		bool getAltRunAvg() {return m_altRunAvg;}
 
     public slots:
         void setNumFrames(int n);
+		void setAltRunAvg(bool b) {m_altRunAvg = b; emit altRunAvgChanged(b);}
 
     signals:
         void numFramesChanged(int n);
+		void altRunAvgChanged(bool b);
 
     private:
         plv::CvMatDataInputPin* m_inputPin;
@@ -77,6 +80,7 @@ namespace plvopencv
 
         int m_numFrames;
         int m_total;
+		bool m_altRunAvg;
     };
 }
 #endif // AVERAGE_H

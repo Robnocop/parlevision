@@ -29,7 +29,8 @@ using namespace plvopencv;
 
 Average::Average() :
     m_numFrames(10),
-    m_total(0)
+    m_total(0),
+	m_altRunAvg(false)
 {
     m_inputPin = createCvMatDataInputPin( "input", this );
     m_outputPin = createCvMatDataOutputPin( "output", this );
@@ -61,7 +62,8 @@ bool Average::start()
 
 bool Average::process()
 {
-	
+	//DOH rewritten this block to a running average as it was not working anymore as a true average, some code optimalisation could be possible therefor
+
     if( m_inputFrames->isConnected() && m_inputFrames->hasData() )
     {
         int frames = m_inputFrames->get();
@@ -90,64 +92,141 @@ bool Average::process()
     
 	//the parlevision program might improve if we can use 32F throughout the pipeline, however several opencv functions do not allow this type.
 	//convert non 8U pics to 8U
-	if (src.depth() == CV_16U)
+	//getAltRunAvg should be set only at init otherwise the type dfferences will screw everything up
+	int m_conversionFactor =1.0;
+	if (getAltRunAvg())
 	{
-		CvMatData depthTypeChange;
-		depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
-		cv::Mat& dTC = depthTypeChange;
-		cv::convertScaleAbs(src, dTC, 0.00390625, 0);
-		src = dTC;
+		if (src.depth() == CV_16U)
+		{
+			CvMatData depthTypeChange;
+			depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
+			cv::Mat& dTC = depthTypeChange;
+			cv::convertScaleAbs(src, dTC, 0.00390625, 0);
+			src = dTC;
+		}
+		if (src.depth() == CV_32F)
+		{
+			CvMatData depthTypeChange;
+			depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
+			cv::Mat& dTC = depthTypeChange;
+			cv::convertScaleAbs(src, dTC, 255, 0);
+			src = dTC;
+		}
 	}
-	if (src.depth() == CV_32F)
+	else
 	{
-		CvMatData depthTypeChange;
-		depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
-		cv::Mat& dTC = depthTypeChange;
-		cv::convertScaleAbs(src, dTC, 255, 0);
-		src = dTC;
+		if (src.depth() == CV_8U)
+		{
+			CvMatData depthTypeChange;
+			depthTypeChange = CvMatData::create(src.cols, src.rows, CV_32F, in.channels());
+			cv::Mat& dTC = depthTypeChange;
+			m_conversionFactor = std::numeric_limits<unsigned char>::max();
+			src.convertTo(dTC,dTC.type(), 1.0/m_conversionFactor);
+			src = dTC;
+		}
+		if (src.depth() == CV_16U)
+		{
+			CvMatData depthTypeChange;
+			depthTypeChange = CvMatData::create(src.cols, src.rows, CV_32F, in.channels());
+			cv::Mat& dTC = depthTypeChange;
+			m_conversionFactor = std::numeric_limits<unsigned short>::max();
+			src.convertTo(dTC,dTC.type(), 1.0/m_conversionFactor);
+			src = dTC;
+		}
+		else //src allready properly set to 32F
+		{
+
+		}
 	}
 
+	//this is a local m_temp not the one used for the real N frame average
 	CvMatData m_temp = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
 	cv::Mat& mat2 = m_temp;
 
 	//m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
 	cv::Mat& avg = m_avg;
+	cv::Mat& tmp = m_tmp; 
 
-	if (m_total<getNumFrames())
+	//prevent mixing the black NULL average picture with values. 
+	if (m_total==0)
+	{		
+		if (getAltRunAvg())
+		{
+			//save src to avg
+			cv::convertScaleAbs(src, avg, 1.0, 0);
+			m_total++;
+		}
+		else
+		{
+			//reset global temp for N frames average to zero
+			m_tmp = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+			m_total++;
+		}
+	}
+	else if (m_total<getNumFrames())
 	{
-		m_total++;
+		if (getAltRunAvg())
+		{
+			m_total++;
 		
-		//double dgetnumframes = (double) getNumFrames();
-		double alpha = (1.0/ getNumFrames());
-		double alphaavg =  (1.0-alpha);
-		//qDebug()<< "getnum is bigger m_total is" << m_total << "alpha" << getNumFrames();
-		cv::convertScaleAbs(avg, mat2, alphaavg, 0);
-		//cv::convertScaleAbs(src, src, alpha, 0);
-		//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
-		cv::scaleAdd(src, alpha, mat2, avg);
-		//cv::accumulate(src, mat2, alpha);
+			//double dgetnumframes = (double) getNumFrames();
+			double alpha = (1.0/ getNumFrames());
+			double alphaavg =  (1.0-alpha);
+			//qDebug()<< "getnum is bigger m_total is" << m_total << "alpha" << getNumFrames();
+			cv::convertScaleAbs(avg, mat2, alphaavg, 0);
+			//cv::convertScaleAbs(src, src, alpha, 0);
+			//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
+			cv::scaleAdd(src, alpha, mat2, avg);
+		}
+		else
+		{
+			cv::accumulate(src, tmp);
+			m_total++;
+			//probably need to add a weight factor
+		}
 	}
 	else
 	{
-		//should have used 1.0 doh!
-		//double dgetnumframes = (double) getNumFrames();
-		double alpha = (1.0/getNumFrames());
-		double alphaavg =  (1-alpha);
-		cv::convertScaleAbs(avg, mat2, alphaavg, 0);
-		//cv::convertScaleAbs(src, src, alpha, 0);
-		//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
-		cv::scaleAdd(src, alpha, mat2, avg);
+		if (getAltRunAvg())
+		{
+			//should have used 1.0 doh!
+			//double dgetnumframes = (double) getNumFrames();
+			double alpha = (1.0/getNumFrames());
+			double alphaavg =  (1-alpha);
+			cv::convertScaleAbs(avg, mat2, alphaavg, 0);
+			//cv::convertScaleAbs(src, src, alpha, 0);
+			//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
+			cv::scaleAdd(src, alpha, mat2, avg);
+		}
+		else
+		{
+			//is it allowed to convert to yourselves?
+			tmp.convertTo(tmp, tmp.type(), 1.0 / m_total );
+			//as the rest of pipeline do not like a 32F we set it back to 8U anyway
+			CvMatData typeChange;
+			typeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
+			cv::Mat& tChange = typeChange;
+			cv::convertScaleAbs(tmp, tChange, 255, 0);
+			tmp = tChange;
+
+			m_avg = tmp;
+			m_total = 0;
+		}
 	}
 
 	// now needed
-	m_avg = avg;
+	if (getAltRunAvg())
+	{
+		m_avg = avg;
+	}
+
 	//convert the 32F to 8U
 	//cv::convertScaleAbs(avg, mat2, 1.0, 0);
 	//avg.convertTo(mat2, mat2.type(), 255);
 	m_outputPin->put(m_avg);
 
 	//this seems to only update beyond every m_total frames, instead we now take a running average even for less frames.
-
+	//TODO rebuild this option, only add up so many frames once.
 	//cv::accumulate(src, avg);
 
   //  if( m_total >= m_numFrames )
