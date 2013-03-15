@@ -121,7 +121,6 @@ bool BackgroundSubtractor::process()
 	//due some strange changes ?I? made opencv function need a cv::mat instead of cvmatdata.
 	cv::Mat& inmat = in;
 
-    
     if( !m_background.isEmpty() )
     {
 		//check format of images
@@ -148,7 +147,7 @@ bool BackgroundSubtractor::process()
 		}
 
 		// TODO reattach the difference either absdiff over grayscale or over colour pics see org code!
-		//STILL does't work!
+		//STILL doesn't work!
 		if( m_method.getSelectedValue() == BGSM_GRAYSCALE )
         {
 			CvMatData srcGray = CvMatData::create(in.width(), in.height(), 1);
