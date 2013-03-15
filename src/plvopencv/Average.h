@@ -71,6 +71,7 @@ namespace plvopencv
         plv::CvMatDataOutputPin* m_outputPin;
 
         plv::CvMatData m_avg;
+		//
         plv::CvMatData m_tmp;
         plv::CvMatData m_out;
 

@@ -38,11 +38,12 @@ Average::Average() :
 
     m_inputPin->addAllChannels();
     m_inputPin->addSupportedDepth(CV_8U);
+	m_inputPin->addSupportedDepth(CV_16U);
     m_inputPin->addSupportedDepth(CV_32F);
 
     m_outputPin->addAllChannels();
     m_outputPin->addSupportedDepth(CV_8U);
-    m_outputPin->addSupportedDepth(CV_32F);
+   // m_outputPin->addSupportedDepth(CV_32F); //why it is and will be 8_U
 }
 
 Average::~Average()
@@ -52,11 +53,15 @@ Average::~Average()
 bool Average::start()
 {
     m_total = 0;
+	//m_avg = CvMatData::create( 640, 480, CV_32F, 1 );
+	m_avg = CvMatData::create( 640, 480, CV_8U, 1 );
+	
     return true;
 }
 
 bool Average::process()
 {
+	
     if( m_inputFrames->isConnected() && m_inputFrames->hasData() )
     {
         int frames = m_inputFrames->get();
@@ -67,42 +72,96 @@ bool Average::process()
     }
 
     CvMatData in = m_inputPin->get();
-    const cv::Mat& src = in;
-	//test debug
-	//CvMatData& src =  in;
+    //used to be a const but needed to change to get it working for a 16 bit value.
+	cv::Mat& src = in;
 
-  //  if( m_avg.width() != in.width() || m_avg.height() != in.height() || m_avg.channels() != in.channels() )
-  //  {
-  //      m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-  //      m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
-		//src.convertTo(m_avg, m_avg.type());
-  //  }
-    m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
-    m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+	// m_avg = CvMatData::create( in.width(), in.height(), CV_32F, in.channels() );
+    // m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
 
-	cv::Mat& avg = m_avg;
-	cv::Mat& mat2= m_out;
-	//cv::Mat mat2;
-    mat2.create( cv::Size(in.width(), in.height()), in.type() );
-    
-
-    cv::accumulate(src, avg);
-
-    if( m_total >= m_numFrames )
+    if( m_avg.width() != in.width() || m_avg.height() != in.height() || m_avg.channels() != in.channels() )
     {
-        //avg.convertTo(m_out, m_out.type(), 1.0 / m_total );
-		avg.convertTo(mat2, mat2.type(), 1.0 / m_total );
-		
-		//CvMatData out2 = CvMatData::create(widthpane,heightpane,16);
-		//cv::Mat& dst2 = out2;
-		
-		m_outputPin->put(m_out);
-
-       // src.convertTo(m_avg, m_avg.type());
-        src.convertTo(avg, avg.type());
+        m_avg = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+		qDebug() << "reset average with correct size and depth";
 		m_total = 0;
     }
-    ++m_total;
+	
+	//cv::Mat mat2;
+    //mat2.create( cv::Size(in.width(), in.height()), in.type() );
+    
+	//the parlevision program might improve if we can use 32F throughout the pipeline, however several opencv functions do not allow this type.
+	//convert non 8U pics to 8U
+	if (src.depth() == CV_16U)
+	{
+		CvMatData depthTypeChange;
+		depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
+		cv::Mat& dTC = depthTypeChange;
+		cv::convertScaleAbs(src, dTC, 0.00390625, 0);
+		src = dTC;
+	}
+	if (src.depth() == CV_32F)
+	{
+		CvMatData depthTypeChange;
+		depthTypeChange = CvMatData::create(src.cols, src.rows, CV_8U, in.channels());
+		cv::Mat& dTC = depthTypeChange;
+		cv::convertScaleAbs(src, dTC, 255, 0);
+		src = dTC;
+	}
+
+	CvMatData m_temp = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+	cv::Mat& mat2 = m_temp;
+
+	//m_out = CvMatData::create( in.width(), in.height(), CV_8U, in.channels() );
+	cv::Mat& avg = m_avg;
+
+	if (m_total<getNumFrames())
+	{
+		m_total++;
+		
+		//double dgetnumframes = (double) getNumFrames();
+		double alpha = (1.0/ getNumFrames());
+		double alphaavg =  (1.0-alpha);
+		//qDebug()<< "getnum is bigger m_total is" << m_total << "alpha" << getNumFrames();
+		cv::convertScaleAbs(avg, mat2, alphaavg, 0);
+		//cv::convertScaleAbs(src, src, alpha, 0);
+		//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
+		cv::scaleAdd(src, alpha, mat2, avg);
+		//cv::accumulate(src, mat2, alpha);
+	}
+	else
+	{
+		//should have used 1.0 doh!
+		//double dgetnumframes = (double) getNumFrames();
+		double alpha = (1.0/getNumFrames());
+		double alphaavg =  (1-alpha);
+		cv::convertScaleAbs(avg, mat2, alphaavg, 0);
+		//cv::convertScaleAbs(src, src, alpha, 0);
+		//http://opencv.willowgarage.com/documentation/python/operations_on_arrays.html
+		cv::scaleAdd(src, alpha, mat2, avg);
+	}
+
+	// now needed
+	m_avg = avg;
+	//convert the 32F to 8U
+	//cv::convertScaleAbs(avg, mat2, 1.0, 0);
+	//avg.convertTo(mat2, mat2.type(), 255);
+	m_outputPin->put(m_avg);
+
+	//this seems to only update beyond every m_total frames, instead we now take a running average even for less frames.
+
+	//cv::accumulate(src, avg);
+
+  //  if( m_total >= m_numFrames )
+  //  {
+  //      //avg.convertTo(m_out, m_out.type(), 1.0 / m_total );
+		//avg.convertTo(mat2, mat2.type(), 1.0 / m_total );
+		//			
+		//m_outputPin->put(m_out);
+
+  //     // src.convertTo(m_avg, m_avg.type());
+  //      src.convertTo(avg, avg.type());
+		//m_total = 0;
+  //  }
+  //  ++m_total;
     return true;
 }
 
