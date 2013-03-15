@@ -34,7 +34,8 @@ ServerConnection::ServerConnection(int socketDescriptor, bool lossless, int maxF
     m_lossless(lossless),
     m_maxFramesInQueue(maxFrameQueue),
     m_maxFramesInFlight(maxFramesInFlight),
-    m_blockSize(0)
+    m_blockSize(0),
+	m_acknowledge(true)
 {
     connect( this, SIGNAL( scheduleSend()), this, SLOT(sendData()), Qt::QueuedConnection );
 }
@@ -96,8 +97,11 @@ void ServerConnection::queueFrame(quint32 frameNumber, QByteArray frameData)
         {
             // drop the oldest frame
             Frame f = m_frameQueue.takeFirst();
-            qDebug() << "Connection " << m_tcpSocket->peerAddress().toString() << ":"
+			if (getAcknowledgeNeeded())
+            {
+				qDebug() << "Connection " << m_tcpSocket->peerAddress().toString() << ":"
                      << m_tcpSocket->peerPort() << " dropped frame " << f.serial;
+			}
         }
     }
     emit scheduleSend();
@@ -140,8 +144,17 @@ void ServerConnection::sendData()
             else
             {
                 m_frameNumbersInFlight.append(f.serial);
+				//towards a without acknowledge
                 m_frameQueue.removeFirst();
             }
+
+			if (!getAcknowledgeNeeded())
+			{
+				if (m_frameNumbersInFlight.size() == m_maxFramesInFlight-1)
+				{
+					m_frameNumbersInFlight.removeFirst();
+				}
+			}
         }
         else
         {
@@ -311,7 +324,7 @@ void ServerConnection::disconnected()
     emit finished();
 }
 
-void ServerConnection::setMaxFrameQueue(int max)
+void ServerConnection::setMaxFramesInQueue(int max)
 {
     m_maxFramesInQueue = max;
 }
@@ -337,4 +350,9 @@ void ServerConnection::error(QAbstractSocket::SocketError socketError)
         emit onError(PlvNonFatalError, tr("The following error occurred: %1.")
                      .arg(m_tcpSocket->errorString()));
     }
+}
+
+void ServerConnection::setAcknowledgeNeeded(bool acknowledge)
+{
+	m_acknowledge = acknowledge;
 }

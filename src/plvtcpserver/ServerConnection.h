@@ -53,6 +53,8 @@ class ServerConnection : public QObject
 
 public:
     ServerConnection(int socketDescriptor, bool lossless, int maxFrameQueue, int maxFramesInFlight);
+	void setAcknowledgeNeeded(bool ack);
+	bool getAcknowledgeNeeded() {return m_acknowledge;}
     virtual ~ServerConnection();
 
 public slots:
@@ -75,7 +77,7 @@ public slots:
 
     void error(QAbstractSocket::SocketError socketError);
 
-    void setMaxFrameQueue(int max);
+    void setMaxFramesInQueue(int max);
     void setMaxFramesInFlight(int max);
     void setLossless(bool lossless);
 
@@ -98,6 +100,7 @@ private:
     QString m_errorString;
     bool m_waiting;
     bool m_lossless;
+	bool m_acknowledge;
     int m_maxFramesInQueue;
     int m_maxFramesInFlight;
     int m_blockSize;

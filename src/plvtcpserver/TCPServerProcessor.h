@@ -53,6 +53,7 @@ class TCPServerProcessor : public plv::PipelineProcessor
     Q_PROPERTY( bool lossless READ getLossless WRITE setLossless NOTIFY losslessChanged )
     Q_PROPERTY( int maxFramesInQueue  READ getMaxFramesInQueue  WRITE setMaxFramesInQueue NOTIFY maxFramesInQueueChanged )
     Q_PROPERTY( int maxFramesInFlight READ getMaxFramesInFlight WRITE setMaxFramesInFlight NOTIFY maxFramesInFlightChanged )
+	Q_PROPERTY( bool requireAcknowledge READ getRequireAcknowledge WRITE setRequireAcknowledge NOTIFY requireAcknowledgeChanged )
 
     /** required standard method declaration for plv::PipelineProcessor */
     PLV_PIPELINE_PROCESSOR
@@ -72,6 +73,7 @@ public:
     int getMaxFramesInFlight() const;
     int getMaxFramesInQueue() const;
     bool getLossless() const;
+	bool getRequireAcknowledge() {return m_requireAcknowledge;}
 
     virtual bool isReadyForProcessing() const;
 
@@ -87,9 +89,11 @@ signals:
     void maxFramesInQueueChanged(int max);
     void maxFramesInFlightChanged(int max);
     void losslessChanged(bool lossless);
+	void requireAcknowledgeChanged(bool b);
 
 public slots:
     void setPort(int port, bool doEmit=false );
+	void setRequireAcknowledge(bool b); // {m_requireAcknowledge = b; emit requireAcknowledgeChanged(b);}
     void setConvertCvMatDataToQImage(bool doConvert, bool doEmit=false);
     void stalled(ServerConnection* connection);
     void unstalled(ServerConnection* connection);
@@ -104,6 +108,7 @@ private:
     int m_port;
     Server* m_server;
     bool m_waiting;
+	bool m_requireAcknowledge;
     bool m_convertCvMatToQImage;
     int m_cvMatDataTypeId;
 };

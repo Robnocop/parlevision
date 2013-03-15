@@ -306,21 +306,24 @@ void TCPClientProducer::readData()
 
 void TCPClientProducer::ackFrame(quint32 frameNumber)
 {
-    QByteArray bytes;
-    QDataStream out(&bytes, QIODevice::WriteOnly);
-    out.setVersion(QDataStream::Qt_4_0);
+	/*if (false)
+	{*/
+		QByteArray bytes;
+		QDataStream out(&bytes, QIODevice::WriteOnly);
+		out.setVersion(QDataStream::Qt_4_0);
 
-    // write the header
-    out << (quint32)(2*sizeof(quint32)); // size of message excluding 4 bytes for size
-    out << (quint32)PROTO_ACK;
-    out << (quint32)frameNumber;
+		// write the header
+		out << (quint32)(2*sizeof(quint32)); // size of message excluding 4 bytes for size
+		out << (quint32)PROTO_ACK;
+		out << (quint32)frameNumber;
 
-    if( m_tcpSocket->write(bytes) == -1 )
-    {
-        //setError( PlvNonFatalError, m_tcpSocket->errorString() );
-        QString msg = tr("Failed to write ACK to socket.");
-            qWarning() << msg;
-    }
+		if( m_tcpSocket->write(bytes) == -1 )
+		{
+			//setError( PlvNonFatalError, m_tcpSocket->errorString() );
+			QString msg = tr("Failed to write ACK to socket.");
+				qWarning() << msg;
+		}
+	//}
 }
 
 //bool TCPClientProducer::parseConfig( QDataStream& in )

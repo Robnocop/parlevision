@@ -28,10 +28,16 @@
 Server::Server(QObject *parent) : QTcpServer(parent),
     m_lossless(false),
     m_maxFramesInQueue(1),
-    m_maxFramesInFlight(1)
+    m_maxFramesInFlight(1),
+	m_acknowledge(true)
 {
     connect( this, SIGNAL( stalled(ServerConnection*) ), parent, SLOT( stalled(ServerConnection*) ) );
     connect( this, SIGNAL( unstalled(ServerConnection*) ), parent, SLOT( unstalled(ServerConnection*) ) );
+}
+
+void Server::setAcknowledge(bool ack)
+{
+	m_acknowledge = ack;
 }
 
 void Server::incomingConnection(int socketDescriptor)
@@ -40,7 +46,8 @@ void Server::incomingConnection(int socketDescriptor)
 
     QMutexLocker lock(&m_serverPropMutex);
     ServerConnection* connection = new ServerConnection(socketDescriptor, m_lossless, m_maxFramesInQueue, m_maxFramesInFlight);
-    lock.unlock();
+	connection->setAcknowledgeNeeded(m_acknowledge);
+	lock.unlock();
 
     // let errors go through the error reporting signal of this class
     connect( this, SIGNAL( onError(PlvErrorType,QString)),
@@ -66,8 +73,8 @@ void Server::incomingConnection(int socketDescriptor)
     connect( connection, SIGNAL( waitingOnClient(ServerConnection*,bool)),
              this, SLOT( serverThreadStalled(ServerConnection*,bool)) );
 
-    connect( parent(), SIGNAL( maxFrameQueueChanged(int) ),
-             connection, SLOT( setMaxFrameQueue(int) ) );
+    connect( parent(), SIGNAL( maxFramesInQueueChanged(int) ),
+             connection, SLOT( setMaxFramesInQueue(int) ) ); //setMaxFrameInQueue &&maxFrameInQueueChanged added in TODO check
 
     connect( parent(), SIGNAL( maxFramesInFlightChanged(int) ),
              connection, SLOT( setMaxFramesInFlight(int)) );

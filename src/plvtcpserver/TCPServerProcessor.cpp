@@ -31,12 +31,14 @@
 TCPServerProcessor::TCPServerProcessor() :
     m_port(1337),
     m_waiting(false),
-    m_convertCvMatToQImage(false)
+    m_convertCvMatToQImage(false),
+	m_requireAcknowledge(true)
 
 {
     plv::createDynamicInputPin( "generic pin", this, plv::IInputPin::CONNECTION_OPTIONAL );
     m_cvMatDataTypeId = QMetaType::type("plv::CvMatData");
     m_server = new Server(this);
+	m_server->setAcknowledge(getRequireAcknowledge());
 }
 
 TCPServerProcessor::~TCPServerProcessor()
@@ -348,5 +350,13 @@ void TCPServerProcessor::serverError(PlvErrorType type, const QString& msg)
     // propagate to pipeline element error handling
     setError(type,msg);
     emit onError(type,this);
+}
+
+void TCPServerProcessor::setRequireAcknowledge(bool b)
+{
+	QMutexLocker lock( m_propertyMutex );
+	m_requireAcknowledge = b; 
+	m_server->setAcknowledge(m_requireAcknowledge);
+	emit requireAcknowledgeChanged(b);
 }
 

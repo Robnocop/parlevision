@@ -51,6 +51,7 @@ public slots:
     void setLossless(bool lossless);
     void setMaxFramesInQueue(int max);
     void setMaxFramesInFlight(int max);
+	void setAcknowledge(bool b);
 
     int getMaxFramesInFlight() const;
     int getMaxFramesInQueue() const;
@@ -73,6 +74,7 @@ private:
     void incomingConnection(int socketDescriptor);
 
     bool m_lossless;
+	bool m_acknowledge;
     int m_maxFramesInQueue;
     int m_maxFramesInFlight;
     mutable QMutex m_serverPropMutex;
