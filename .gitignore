@@ -27,6 +27,9 @@ common.pri
 parlevision-all.pro
 ipch
 *.opensdf
-
-
+test
+Output-Build.txt
+UpgradeLog.xml
+*.plv
+_UpgradeReport_Files
 
