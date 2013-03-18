@@ -115,12 +115,12 @@ void SaveImageToFile::setDirectory(QString s)
 
     QMutexLocker lock(m_propertyMutex);
     m_directory = s;
-	//added
-	m_directory = m_directory.replace('\\','/');
-    if(!m_directory.endsWith('/'))
-    {
-        m_directory.append('/');
-    }
+	//added but should be done in process in order to let a user be able to type.
+	//m_directory = m_directory.replace('\\','/');
+ //   if(!m_directory.endsWith('/'))
+ //   {
+ //       m_directory.append('/');
+ //   }
 
     emit directoryChanged(m_directory);
 }
