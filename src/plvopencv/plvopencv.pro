@@ -66,6 +66,7 @@ SOURCES += plvopencvplugin.cpp \
     ForegroundDetector.cpp \
     Mask.cpp \
     Stitch.cpp \
+	StitchColor.cpp \
     Crop.cpp
 	
 HEADERS +=  plvopencvplugin.h \
@@ -104,5 +105,6 @@ HEADERS +=  plvopencvplugin.h \
             ForegroundDetector.h \
             Mask.h \
             Stitch.h \
+			StitchColor.h \
             Crop.h
     

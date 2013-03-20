@@ -27,6 +27,7 @@
 #include "Multiply.h"
 #include "Split.h"
 #include "Stitch.h"
+#include "StitchColor.h"
 #include "ImageProducer.h"
 #include "ImageDirectoryProducer.h"
 #include "BackgroundSubtractor.h"
@@ -80,6 +81,7 @@ void PlvOpenCVPlugin::onLoad()
     plvRegisterPipelineElement<plvopencv::Multiply>();
     plvRegisterPipelineElement<plvopencv::Split>();
     plvRegisterPipelineElement<plvopencv::Stitch>();
+	plvRegisterPipelineElement<plvopencv::StitchColor>();
     plvRegisterPipelineElement<plvopencv::BackgroundSubtractor>();
     plvRegisterPipelineElement<plvopencv::DilateErode>();
     plvRegisterPipelineElement<plvopencv::Average>();
