@@ -30,6 +30,8 @@
 #include <opencv/highgui.h>
 #include <QDir>
 
+
+
 using namespace plv;
 using namespace plvopencv;
 
@@ -49,7 +51,8 @@ enum ImageFormat {
     PNG,
     PBM,
     SR,
-    TIFF
+    TIFF,
+	JP2
 };
 
 /**
@@ -58,7 +61,8 @@ enum ImageFormat {
 SaveImageToFile::SaveImageToFile() :
         m_directory(SAVEIMAGETOFILE_DEFAULT_DIR),
         m_fileExt(".bmp"),
-		m_trailingnumber(0)
+		m_trailingnumber(0),
+		m_quality(30)
 {
     m_inputImage    = createInputPin<CvMatData>("image", this, IInputPin::CONNECTION_OPTIONAL );
     m_inputImages   = createInputPin< QList<CvMatData> >("image list", this, IInputPin::CONNECTION_OPTIONAL );
@@ -68,19 +72,34 @@ SaveImageToFile::SaveImageToFile() :
 
     m_fileFormat.add("Windows Bitmap - *.bmp", BMP);
     m_fileFormat.add("JPEG Files - *.jpg", JPG);
-    m_fileFormat.add("Portable Network Graphics - *.png", PNG);
+	m_fileFormat.add("Portable Network Graphics - *.png", PNG);
     m_fileFormat.add("Portable Image Format - *.pbm", PBM);
     m_fileFormat.add("Sun Rasters - *.sr", SR);
     m_fileFormat.add("TIFF Files - *.tiff", TIFF);
+	m_fileFormat.add("JPEG 2000 Files - *.jp2", JP2);
 }
 
 SaveImageToFile::~SaveImageToFile()
 {
 }
 
+//bool SaveImageToFile::deinit()
+//{
+//	emit stopThread();
+//	return true;
+//}
+
 bool SaveImageToFile::init()
 {
+	//create a seperate thread for this calculation intensive function?
+	//QThreadEx* connectionThread = new QThreadEx();
+ //   this->moveToThread(connectionThread); //if that is allowed
+	//
+	//connect( this, SIGNAL(stopThread()),
+ //            connectionThread, SLOT(quit()));
+
 	m_trailingnumber = 0;
+	//m_nr = 0;
     //replace all '\' characters with '/' characters
     m_directory = m_directory.replace('\\','/');
     if(!m_directory.endsWith('/'))
@@ -93,7 +112,7 @@ bool SaveImageToFile::init()
     return dir.exists();
 }
 
-QString SaveImageToFile::getDirectory() const
+QString SaveImageToFile::getDirectory()//const
 {
     QMutexLocker lock(m_propertyMutex);
     return m_directory;
@@ -121,8 +140,25 @@ void SaveImageToFile::setDirectory(QString s)
  //   {
  //       m_directory.append('/');
  //   }
-
+	//added as directyory was not saved of logger was no longer selected.
+	lock.unlock();
     emit directoryChanged(m_directory);
+}
+
+void SaveImageToFile::setQuality(int i)
+{
+	QMutexLocker lock(m_propertyMutex);
+	if(i>=0 && i<=100)
+	{
+		m_quality = i;
+		lock.unlock();
+		emit qualityChanged(m_quality);
+	}
+	else
+	{
+		qDebug() << "select a quality value between 0&100";
+	}
+    
 }
 
 /**
@@ -152,6 +188,9 @@ void SaveImageToFile::setFileFormat(plv::Enum e)
         break;
     case BMP: // Bitmap files
         m_fileExt = ".bmp";
+        break;
+	case JP2: // JPEG 2000 files, those accept 16u images but need to be RGB instead of BGR 
+        m_fileExt = ".jp2";
         break;
     default: //Defaulting to Windows bitmap
         m_fileExt = ".bmp";
@@ -221,7 +260,7 @@ bool SaveImageToFile::process()
 		//http://stackoverflow.com/questions/265769/maximum-filename-length-in-ntfs-windows-xp-and-windows-vista
 		//http://answers.microsoft.com/en-us/windows/forum/windows_7-files/what-is-the-maximum-number-of-files-i-can-place/07b62caa-04c7-4c8a-92bb-6ac12b737beb
 		filenameBegin = QString("%1").arg(this->getProcessingSerial(), 6, 10, QChar('0')).toUpper();
-		//filenameBegin = QString::number(this->getProcessingSerial());
+		//filenameBegin = QString::number(m_nr); //not faster
     }
 
     // if the trigger is connected, only
@@ -238,13 +277,11 @@ bool SaveImageToFile::process()
 
     bool success = false;
     bool multi_image = images.size() > 1;
-	if (multi_image)
-		qDebug() << "multiimage";
-
+	
 	//for some reason ++i was used i++ seems better
     for(int i=0; i<images.size(); i++)
     {
-        QString filename;
+		QString filename;
         if(multi_image)
             filename = QString("%1%2_%3%4").arg(path).arg(i).arg(filenameBegin).arg(m_fileExt);
         else
@@ -266,8 +303,25 @@ bool SaveImageToFile::process()
                 // If the format, depth or channel order is different, use Mat::convertTo ,
                 // and cvtColor to convert it before saving, or use the universal XML I/O functions
                 // to save the image to XML or YAML format.
+			
 
-                success = cv::imwrite(filename.toStdString(), mat);
+				if (m_fileExt == ".png")
+				{
+					std::vector<int> compression_params;
+					int quality = (int) 9*getQuality()/100;
+					compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+					compression_params.push_back(quality);
+					success = cv::imwrite(filename.toStdString(), mat,compression_params);
+				}
+				else if (m_fileExt == ".jpg")
+				{
+					std::vector<int> compression_params;
+					compression_params.push_back(CV_IMWRITE_JPEG_QUALITY );
+					compression_params.push_back(getQuality());
+					success = cv::imwrite(filename.toStdString(), mat,compression_params);
+				}
+				else
+					success = cv::imwrite(filename.toStdString(), mat);
             }
         }
 		else //if this file name allready exists
@@ -309,7 +363,23 @@ bool SaveImageToFile::process()
 					// and cvtColor to convert it before saving, or use the universal XML I/O functions
 					// to save the image to XML or YAML format.
 
-					success = cv::imwrite(filename.toStdString(), mat);
+					if (m_fileExt == ".png")
+					{
+						std::vector<int> compression_params;
+						int quality = (int) 9*getQuality()/100;
+						compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+						compression_params.push_back(quality);
+						success = cv::imwrite(filename.toStdString(), mat,compression_params);
+					}
+					else if (m_fileExt == ".jpg")
+					{
+						std::vector<int> compression_params;
+						compression_params.push_back(CV_IMWRITE_JPEG_QUALITY );
+						compression_params.push_back(getQuality());
+						success = cv::imwrite(filename.toStdString(), mat,compression_params);
+					}
+					else
+						success = cv::imwrite(filename.toStdString(), mat);
 				}
 			}
 		}
@@ -318,6 +388,8 @@ bool SaveImageToFile::process()
         {
             qWarning() << "plv::opencv::SaveImageToFile::process() failed to save image " << filename;
         }
+		
     }
+	//m_nr++;
     return true;
 }

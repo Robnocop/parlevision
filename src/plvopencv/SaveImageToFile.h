@@ -28,6 +28,8 @@
 #include <plvcore/CvMatData.h>
 #include <QList>
 
+//#include <QThread>
+
 namespace plv
 {
     class OpenCVImage;
@@ -72,6 +74,7 @@ namespace plvopencv
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
         Q_PROPERTY( plv::Enum fileFormat READ getFileFormat WRITE setFileFormat NOTIFY fileFormatChanged )
+		 Q_PROPERTY( int quality READ getQuality WRITE setQuality NOTIFY qualityChanged  )
 
         /** required standard method declaration for plv::PipelineElement */
         PLV_PIPELINE_PROCESSOR
@@ -82,19 +85,27 @@ namespace plvopencv
         virtual ~SaveImageToFile();
 
         /** property methods */
-        QString getDirectory() const;
+        QString getDirectory() ; //const?
         plv::Enum getFileFormat() const;
-
-        /** checks if directory exists */
+		
+		/** checks if directory exists */
         virtual bool init();
+
+		//to send stop thread signal didnt work
+		//virtual bool deinit();
+
+		int getQuality() {return m_quality;}
 
     signals:
         void directoryChanged(QString newValue);
         void fileFormatChanged(plv::Enum newValue);
+		void qualityChanged(int i);
+		//void stopThread();
 
     public slots:
         void setDirectory(QString s);
         void setFileFormat(plv::Enum e);
+		void setQuality(int i);
 
     private:
         plv::InputPin< plv::CvMatData>*         m_inputImage;
@@ -107,9 +118,18 @@ namespace plvopencv
         plv::Enum m_fileFormat; /** The file extention and thus the format in which the data is stored. */
 
 		int m_trailingnumber;
+		int m_quality;
+		//int m_nr;
         /** Additional properties */
         QString m_fileExt;   /** The filename extension selected through m_fileFormat. */
     };
 }
+
+///** Helper class for a QThread to run its own event loop */
+//class QThreadEx : public QThread
+//{
+//protected:
+//    void run() { exec(); }
+//};
 
 #endif // SAVEIMAGETOFILE_H

@@ -1,0 +1,54 @@
+quality		last time range		fps
+100(ident->30)	35			24 
+
+95 		68-71			13
+100 		71			12
+90		69-72			12
+85		70			12
+
+70		72-74			12
+60		76-78			12
+
+40		89-92			10
+30		102-106			9-10
+30		(2e meting)104-108	9-10
+20		128-130			7			
+10		35			24
+0		34-37			24
+
+single image
+jpeg2000	220			4
+
+(after a while back to 70 ?file open? code?)
+overwritten is also 34, so no real difference
+
+stitched image png
+
+0		133-150			6-7
+20		491-529			1
+100		270			3
+
+
+stitched image jpg
+99		87-91			10
+80		69-72			12
+
+30		57-66			14
+15		55-60			14-16
+10		54-58(55)		16
+8		55			16
+3		53			16
+
+standard	76-80			12
+		
+bitmap		43-145 (bounces up/down) 9-13
+tiff		117-120			8-10
+pbm		44-180			11
+sr		34-181			10-11
+jp2		880			4
+
+PNG 
+In the case of PNG it can be the compression level ( CV_IMWRITE_PNG_COMPRESSION ), from 0 to 9 (the higher value means smaller size and longer compression time), 3 by default
+In the case of JPEG it can be a quality ( CV_IMWRITE_JPEG_QUALITY ), from 0 to 100 (the higher is the better), 95 by default.
+
+
