@@ -37,6 +37,7 @@
 #include "RunningAverage.h"
 #include "ForegroundDetector.h"
 #include "Crop.h"
+#include "Resize.h"
 
 PlvOpenCVPlugin::PlvOpenCVPlugin()
 {
@@ -88,6 +89,7 @@ void PlvOpenCVPlugin::onLoad()
     plvRegisterPipelineElement<plvopencv::RunningAverage>();
     plvRegisterPipelineElement<plvopencv::ForegroundDetector>();
     plvRegisterPipelineElement<plvopencv::CropImage>();
+	plvRegisterPipelineElement<plvopencv::Resize>();
 }
 Q_EXPORT_PLUGIN2(plv_opencv_plugin, PlvOpenCVPlugin)
 

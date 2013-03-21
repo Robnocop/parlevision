@@ -67,6 +67,7 @@ SOURCES += plvopencvplugin.cpp \
     Mask.cpp \
     Stitch.cpp \
 	StitchColor.cpp \
+	Resize.cpp \
     Crop.cpp
 	
 HEADERS +=  plvopencvplugin.h \
@@ -106,5 +107,6 @@ HEADERS +=  plvopencvplugin.h \
             Mask.h \
             Stitch.h \
 			StitchColor.h \
+			Resize.h \
             Crop.h
     
