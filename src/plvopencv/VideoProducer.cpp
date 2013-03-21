@@ -60,7 +60,7 @@ void VideoProducer::setFilename(const QString& filename)
         return;
     }
 	
-	//checcking beore saving would mean one has first to set directory and only then the filename
+	//checcking before saving would mean one has first to set directory and only then the filename so not done that way
     QMutexLocker lock( m_propertyMutex );
 	QString dir = m_directory;
     QFile checkfile = dir.append(filename);
@@ -117,7 +117,20 @@ QString VideoProducer::getDirectory()
 bool VideoProducer::validateExtension(const QString& filename)
 {
 	QStringList parts = filename.split(".");
-    QString filenameBegin = parts.at(1);
+    if (parts.length()>0) 
+	{
+		QString fileExtension = parts.at(1);
+		//qDebug() << fileExtension ;
+		//these are not verified with their most likely codecs
+		if (!(fileExtension=="avi" || fileExtension=="vob" || fileExtension=="tod" || 
+			fileExtension=="mkv" || fileExtension=="mpeg" || fileExtension=="mpg" ||
+			fileExtension=="mp4") || fileExtension=="flv" || fileExtension=="mov" ||
+			fileExtension=="ogm")
+		{
+			return false;
+		}
+	}
+
 	//this doesnt seem to be right just don't check it.
     return true;
 }
