@@ -120,7 +120,7 @@ bool StitchColor::process()
     const cv::Mat& in2 = in2Img;
     const cv::Mat& in3 = in3Img;
 
-	if(!in0.channels()>1)
+	if(!(in0.channels()>1))
 	{
 		//debug:
 		//if(in0.cols < 100) so cols are actually cols

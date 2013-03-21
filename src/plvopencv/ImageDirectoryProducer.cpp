@@ -354,7 +354,7 @@ bool ImageDirectoryProducer::produce()
 		//qDebug() << "selectedvalue is eleven";
 		//QString filenames;
 		//not set to -1 doesn't seem right
-		if (m_nr>=getEndNumber())
+		if (m_nr>=(unsigned int) getEndNumber())
 		{
 			if (m_nr!=getEndNumber()+1)
 			{

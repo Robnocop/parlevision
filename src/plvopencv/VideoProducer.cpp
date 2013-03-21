@@ -59,11 +59,27 @@ void VideoProducer::setFilename(const QString& filename)
         qDebug() << tr("Invalid filename %1.").arg(filename);
         return;
     }
-
+	
+	//checcking beore saving would mean one has first to set directory and only then the filename
     QMutexLocker lock( m_propertyMutex );
-    m_filename = filename;
-    qDebug() << "New filename selected: " << m_filename;
-    return;
+	QString dir = m_directory;
+    QFile checkfile = dir.append(filename);
+	if (checkfile.exists() )
+	{
+		m_filename = filename;
+		qDebug() << "New filename selected: " << m_filename;
+		lock.unlock();
+		emit filenameChanged(m_filename);
+	}
+	else
+	{
+		m_filename = filename;
+		qDebug() << "File does not exist: " << dir;
+		//emit filenameChanged(m_filename);
+		lock.unlock();
+	}
+	
+	return;
 }
 
 QString VideoProducer::getFilename()
@@ -79,13 +95,16 @@ void VideoProducer::setDirectory(const QString& directory)
     directoryCopy.replace('\\','/');
 
     //validate the directory
-    QDir dir(directory);
+    //QDir dir(directory);
+	QDir dir(directoryCopy);
     if( dir.exists() )
     {
+		//does it actually recognize without the appended / ?
         if(!directoryCopy.endsWith('/')) directoryCopy.append('/');
 		QMutexLocker lock( m_propertyMutex );
 		m_directory = directoryCopy;
         qDebug() << "New directory selected:" << m_directory;
+		emit directoryChanged(directoryCopy);
     }
 }
 
@@ -97,7 +116,9 @@ QString VideoProducer::getDirectory()
 
 bool VideoProducer::validateExtension(const QString& filename)
 {
-	//this doesnt seem to be right!
+	QStringList parts = filename.split(".");
+    QString filenameBegin = parts.at(1);
+	//this doesnt seem to be right just don't check it.
     return true;
 }
 
@@ -208,7 +229,7 @@ bool VideoProducer::produce()
     m_ratio = m_capture->get(CV_CAP_PROP_POS_AVI_RATIO);
     m_fps = (int)m_capture->get(CV_CAP_PROP_FPS);
 
-	int serial = getProcessingSerial();
+	//int serial = getProcessingSerial();
 	
     m_outFrameCount->put(m_frameCount);
     m_outPositionMillis->put(m_posMillis);
