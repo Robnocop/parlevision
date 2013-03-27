@@ -98,18 +98,21 @@ bool TrackToStringConverter::process()
         //p.x = image.width() - p.x;
         //p.y = image.height() - p.y;
 		//playgroundQString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#").arg(t.getID()).arg(p.x).arg(p.y);
-		QString blobString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+		//legacy format, change to tab formatted if in order
+		QString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
 		out.append(blobString);
 		out.append("\n");
 		if (getSaveToFile())
 		{
+			//maybe better to save the values instead of calling them twice. although none of these values seem to require much proccesing power, they only return a value. 
+			QString blobTabString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
 			QFile file(m_filename);
 			bool ret = file.open(QIODevice::WriteOnly | QIODevice::Append);
 			Q_ASSERT(ret);
 			//Q_ASSERT(blobString.size()>0);
 			QTextStream s(&file);
-			for (int i = 0; i < blobString.size(); ++i)
-				s << blobString.at(i);// << '\n';
+			for (int i = 0; i < blobTabString.size(); ++i)
+				s << blobTabString.at(i);// << '\n';
 			//file.write(blobString);
 			//file.write("APPEND new Line");
 			file.write("\n");	
