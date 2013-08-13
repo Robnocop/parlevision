@@ -37,6 +37,7 @@ namespace plvblobtracker
 			direction(361),
 			lastUpdate(0),//should never be 0 i guess
 			velocity(0),
+			velocity2(0),
 			avgvelocity(0),
 			avgdirection(0),
 			state(BlobTrackBirth),
@@ -76,6 +77,7 @@ namespace plvblobtracker
 		unsigned int direction;
 		//velocity
 		unsigned int velocity;
+		float velocity2;
 		unsigned int avgvelocity;
 		unsigned int avgdirection;
 
@@ -113,7 +115,7 @@ namespace plvblobtracker
 				  int dieThreshold=30, //number of frames a track has not been updated before it is removed from the list was 400, ?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
                   int historySize=10, //10 number of complete blobs in the track vector that can be recalled
                   int trackSize=90, //drawn and saved tail length also arraysize of recallable speed and rotation values
-				  int avgOver= 5); //value over which the direction and speed are averaged, now set to 5 suiting
+				  int avgOver= 2); //value over which the direction and speed are averaged, now set to 5 suiting
 
         virtual ~BlobTrack();
 
@@ -130,6 +132,9 @@ namespace plvblobtracker
         inline unsigned int getId() const { return d->id; }
 		inline unsigned int getDirection() const { return d->direction; }
 		inline unsigned int getVelocity() const { return d->velocity; }
+		//Framebased
+		inline float getVelocity2() const { return d->velocity2; }
+
 		inline unsigned int getAvgVelocity() const { return d->avgvelocity; }
 		inline unsigned int getAvgDirection() const { return d->avgdirection; }
 		inline unsigned int getLastUpdate() const { return d->lastUpdate; }
@@ -165,6 +170,7 @@ namespace plvblobtracker
 		//void BlobTrack::setBits(bool bit, int slot);
 		void setDirection(std::vector< cv::Point > cogs);
 		void setVelocity(std::vector< cv::Point > cogs);
+		void setVelocity2(std::vector< cv::Point > cogs);
 		void setLastUpdate(unsigned int updatetime);
 		void setTimeSinceLastUpdate(unsigned int amountoftimepast);
 

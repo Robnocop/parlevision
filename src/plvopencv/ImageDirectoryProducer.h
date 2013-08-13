@@ -58,12 +58,14 @@ namespace plvopencv
         Q_CLASSINFO("description", "A producer that loads all the images in a directory. We recommend only to use the WithNumbers method for large directories of image files.");
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
+		Q_PROPERTY( QString directoryRGB READ getDirectoryRGB WRITE setDirectoryRGB NOTIFY directoryRGBChanged )
 		Q_PROPERTY( plv::Enum sortType READ getSortType WRITE setSortType NOTIFY sortTypeChanged )
 		Q_PROPERTY( int startNumber READ getStartNumber WRITE setStartNumber NOTIFY startNumberChanged )
 		Q_PROPERTY( int endNumber READ getEndNumber WRITE setEndNumber NOTIFY endNumberChanged )
 		Q_PROPERTY( int wantedFPS READ getWantedFPS WRITE setWantedFPS NOTIFY wantedFPSChanged )
 		Q_PROPERTY( int trailingZeros READ getTrailingZeros WRITE setTrailingZeros NOTIFY trailingZerosChanged )
 		Q_PROPERTY( bool loopIt READ getLoopIt WRITE setLoopIt NOTIFY loopItChanged )
+		Q_PROPERTY( bool annotation READ getAnnotation WRITE setAnnotation NOTIFY annotationChanged )
 
         /** required standard method declaration for plv::PipelineElement */
         PLV_PIPELINE_PRODUCER
@@ -78,10 +80,13 @@ namespace plvopencv
 		int getEndNumber() {return m_end;}
 		int getWantedFPS() {return m_fps;}
 		bool getLoopIt() {return m_loop;}
+		bool getAnnotation() {return m_annotation;}
 		int getTrailingZeros() {return m_trailingZeros;}
 		
 		//is the mutexlocker needed here?
 		QString getDirectory() {QMutexLocker lock( m_propertyMutex ); return m_directory; };
+
+		QString getDirectoryRGB() {QMutexLocker lock( m_propertyMutex ); return m_directoryRGB; };
 
 		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
 
@@ -94,35 +99,58 @@ namespace plvopencv
 
     signals:
         void directoryChanged(const QString& newValue);
+		//RGB
+		void directoryRGBChanged(const QString& newValueRGB);
+
 		void sortTypeChanged(plv::Enum newValue);
 		void startNumberChanged(int i);
 		void endNumberChanged(int i);
 		void wantedFPSChanged(int i);
 		void loopItChanged (bool b);
 		void trailingZerosChanged(bool b);
-
+		
+		//ugly and temp solution :
+		void annotationChanged(bool b);
+		
+		
     public slots:
 		//???void setDirectory(const QString& newDir); dont know the results 
 		void setDirectory(const QString& newValue);
+		//RGB
+		void setDirectoryRGB(const QString& newValueRGB);
+
 		void setSortType(plv::Enum e);
 		//allows to reset the number, we now don't set it twice in init as it allows for a pause and return
 		void setStartNumber(int i) {m_start = i; m_nr = m_start; m_idx = m_start; emit (startNumberChanged(i)); } //init();
 		void setEndNumber(int i) {m_end = i; emit (endNumberChanged(i)); } //init();
 		void setWantedFPS(int i) {m_fps = i; emit (wantedFPSChanged(i));}
 		void setLoopIt(bool b) {m_loop = b; emit (loopItChanged(b));}
+		void setAnnotation(bool b) {m_annotation = b; emit (annotationChanged(b));}
 		void setTrailingZeros(int i) {m_trailingZeros = i; emit (trailingZerosChanged(i));}
 
     protected:
         plv::CvMatData m_loadedImage;
-        plv::CvMatDataOutputPin* m_imgOutputPin;
         plv::OutputPin<QString>* m_fileNameOutputPin;
+		plv::CvMatDataOutputPin* m_imgOutputPin;
+		//TEMP HACK RGB
+		plv::CvMatDataOutputPin* m_imgOutputPinRGB;
+        		
         plv::OutputPin<QString>* m_filePathOutputPin;
 		plv::Enum m_sort;
-
+		
     private:
 		QTime m_timeSinceLastFPSCalculation;
         QString m_directory;
-        QFileInfoList m_entryInfoList;
+
+		QFileInfoList m_entryInfoList;
+		//temp hack RGB
+		QFileInfoList m_entryInfoListRGB;
+		QString m_directoryRGB;
+        
+		bool resetFile();
+		int readFile(QString filename);
+		QFileInfoList loadImageDir(QDir dir);
+
         int m_idx;
 		unsigned int m_nr;
 		int m_start;
@@ -133,6 +161,11 @@ namespace plvopencv
 		bool m_flagTimer;
 		bool m_flagpaused;
 		QString m_imgtype;
+		
+		//ugly solution:
+		bool m_annotation;
+		QString m_filename2;
+		//plv::InputPin<int>* m_changeFrame;
     };
 }
 

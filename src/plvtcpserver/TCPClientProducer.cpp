@@ -31,7 +31,8 @@ TCPClientProducer::TCPClientProducer() :
     m_blockSize(0),
     m_networkSession(0),
     m_configured( true ),
-    m_autoReconnect( false )
+    m_autoReconnect( false ),
+	m_sendAcknowledge( true )
 {
     m_intOut      = plv::createOutputPin<int>("int", this);
     m_stringOut   = plv::createOutputPin<QString>("QString", this);
@@ -306,8 +307,8 @@ void TCPClientProducer::readData()
 
 void TCPClientProducer::ackFrame(quint32 frameNumber)
 {
-	/*if (false)
-	{*/
+	if (getSendAcknowledge())
+	{
 		QByteArray bytes;
 		QDataStream out(&bytes, QIODevice::WriteOnly);
 		out.setVersion(QDataStream::Qt_4_0);
@@ -323,7 +324,7 @@ void TCPClientProducer::ackFrame(quint32 frameNumber)
 			QString msg = tr("Failed to write ACK to socket.");
 				qWarning() << msg;
 		}
-	//}
+	}
 }
 
 //bool TCPClientProducer::parseConfig( QDataStream& in )

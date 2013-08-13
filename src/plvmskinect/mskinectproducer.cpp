@@ -283,11 +283,12 @@ bool MSKinectProducer::produce()
 		
 		m_depthFrames[i] = cv::Mat();
         m_videoFrames[i] = cv::Mat();
-		if( m_skeletonFrames.at(i).isValid() )
-        {
-            m_outputPinsSkeleton.at(i)->put( m_skeletonFrames.at(i) );
-            m_skeletonFrames[i] = SkeletonFrame();
-        }
+		//TO CHANGE
+		//if( m_skeletonFrames.at(i).isValid() )
+  //      {
+  //          m_outputPinsSkeleton.at(i)->put( m_skeletonFrames.at(i) );
+  //          m_skeletonFrames[i] = SkeletonFrame();
+  //      }
     }
 
     return true;
@@ -323,7 +324,8 @@ void MSKinectProducer::newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonF
 {
     QMutexLocker lock( &m_kinectProducerMutex );
     assert( deviceIndex > -1 && deviceIndex < m_deviceCount );
-    m_skeletonFrames[deviceIndex] = frame;
+   //TO CHANGE
+	//m_skeletonFrames[deviceIndex] = frame;
 }
 
 void MSKinectProducer::kinectFinished( int deviceIndex )

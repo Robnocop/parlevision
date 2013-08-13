@@ -9,11 +9,9 @@ using namespace plvblobtracker;
 TrackToStringConverter::TrackToStringConverter() :
 	m_saveToFile(true),
 	m_filename("blobtracklog.txt"),
-	halfhour(0)
+	m_legacyFormat(true)
 {
     m_inputBlobs = createInputPin< QList<BlobTrack> >( "input", this );
-  
-
     m_outputPin = createOutputPin<QString>( "output", this );
 }
 
@@ -73,9 +71,18 @@ void TrackToStringConverter::setSaveToFile(bool b)
 bool TrackToStringConverter::process()
 {
     QList<plvblobtracker::BlobTrack> tracks = m_inputBlobs->get();
-	bool savetofile = true;
-    QString out = QString("FRAME:%1#").arg( this->getProcessingSerial() );
-
+	//bool savetofile = true;
+    QString out;
+	if (getLegacyFormat())
+	{	 
+		out = QString("FRAME:%1#").arg( this->getProcessingSerial() );
+	}
+	else
+	{
+		QString dateAndTime = QTime().currentTime().toString();
+		out = QString("FRAME: \t %1 \t at time \t %2").arg(this->getProcessingSerial()).arg(dateAndTime);
+	}
+	//as the framenumber might not be constant it is in order to have the system time which in most cases is more reliable. 
 	if (getSaveToFile())
 	{
 			QFile file(m_filename);
@@ -83,7 +90,7 @@ bool TrackToStringConverter::process()
 			Q_ASSERT(ret);
 			QTextStream s(&file);
 			QString dateAndTime = QTime().currentTime().toString();
-			QString frameNumber = QString("FRAME: \t %1 \t at time \t %2").arg(this->getProcessingSerial()).arg(dateAndTime);;
+			QString frameNumber = QString("FRAME: \t %1 \t at time \t %2").arg(this->getProcessingSerial()).arg(dateAndTime);
 			for (int i = 0; i < frameNumber.size(); ++i)
 				s << frameNumber.at(i);// << '\n';
 			file.write("\n");	
@@ -91,7 +98,7 @@ bool TrackToStringConverter::process()
 			Q_ASSERT(ret);
 			file.close();
 	}
-    // convert coordinates to what the virtual playground expects
+    // convert coordinates to what the virtual playground expects (legacy) otherwise save the info per updated track tab delimited. 
     foreach( BlobTrack t , tracks )
     {
         cv::Point p = t.getLastMeasurement().getCenterOfGravity();
@@ -99,7 +106,11 @@ bool TrackToStringConverter::process()
         //p.y = image.height() - p.y;
 		//playgroundQString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#").arg(t.getID()).arg(p.x).arg(p.y);
 		//legacy format, change to tab formatted if in order
-		QString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+		QString blobString;
+		if (getLegacyFormat())
+			blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+		else
+			blobString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
 		out.append(blobString);
 		out.append("\n");
 		if (getSaveToFile())
@@ -122,31 +133,6 @@ bool TrackToStringConverter::process()
 		}
     }
 
-	//if (getSaveToFile())
-	//{
-	//	if (halfhour>54000)
-	//	//if (halfhour>60)
-	//	{
-	//		halfhour = 0;
-	//		QFile file(m_filename);
-	//		bool ret = file.open(QIODevice::WriteOnly | QIODevice::Append);
-	//		Q_ASSERT(ret);
-	//		QTextStream s(&file);
-	//		QString dateAndTime = QTime().currentTime().toString(); //QString("blobs of frame %1").arg(this->getProcessingSerial());
-	//		file.write("current time:");
-	//		for (int i = 0; i < dateAndTime.size(); ++i)
-	//			s << dateAndTime.at(i);// << '\n';
-	//		file.write("\n");	
-	//		ret = file.flush();
-	//		Q_ASSERT(ret);
-	//		file.close();
-	//		//m_timenotset = false;
-	//	}
-	//	else
-	//	{
-	//		halfhour++;
-	//	}
-	//}
     // end TCP frame with newline, why?
     out.append("\n");
 

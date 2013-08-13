@@ -60,7 +60,8 @@ bool MSKinectFakeColor::stop()
 bool MSKinectFakeColor::process()
 {
     assert(m_inputPin != 0);
-    assert(m_outputPin != 0);
+	//why was this ever the case:
+    //assert(m_outputPin != 0);
 
 	//from src to in
     CvMatData in = m_inputPin->get();
@@ -69,7 +70,6 @@ bool MSKinectFakeColor::process()
 	//qDebug() << tr("type %1").arg(in.type());
 	//qDebug() << tr("type %1 %2 in %3 %4").arg(matin.cols).arg(matin.rows).arg(in.width()).arg(in.height());
 	
-	//wont work	cv::Mat in = m_inputPin->get();
 	//added
 	CvMatData out = CvMatData::create(in.properties());
 	cv::Mat& mat = out;

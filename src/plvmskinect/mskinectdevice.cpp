@@ -27,6 +27,8 @@
 
 #include <QDebug>
 #include <QMutexLocker>
+#include <qfile.h>
+#include <stdlib.h>
 
 using namespace plv;
 using namespace plvmskinect;
@@ -139,8 +141,9 @@ bool KinectDevice::init()
     //                    // | nui_initialize_flag_uses_skeleton
     //                     | nui_initialize_flag_uses_color
 
-	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
-	//DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON |  NUI_INITIALIZE_FLAG_USES_COLOR;
+	//DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR ;
+	//TO CHANGE
+	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON |  NUI_INITIALIZE_FLAG_USES_COLOR;
     hr = m_nuiInstance->NuiInitialize( nuiFlags);
 	//old fail protocol
 	
@@ -210,7 +213,8 @@ bool KinectDevice::init()
 		else
 		{
 			hr = m_nuiInstance->NuiImageStreamOpen(
-			NUI_IMAGE_TYPE_COLOR,
+			///TO CHANGE: NUI_IMAGE_TYPE_COLOR,
+			NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
 			NUI_IMAGE_RESOLUTION_640x480, 
 			0,
 			2,
@@ -235,8 +239,9 @@ bool KinectDevice::init()
 //	OLD
 	
     hr = m_nuiInstance->NuiImageStreamOpen(
-        NUI_IMAGE_TYPE_DEPTH,
-        NUI_IMAGE_RESOLUTION_640x480, //not for depth http://msdn.microsoft.com/en-us/library/microsoft.kinect.depthimageformat.aspx NUI_IMAGE_RESOLUTION_1280x960
+        //TO CHANGE: NUI_IMAGE_TYPE_DEPTH,
+        NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
+		NUI_IMAGE_RESOLUTION_640x480, //not for depth http://msdn.microsoft.com/en-us/library/microsoft.kinect.depthimageformat.aspx NUI_IMAGE_RESOLUTION_1280x960
         0,
         2,
         m_hNextDepthFrameEvent,
@@ -355,7 +360,6 @@ void KinectDevice::start()
         break;
     case KINECT_INITIALIZED:
         // Start thread
-		
 		QThread::start();
 		break;
     case KINECT_RUNNING:
@@ -510,6 +514,49 @@ void KinectDevice::Nui_GotDepthAlert()
 		NUI_DEPTH_IMAGE_PIXEL * pBuffer =  (NUI_DEPTH_IMAGE_PIXEL *) LockedRect.pBits;
 		INuiCoordinateMapper* pMapper;
 		m_nuiInstance->NuiGetCoordinateMapper(&pMapper);
+		
+		//CHANGED!!!
+///////////////////// place in init or so////////////////
+		////CoordinateMapper temp = new CoordinateMapper(this.sensor)
+		//unsigned long mapperulong;
+		//void* ppDataThing;
+		//pMapper->GetColorToDepthRelationalParameters(&mapperulong, &ppDataThing);
+		//
+		////qDebug() << "mapperulong" << mapperulong << "sizeof datathing" << sizeof(ppDataThing);
+		//
+		////TODO
+		////FILE *fp = fopen("kinectrelationalparameters.dat", "wb");
+		////fwrite(ppDataThing, 1, mapperulong, fp);
+		////fclose(fp);
+		////
+		////FILE *fp2 = fopen("ulong.dat", "wb");
+		//////sizeof(mapperulong)
+		//////approximatly 12604 
+		////const void* writeaway = (void*) mapperulong; 
+		////fwrite(writeaway, 1, sizeof(unsigned long), fp2);
+		////fclose(fp2);
+
+		//QFile file2("ulong.dat");
+		//file2.open(QIODevice::WriteOnly);
+		//QDataStream out(&file2);
+
+		//// Write a header with a "magic number" and a version
+		//out << (quint32)mapperulong;
+		//file2.close();
+
+		//QFile file3("kinectrelationalparameters.dat");
+		//if (file3.open(QIODevice::WriteOnly))
+		//{
+		//	QDataStream out3(&file3);
+		//	//out3.writeRawData((const char*)ppDataThing, mapperulong);
+		//	//out3.writeBytes((const char*)ppDataThing, mapperulong);
+		//	out3 << ppDataThing;
+		//	file3.close();
+		//	//qDebug("wrote a kinectrelationalparameter");
+		//}
+		//
+/////////////////////end of bullshit////////////////////
+
 		//check if int maxval < 307200 (640*480)
 		int j = 0;
 	
@@ -1089,9 +1136,10 @@ void KinectDevice::Nui_GotSkeletonAlert()
         if( sf.getNuiSkeletonFramePointer()->SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED )
         {
             foundSkeleton = true;
+			
         }
     }
-
+	qDebug()<<"skeleton tracked " << foundSkeleton << "for Kinect" << m_id;
     // no skeletons!
     if( !foundSkeleton )
     {
@@ -1103,7 +1151,8 @@ void KinectDevice::Nui_GotSkeletonAlert()
     }
 
     // smooth out the skeleton data
-    NuiTransformSmooth( sf.getNuiSkeletonFramePointer(), NULL );
+    //TO CHANGE 
+	//NuiTransformSmooth( sf.getNuiSkeletonFramePointer(), NULL );
 
     emit newSkeletonFrame( m_id, sf );
 }

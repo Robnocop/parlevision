@@ -19,6 +19,8 @@
   * If not, see <http://www.gnu.org/licenses/>.
   */
 
+//TODO when close program is clicked, get cancel to not stop the program
+
 #include "ui_mainwindow.h"
 #include "ui_welcome.h"
 
@@ -259,6 +261,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 				m_pipeline->stop();
 			m_pipeline->clear();
 		}
+		//??even if discard save the settings?
 		QSettings settings;
 		qDebug() << "Saving geometry info to " << settings.fileName();
 		settings.setValue("MainWindow/geometry", saveGeometry());
@@ -522,6 +525,7 @@ bool MainWindow::closePipeline()
 	//qDebug() << "in close pipeline exit =" << exit;
 	if (exit)
 	{
+		//qDebug() << "in close pipeline i do reset and stuff " << exit;
 		m_scene->reset();
 
 		m_ui->view->setAcceptDrops(false);
@@ -728,6 +732,8 @@ void plvgui::MainWindow::on_actionExit_triggered()
 	//qDebug() << "on action exit triggered exit =" << exit;
 	if (exit)
 	{
+		//not reached on discard or cancel! 
+		//qDebug() << "on action exit started the exit: =" << exit;
 		closePipeline();
 		//extreme attempt and it is not here that cancel does not work
 		QApplication::exit();
@@ -840,9 +846,15 @@ void MainWindow::handleMessage(QtMsgType type, QString msg)
         msgBox.setText(tr("Fatal Error: %1. \n The application will now close").arg(msg));
         msgBox.exec();
 
-        this->offerToSave();
-        QApplication::exit();
-    }
+		//CHANGED:
+		bool exittmp = this->offerToSave();
+		//qDebug()<< "exittmp in handleMessage correctly prevents exit:" << exittmp;
+        if (exittmp)
+		{
+			//qDebug() << "handleMessage started exit";
+			QApplication::exit();
+    	}
+	}
 }
 
 bool MainWindow::offerToSave()

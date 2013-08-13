@@ -30,6 +30,7 @@
 #include "VPBlobToStringConverter.h"
 #include "TrackToStringConverter.h"
 #include "TouchBlobAndStringConverter.h"
+#include "TrackAnnotation.h"
 
 
 using namespace plv;
@@ -53,7 +54,7 @@ void PlvBlobTrackPlugin::onLoad()
     plvRegisterPipelineElement<plvblobtracker::VPBlobToStringConverter>();
 	plvRegisterPipelineElement<plvblobtracker::TrackToStringConverter>();
 	plvRegisterPipelineElement<plvblobtracker::TouchBlobAndStringConverter>();
-
+	plvRegisterPipelineElement<plvblobtracker::TrackAnnotation>();
 }
 
 Q_EXPORT_PLUGIN2(plv_blobtracker_plugin, PlvBlobTrackPlugin)

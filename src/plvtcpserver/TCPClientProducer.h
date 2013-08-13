@@ -46,6 +46,8 @@ class TCPClientProducer : public plv::PipelineProducer
     Q_PROPERTY( int port READ getPort WRITE setPort NOTIFY portChanged  )
     Q_PROPERTY( QString serverIP READ getServerIP WRITE setServerIP NOTIFY serverIPChanged )
     Q_PROPERTY( bool autoReconnect READ getAutoReconnect WRITE setAutoReconnect NOTIFY autoReconnectChanged  )
+	Q_PROPERTY( bool sendAcknowledge READ getSendAcknowledge WRITE setSendAcknowledge NOTIFY sendAcknowledgeChanged )
+
 
 public:
     TCPClientProducer();
@@ -62,11 +64,13 @@ public:
     int getPort() const;
     QString getServerIP() const;
     bool getAutoReconnect() const;
+	bool getSendAcknowledge() {return m_sendAcknowledge;}
 
 signals:
     void portChanged(int port);
     void serverIPChanged(QString ip);
     void autoReconnectChanged(bool ar);
+	void sendAcknowledgeChanged(bool b);
 
 public slots:
     void setPort(int port, bool doEmit=false );
@@ -77,7 +81,9 @@ public slots:
     void connected();
     void disconnected();
     void setAutoReconnect(bool ar, bool doEmit=false );
-
+	void setSendAcknowledge(bool b) {m_sendAcknowledge = b; emit sendAcknowledgeChanged(b);}
+	//void setRequireAcknowledge(bool b); // {m_requireAcknowledge = b; emit requireAcknowledgeChanged(b);}
+    
 private:
     void ackFrame(quint32 frameNumber);
 
@@ -91,6 +97,7 @@ private:
     QList<QVariantList> m_frameList;
     QMutex m_frameListMutex;
     bool m_autoReconnect;
+	bool m_sendAcknowledge;
 
     plv::OutputPin<int>* m_intOut;
     plv::OutputPin<QString>* m_stringOut;

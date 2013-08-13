@@ -91,6 +91,7 @@ namespace plvblobtracker
         plv::InputPin< QList<plvblobtracker::Blob> >* m_inputBlobs;
         plv::CvMatDataOutputPin* m_outputImage;
 		plv::CvMatDataOutputPin* m_outputImage2;
+		plv::OutputPin<bool>* m_outputAnnotationSituation;
 		plv::OutputPin< QList<plvblobtracker::BlobTrack> >* m_outputBlobTracks;
 		//plv::CvMatDataOutputPin* m_outputImage3;
 		//plv::CvMatDataOutputPin* m_outputImage4;
@@ -124,6 +125,9 @@ namespace plvblobtracker
 		QTime m_timeSinceLastFPSCalculation;
 		int m_numFramesSinceLastFPSCalculation;
 		float m_fps; /** running avg of fps */
+
+		//ANNOTATION TOOL
+		bool m_annotationneeded;
 
     };
 }

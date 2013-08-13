@@ -76,6 +76,7 @@ void BlobTrack::setID(int newid)
 	d->id = newid;
 }
 
+//realtime
 void BlobTrack::setVelocity(std::vector< cv::Point > cogs)
 {
 	int onex,oney;
@@ -88,6 +89,21 @@ void BlobTrack::setVelocity(std::vector< cv::Point > cogs)
 	//d->velocity = (int) (sqrt(qone));
 	//velocity per second ?? gettime is in milliseconds
 	d->velocity = (int) 1000*(sqrt(qone))/getTimeSinceLastMeasurement();
+}
+
+//framebased
+void BlobTrack::setVelocity2(std::vector< cv::Point > cogs)
+{
+	int onex,oney;
+	double qone;
+	//??width width +-= 640*640>int maxval?
+	onex = abs(cogs.at(0).x - cogs.at(1).x);
+	oney = abs(cogs.at(0).y - cogs.at(1).y);
+	qone = onex*onex+oney*oney;
+	//velocity per frame	
+	//d->velocity = (int) (sqrt(qone));
+	//pixels of movement between cogs in this frame.
+	d->velocity2 = (float) (sqrt(qone));
 }
 
 void BlobTrack::setLastUpdate(unsigned int lastupdate)
@@ -175,6 +191,7 @@ void BlobTrack::addMeasurement( const Blob& blob )
 		cogstoset.push_back(blob.getCenterOfGravity());
 		setDirection(cogstoset);
 		setVelocity(cogstoset);
+		setVelocity2(cogstoset);
 	}
 
 

@@ -18,7 +18,7 @@ namespace plv
 }
 
 namespace plvmskinect
-	{
+{
 	class MSKinectFakeColor : public plv::PipelineProcessor
 	{
 		Q_OBJECT

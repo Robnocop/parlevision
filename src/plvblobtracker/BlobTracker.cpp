@@ -65,6 +65,8 @@ BlobTracker::BlobTracker() :
     m_outputImage = createCvMatDataOutputPin( "blob tracker image", this);
 	m_outputImage2 = createCvMatDataOutputPin( "selected blob image", this);
 
+	m_outputAnnotationSituation = createOutputPin<bool>("annotation needed", this );
+
 	m_outputBlobTracks = createOutputPin< QList<plvblobtracker::BlobTrack> >("tracks", this);
 }
 
@@ -85,6 +87,9 @@ bool BlobTracker::init()
 	{
 		m_idPool.push_back(i);
 	}
+
+	//annotation
+	m_annotationneeded = false;
 
 	return true;
 }
@@ -122,6 +127,9 @@ bool BlobTracker::stop()
 
 bool BlobTracker::process()
 {
+	//ANNOTATION
+	m_annotationneeded = false;
+
 	//time based measurements
 	++m_numFramesSinceLastFPSCalculation;
 	int elapsed = m_timeSinceLastFPSCalculation.elapsed();
@@ -212,7 +220,12 @@ bool BlobTracker::process()
 				//qDebug() << "Id off dead blob"  << (int)track.getId();
 				m_blobTracks.removeAt(i);
 				//TODO check logic whether a gone blob should have the same ID or not. maybe push_back makes more sense.
-				m_idPool.push_front(track.getId());
+				//m_idPool.push_front(track.getId());
+				m_idPool.push_back(track.getId());
+
+				//ANNOTATION
+				m_annotationneeded = true;
+				qDebug() << "dead blobtrack: " << track.getId();
 			}
 			//draw selected blob on second output pin, indicating the current state as well, but now orange for normal as it is not updated and gray for newborns
 			else if (track.getId() == getBlobSelector())
@@ -235,6 +248,9 @@ bool BlobTracker::process()
 	m_outputImage2->put(out2);
 	//add the track to the outputted list
 	m_outputBlobTracks-> put( newTracks ) ;
+
+	//check whether manual annotation or optimalisation might be needed:
+	m_outputAnnotationSituation-> put(m_annotationneeded);
 	
 	if(elapsed > m_thresholdremove ) //10000
 	{		
@@ -500,10 +516,14 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 		
 		if (multipletracks>1) 
 		{
+			
 			for( int k=0; k < multipletrackslist.size(); ++k )
 			{
 				BlobTrack& track = tracks[multipletrackslist.at(k)];
 				track.setMerged(true);
+				//ANNOTATION TOOL;
+				m_annotationneeded = true;
+				qDebug() <<  "multiple tracks exist for a blob in track:" << track.getId();
 			}
 		}
     }
@@ -528,7 +548,8 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
                 match = j;
         }
 
-		//if their are NOT less tracks than blobs; otherwise we can be certain that it is not -1 unless munkres had a bug
+		//if their are NOT less tracks than blobs; 
+		//otherwise we can be certain that it is not -1 unless munkres had a bug
         if( match != -1 )
         {
 			const Blob& blob = blobs.at(match);
@@ -572,6 +593,9 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 					timesinceupdate = m_timeSinceLastFPSCalculation.elapsed() + m_thresholdremove - track.getLastUpdate();
 				}
 				track.notMatched( timesinceupdate );
+
+				m_annotationneeded = true;
+				qDebug() << "track " << track.getId() << "has no overlap";
 				//track.setID(m_idPool.front());
 			}
         }
@@ -591,6 +615,9 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				timesinceupdate = m_timeSinceLastFPSCalculation.elapsed() + m_thresholdremove - track.getLastUpdate();
 			}
 			track.notMatched( timesinceupdate );
+
+			m_annotationneeded = true;
+			qDebug() << "track " << track.getId() << "has not matched a blob";
 			//track.setID(m_idPool.front());		
 		}
     }
@@ -629,6 +656,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 			//loop through blobs and set merged state TRUE is done in other part now.
 		}
 		//the tracks do not die, although not updated until after several frames e.g. 4000frames or 45 frames
+		//i think the remark above is no longer true;
 		m_maxNrOfBlobs = blobs.size();
 		m_biggerMaxCount = 0;
 	}
@@ -654,10 +682,15 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				track.setLastUpdate(m_timeSinceLastFPSCalculation.elapsed());
 				track.setTimeSinceLastUpdate((int) 1000/m_fps);
 				tracks.append(track);
+				//ANNOTATION
+				qDebug()<< "a new track" << track.getId() << "is created";
 			}
 		}
 		//reset the trigger or only the number of blobs ?? entering would ressult in multiple blobs should then be waited the threshold number of frames again
 		m_biggerMaxCount = 0;
+		
+		//ANNOTATION
+		m_annotationneeded=true;
 	}
 
 	// a blob can match multiple tracks

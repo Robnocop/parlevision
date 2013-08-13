@@ -22,6 +22,8 @@
 #ifndef SAVEIMAGETOFILE_H
 #define SAVEIMAGETOFILE_H
 
+#include <opencv/cv.h>
+
 #include <plvcore/PipelineProcessor.h>
 #include <plvcore/Pin.h>
 #include <plvcore/Enum.h>
@@ -118,6 +120,7 @@ namespace plvopencv
         plv::Enum m_fileFormat; /** The file extention and thus the format in which the data is stored. */
 
 		int m_trailingnumber;
+		int m_frametimenotify;
 		int m_quality;
 		//int m_nr;
         /** Additional properties */

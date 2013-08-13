@@ -62,7 +62,8 @@ SaveImageToFile::SaveImageToFile() :
         m_directory(SAVEIMAGETOFILE_DEFAULT_DIR),
         m_fileExt(".bmp"),
 		m_trailingnumber(0),
-		m_quality(30)
+		m_quality(30),
+		m_frametimenotify(0)
 {
     m_inputImage    = createInputPin<CvMatData>("image", this, IInputPin::CONNECTION_OPTIONAL );
     m_inputImages   = createInputPin< QList<CvMatData> >("image list", this, IInputPin::CONNECTION_OPTIONAL );
@@ -99,6 +100,7 @@ bool SaveImageToFile::init()
  //            connectionThread, SLOT(quit()));
 
 	m_trailingnumber = 0;
+	m_frametimenotify = 0;
 	//m_nr = 0;
     //replace all '\' characters with '/' characters
     m_directory = m_directory.replace('\\','/');
@@ -388,6 +390,20 @@ bool SaveImageToFile::process()
         {
             qWarning() << "plv::opencv::SaveImageToFile::process() failed to save image " << filename;
         }
+		//added lines of code and h in header.
+		else
+		{
+			if (m_frametimenotify > 230) //23*10s
+			{ 
+				m_frametimenotify=0;
+				QString dateAndTime = QTime().currentTime().toString(); 
+				qDebug() << "#" << filenameBegin << "\t" << dateAndTime;
+			}
+			else
+			{
+				m_frametimenotify++;
+			}
+		}
 		
     }
 	//m_nr++;
