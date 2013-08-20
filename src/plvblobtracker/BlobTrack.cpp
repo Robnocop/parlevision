@@ -69,11 +69,18 @@ void BlobTrack::notMatched( unsigned int timesinceupdatetime )
 		//threshold was/is set in header to 10
         d->state = BlobTrackDead;
     }
+	//for annotation just always kill non-overlapping tracks
+	d->state = BlobTrackDead;
 }
 
 void BlobTrack::setID(int newid)
 {
 	d->id = newid;
+}
+
+void BlobTrack::setPID(int newid)
+{
+	 d->pid = newid;
 }
 
 //realtime
@@ -363,28 +370,67 @@ void BlobTrack::draw( cv::Mat& target ) const
     assert( d->history.size() > 0 );
     assert( target.depth() == CV_8U );
 
-    const double maxVal    = 255.0;
-    const cv::Scalar red   = CV_RGB(maxVal,0,0);
-    const cv::Scalar blue  = CV_RGB(0,0,maxVal);
-    const cv::Scalar green = CV_RGB(0,maxVal,0);
-
+	//TODO a better placement of setting colors, now every draw all the colors are created little bit overkill
+	//colors
+	const double maxVal    = 255.0;
+    //0
+	const cv::Scalar red   = CV_RGB(maxVal,0,0);
+    //1
+	const cv::Scalar blue  = CV_RGB(0,0,maxVal);
+    //2
+	const cv::Scalar green = CV_RGB(0,maxVal,0);
+	//3 yellow yellow	N,V,X	255;255;0 inspired by: http://web.njit.edu/~kevin/rgb.txt.html
+	const cv::Scalar yellow = CV_RGB(maxVal,maxVal,0);
+	//4 210;105;30
+	const cv::Scalar chocolate = CV_RGB(210,105,30);
+	//5 DeepPink 255;20;147
+	const cv::Scalar deeppink = CV_RGB(255,20,147);
+	//6 HotPink3 [purple]	205;96;144
+	const cv::Scalar purple = CV_RGB(205,96,144);
+	//7 OrangeRed
+	const cv::Scalar orangered = CV_RGB(255,69,0);
+	//8 salmon: pink	X	255;192;203
+	const cv::Scalar salmon = CV_RGB(255,192,203);
+	//9	DarkGoldenrod1	X	255;185;15
+	const cv::Scalar darkgoldenrod = CV_RGB(255,185,15);
+	//10 Steel Blue	N	35;107;142
+	const cv::Scalar steelblue = CV_RGB(35,107,142);
+	QList<cv::Scalar> colors;
+	colors.push_back(red);
+	colors.push_back(blue);
+	colors.push_back(green);
+	colors.push_back(yellow);
+	colors.push_back(chocolate);
+	colors.push_back(deeppink);
+	colors.push_back(purple);
+	colors.push_back(orangered);
+	colors.push_back(salmon);
+	colors.push_back(darkgoldenrod);
+	colors.push_back(steelblue);
+	
     // draw tail
     const int tailLength = d->historySize;
     const double step = maxVal / tailLength;
     int count = 0;
-    for( int i=d->history.size() <= tailLength ? 0 : d->history.size()-tailLength; i < d->history.size(); ++i)
+    
+	for( int i=d->history.size() <= tailLength ? 0 : d->history.size()-tailLength; i < d->history.size(); ++i)
     {
         const Blob& b = d->history[i];
-        int shade = step*++count;
-        b.drawContour(target, CV_RGB(0,shade,0), true);
+        //CHANGED for annotation:
+		int shade = (step*++count)/4;
+        b.drawContour(target, CV_RGB(shade,shade,shade), true);
     }
 
     // draw last measurement
     const Blob& b = getLastMeasurement();
-    b.drawContour(target, green, true);
+	//CHANGED
+	b.drawContour(target, colors.at(getPID()%11), true);
+
     b.drawCenterOfGravity(target, blue);
     b.drawBoundingRect(target,red);
-	QString info = QString("ID: %1 D: %2 V: %3 M: %4 Z: %5").arg(d->id).arg(getDirection()).arg(d->avgvelocity).arg(d->merged).arg(getAveragePixel());
+	//CHANGED: 
+	//QString info = QString("ID: %1 D: %2 V: %3 M: %4 Z: %5").arg(d->id).arg(getDirection()).arg(d->avgvelocity).arg(d->merged).arg(getAveragePixel());
+	QString info = QString("ID: %1 PID: %2 M: %3 Z: %4").arg(getId()).arg(getPID()).arg(d->merged).arg(getAveragePixel());
     b.drawString(target, info);
 
     // draw track

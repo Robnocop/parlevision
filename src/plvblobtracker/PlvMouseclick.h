@@ -51,8 +51,10 @@ namespace plvblobtracker
 			//M, oldid, newid#1,  newid#2,
 			Divided,    //D: blob has been split due to erode dilate or whatever, two tracks need to have same ID and same cog. 
 			//D, id1, id2, newid (id1 && id2 == newid)
-			Boring //B this is a non-interesting fram to annotate, e.g. recess or empty frame
+			Boring, //B this is a non-interesting fram to annotate, e.g. recess or empty frame
 			//Prevent Switch and Split to have the same letter
+			Undo 
+			//Escape 
 			//TODO deal with problem: only at the frame a blob is split it will result in an error! Later on it will keep tracking it seemingly "correctly". However every frame it needs to be manually annotated. 
 	};
 	
@@ -93,7 +95,7 @@ namespace plvblobtracker
 			
 			QList<plvblobtracker::BlobChangeData> m_blobchanges;
 
-			void numberKeyHandling(int i);
+			
 
 		protected:
 			void mouseReleaseEvent(QMouseEvent *event);
@@ -108,7 +110,8 @@ namespace plvblobtracker
 			QString m_filename;
 			bool m_firstid;
 			bool m_secondid;
-
+			int m_inputnr;
+			void numberKeyHandling(int i, bool comma);
 	};
 
 	

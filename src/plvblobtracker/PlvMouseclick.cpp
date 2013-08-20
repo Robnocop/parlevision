@@ -36,7 +36,7 @@ PlvMouseclick::PlvMouseclick()
 	donotcontinue = false;
 	m_dontskipframeitisinteresting = true;
 	m_firstid =true;
-	m_secondid = false;
+	m_secondid = true; // a little strange but this is set to false later on if it is a third id
 
 	//add shortcuts! 
 	//no dont use keyevents
@@ -53,13 +53,14 @@ PlvMouseclick::~PlvMouseclick()
 	m_dontskipframeitisinteresting = true;
 	blobtracksetting = Neutral;
 	m_firstid = true;
-	m_secondid = false;
+	m_secondid = true;
 	//deinit shizzle
 }
 
 void PlvMouseclick::deinit()
 {
 	//deinit shizzle
+	qDebug() << "i as a mouseclick have been deint";
 	m_mouseclick = false;
 	m_error=true;
 	m_popUpExists = false;
@@ -68,6 +69,7 @@ void PlvMouseclick::deinit()
 	blobtracksetting = Neutral;
 	//this->deleteLater();
 	//this->setAttribute(Qt::WA_DeleteOnClose, true);
+	m_blobchanges.clear();
 	this->hide();
 	this->close();
 }
@@ -78,7 +80,10 @@ void PlvMouseclick::processInit()
 	blobtracksetting = Neutral;
 	m_dontskipframeitisinteresting = true;
 	m_firstid = true;
-	m_secondid = false;
+	m_secondid = true;
+	m_inputnr = 0;
+	//TODO reset m_blobchanges?
+	m_blobchanges.clear();
 }
 
 void PlvMouseclick::init()
@@ -93,8 +98,8 @@ void PlvMouseclick::init()
 	blobtracksetting = Neutral;
 	donotcontinue = false;
 	m_firstid = true;
-	m_secondid = false;
-	
+	m_secondid = true;
+	m_blobchanges.clear();
 }
 
 //functions:
@@ -112,7 +117,6 @@ void PlvMouseclick::setNext()
 
 void PlvMouseclick::closeEvent(QCloseEvent *event)
 {
-	
 	m_rightbottom = true;
 	m_popUpExists = false;
 	qDebug() << "windows closed"; 
@@ -121,9 +125,9 @@ void PlvMouseclick::closeEvent(QCloseEvent *event)
 	this->close();
 }
 
+//correct number is painted
 bool PlvMouseclick::toPaint(CvMatData& image)
 {
-    
 	int x,y,w,h;
 
     w = image.width();// * m_zoomFactor;
@@ -141,7 +145,6 @@ bool PlvMouseclick::toPaint(CvMatData& image)
     p.drawImage(target, qtimage);
 
 	m_imlab1.setPixmap(pixmap); 
-	
 	return true;
 }
 
@@ -233,7 +236,8 @@ void PlvMouseclick::keyPressEvent(QKeyEvent * event)
 //http://harmattan-dev.nokia.com/docs/library/html/qt4/qt.html#Key-enum
 void PlvMouseclick::keyReleaseEvent(QKeyEvent * event)
 {
-
+	QString windowname = "";
+	char changetypechar = ' ';
 	//qDebug() << "key released" << event->key();
 	switch(event->key())
 	{
@@ -241,15 +245,11 @@ void PlvMouseclick::keyReleaseEvent(QKeyEvent * event)
 		case Qt::Key_Left:
 			qDebug() << "Pressed Left";
 			framestate = GotoPreviousFrame;
-			
-		
 		break;
 
 		case Qt::Key_Right:
 			qDebug() << "Pressed Right";
 			framestate = GotoNextFrame;
-
-		
 		break;
 
 		case Qt::Key_Down:
@@ -258,6 +258,32 @@ void PlvMouseclick::keyReleaseEvent(QKeyEvent * event)
 		break;
 
 		//DEALING WITH TRACK CHANGE:
+		//is it mutually exclusive, no it is not so multiple things should be setable in one frame, before proceeding
+		case Qt::Key_Escape:
+			qDebug() << "Should undo";
+			blobtracksetting = Undo;
+			m_firstid = true;
+			m_secondid = true;
+			//TODO perhaps add the last removed id in the windowtitle
+			if (!m_blobchanges.empty()) 
+			{
+				changetypechar = m_blobchanges.last().changetype;
+			}
+			windowname = QString("annotationwidget, undid last %1 blobchange state, last nr %2").arg(changetypechar).arg(m_inputnr);
+			this->setWindowTitle(windowname);
+			m_inputnr = 0;
+			//removes last item if it exists
+			setTheState('U');
+			qDebug() << "Pressed U";
+			//framestate = GotoCurrentFrame;
+		break;
+		
+		case Qt::Key_U:
+			qDebug() << "Should undo";
+			blobtracksetting = Undo;
+			//framestate = GotoCurrentFrame;
+		break;
+
 		case Qt::Key_N:
 			blobtracksetting = Neutral;
 			if (!m_blobchanges.isEmpty())
@@ -282,7 +308,7 @@ void PlvMouseclick::keyReleaseEvent(QKeyEvent * event)
 		case Qt::Key_A:
 			blobtracksetting = Assign;
 			m_firstid = true;
-			//vs does not allow to create variables in a case statement
+			//visual studio does not allow to create variables in a case statement
 			setTheState('A');
 			this->setWindowTitle("annotationwidget, assign state");
 		break;
@@ -290,201 +316,242 @@ void PlvMouseclick::keyReleaseEvent(QKeyEvent * event)
 		case Qt::Key_M:
 			blobtracksetting = Merged;
 			m_firstid = true;
-			m_secondid = false;
+			m_secondid = true;
 			setTheState('M');
 			this->setWindowTitle("annotationwidget, merged state");
 		break;
 
 		case Qt::Key_D:
 			blobtracksetting = Divided;
+			m_firstid = true;
+			m_secondid = true;
 			setTheState('D');
 			this->setWindowTitle("annotationwidget, divided/split state");
 		break;
 
-		case Qt::Key_B:
+		//not needed i think
+	/*	case Qt::Key_B:
 			blobtracksetting = Boring;
 			setTheState('B');
 			this->setWindowTitle("annotationwidget, boring state");
 			m_dontskipframeitisinteresting = false;
-		break;
+		break;*/
 
 		//ID stuff:
 		case Qt::Key_0:
 			//react on number according to current state
-			numberKeyHandling(0);
+			numberKeyHandling(0,false);
 		break;
 
 		case Qt::Key_1:
-			numberKeyHandling(1);	
+			numberKeyHandling(1,false);	
 		break;
 		
 		case Qt::Key_2:
-			numberKeyHandling(2);
+			numberKeyHandling(2,false);
 		break;
 
 		case Qt::Key_3:
-			numberKeyHandling(3);
+			numberKeyHandling(3,false);
 		break;
 		
 		case Qt::Key_4:
-			numberKeyHandling(4);
+			numberKeyHandling(4,false);
 		break;
 
 		case Qt::Key_5:
-			numberKeyHandling(5);
+			numberKeyHandling(5,false);
 		break;
 
 		case Qt::Key_6:
-			numberKeyHandling(6);
+			numberKeyHandling(6,false);
 		break;
 
 		case Qt::Key_7:
-			numberKeyHandling(7);
+			numberKeyHandling(7,false);
 		break;
 
 		case Qt::Key_8:
-			numberKeyHandling(8);
+			numberKeyHandling(8,false);
 		break;
 
 		case Qt::Key_9:
-			numberKeyHandling(9);
+			numberKeyHandling(9,false);
 		break;
 
+		case Qt::Key_Comma:
+			numberKeyHandling(0,true);
+		break;
 
+		case Qt::Key_Enter:
+			numberKeyHandling(0,true);
+		break;
+
+		case Qt::Key_Return:
+			numberKeyHandling(0,true);
+		break;
 	}
 
 }
 
-void PlvMouseclick::numberKeyHandling(int nr)
+//todo test whether this actually works
+void PlvMouseclick::numberKeyHandling(int nr, bool comma)
 {
-	//what state are we in?
-	if (blobtracksetting == Exchange)
+	//nrs can be higher than 10 so need to handle 2 and 3 digits as well
+	if 	(blobtracksetting == Neutral)
 	{
-		//to be sure no strange errors occur
-		if (!m_blobchanges.isEmpty())
+		qDebug() << "you pressed id or a number " << nr << "but you are in neutral state, choose first";
+	}
+	else if (!comma)
+	{
+		m_inputnr = m_inputnr*10+nr; 
+	}
+	else
+	{
+		//what state are we in?
+		//Two blob have switched ids, they have "exchanged ids"
+		//an exchange is basically a double assign
+		if (blobtracksetting == Exchange)
+		{
+			//to be sure no strange errors occur
+			if (!m_blobchanges.isEmpty())
+			{
+				if (m_firstid)
+				{
+					m_firstid = false;
+					m_blobchanges.last().oldid = m_inputnr;
+				}
+				else
+				{
+					//maybe dont reset here?
+					m_firstid = true;
+					m_blobchanges.last().newid = m_inputnr;
+					m_blobchanges.last().changetype = 'A';
+					//allowed in case?
+					qDebug() << "just added switch of" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
+					//TODO IN THIS WAY COGGS ARE NOT TAKEN INTOACCOUNT!
+					//this wouldn't help either cv::Point tempcogs= m_blobchanges.last().cogs;
+					m_blobchanges.push_back(m_blobchanges.last());
+					int tempint = m_blobchanges.last().newid;
+					m_blobchanges.last().newid = m_blobchanges.last().oldid;
+					m_blobchanges.last().oldid = tempint;
+				}
+				qDebug() << "currently exchanging id" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
+			}
+		}
+		//A blob has the wrong ID, change it
+		else if (blobtracksetting == Assign)
 		{
 			if (m_firstid)
 			{
 				m_firstid = false;
-				m_blobchanges.last().oldid = nr;
+				m_blobchanges.last().oldid = m_inputnr;
 			}
 			else
 			{
 				//maybe dont reset here?
 				m_firstid = true;
-				m_blobchanges.last().newid = nr;
-				//allowed in case?
-				qDebug() << "just added switch of" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
-				//IN THIS WAY COGGS ARE NOT TAKEN INTOACCOUNT!
-				m_blobchanges.push_back(m_blobchanges.last());
-				int tempint = m_blobchanges.last().newid;
-				m_blobchanges.last().newid = m_blobchanges.last().oldid;
-				m_blobchanges.last().oldid = tempint;
+				m_blobchanges.last().newid = m_inputnr;
+				qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
 			}
-			qDebug() << "currently exchanging id" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
 		}
-	}
-	else if (blobtracksetting == Assign)
-	{
-		if (m_firstid)
+		//ONE blob with TWO ids, this one might shoud be usable again, to assign even more ids to one blob
+		else if (blobtracksetting == Merged)
 		{
-			m_firstid = false;
-			m_blobchanges.last().oldid = nr;
-		}
-		else
-		{
-			//maybe dont reset here?
-			m_firstid = true;
-			m_blobchanges.last().newid = nr;
-			qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;
-		}
-	}
-	else if (blobtracksetting == Merged)
-	{
-		if (m_firstid)
-		{
-			m_firstid = false;
-			m_blobchanges.last().oldid = nr;
-		}
-		else
-		{
-			
-
-			if (!m_secondid == true)
+			if (m_firstid)
 			{
-				//keep one with old id
-				m_blobchanges.push_back(m_blobchanges.last()); 
-				m_blobchanges.last().newid = nr;
-				qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize before dupl" << m_blobchanges.size();
-				m_secondid = true;
+				m_firstid = false;
+				m_blobchanges.last().oldid = m_inputnr;
 			}
 			else
 			{
-				//duplicate?
-				m_blobchanges.push_back(m_blobchanges.last());
-				m_blobchanges.last().newid = nr;
-				qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize after dupl" << m_blobchanges.size();
-				m_secondid = false;
-				//maybe dont reset here?
-				m_firstid = true;
-			}
-			
-		}
-	}
-	else if (blobtracksetting == Divided)
-	{
-		if (m_firstid)
-		{
-			m_firstid = false;
-			m_blobchanges.last().oldid = nr;
-		}
-		else
-		{
-			
-			if (!m_secondid == true)
-			{
-				//keep one with old id
-				m_blobchanges.last().newid = nr;
-				m_secondid = true;
+				//TODO checck does secondid identify third id indeed?
+				if (m_secondid == true)
+				{
+					//keep one with old id, but it will have no newid?
+					//todo why three line instead of 2? m_blobchanges.push_back(m_blobchanges.last()); 
+					m_blobchanges.last().newid = m_inputnr;
+					qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize before dupl" << m_blobchanges.size();
+					m_secondid = false;
+				}
+				else
+				{
+					//todo duplicate only here?
+					m_blobchanges.push_back(m_blobchanges.last());
+					m_blobchanges.last().newid = m_inputnr;
+					qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize after dupl" << m_blobchanges.size();
 				
+					//maybe dont reset here?
+					m_firstid = true;
+					m_secondid = true;
+				}
+			
+			}
+		}
+		//TWO blobs with 1 ID, is divided two blobs are recognised but both should have the same id. Thus select oldblob 1. select oldblob2, asssign the correct newid //codewise this seems complicated and incorrect, problem if no new is set!
+		else if (blobtracksetting == Divided)
+		{
+			if (m_firstid)
+			{
+				m_firstid = false;
+				m_blobchanges.last().oldid = m_inputnr;
 			}
 			else
 			{
-				//m_blobchanges.push_back(m_blobchanges.last()); 
-				m_blobchanges.last().newid = nr;
-				qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize before dupl" << m_blobchanges.size();
-
-				//duplicate?
-				m_blobchanges.push_back(m_blobchanges.last());
-				m_blobchanges.last().newid = nr;
-				qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid << "debug asize after dupl" << m_blobchanges.size();
-				m_secondid = false;
-				m_firstid = true;
-			}
 			
-		}
-	}
-	else if (blobtracksetting == Boring)
-	{
+				if (m_secondid == true)
+				{
+					//keep one with old id
+					m_blobchanges.last().newid = m_inputnr;
+					m_secondid = false;
+				}
+				else
+				{
+					//m_blobchanges.push_back(m_blobchanges.last()); 
+					int tempactualyoldid2 = m_blobchanges.last().newid;
+					m_blobchanges.last().newid = m_inputnr;
+					qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;// << "debug asize before dupl" << m_blobchanges.size();
 
-	}
-	else if (blobtracksetting == Neutral)
-	{
-		qDebug() << "you pressed id" << nr << "but you are in neutral state, choose first";
+					//duplicate?
+					m_blobchanges.push_back(m_blobchanges.last());
+					m_blobchanges.last().oldid = tempactualyoldid2 ;
+					qDebug() << "just assigned" << m_blobchanges.last().oldid << "to"  << m_blobchanges.last().newid;// << "debug asize after dupl" << m_blobchanges.size();
+				
+					m_firstid = true;
+					m_secondid = true;
+				}
+			
+			}
+		}
+		/*else if (blobtracksetting == Boring)
+		{
+			qDebug() << "you choose to skip this frame so this is unreachable and if it is you should not type a number" << nr ;
+		}*/
+		m_inputnr = 0;
 	}
 }
 
 void PlvMouseclick::setTheState(char c)
 {
-	BlobChangeData exchanging;
-	exchanging.oldid = 10;
-	exchanging.newid = 10;
-	exchanging.cogs.x= 0;
-	exchanging.cogs.y = 0;
-	exchanging.changetype = c;
-	m_blobchanges.push_back(exchanging);
+	//if undo try to remove last item
+	if(c == 'U')
+	{
+		if (!m_blobchanges.isEmpty())
+		{
+			m_blobchanges.removeLast();
+		}
+	}
+	else
+	{
+		BlobChangeData exchanging;
+		exchanging.oldid = 99;
+		exchanging.newid = 99;
+		exchanging.cogs.x= 0;
+		exchanging.cogs.y = 0;
+		exchanging.changetype = c;
+		m_blobchanges.push_back(exchanging);
+	}
 }
-
 
 //
 void PlvMouseclick::mouseReleaseEvent(QMouseEvent * event)

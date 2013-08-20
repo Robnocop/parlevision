@@ -30,11 +30,20 @@ namespace plvblobtracker
 	
 		//to save changes of the widget
 		public: 
+			//todo check whether it will be suitable for >2 ids in 1 blob
+			//oldsetup:
 			int oldid;
 			int newid;
 			cv::Point cogs;
 			char changetype;
-	
+			
+			//todo shouldnt it be
+			//char changetype;
+			//int oldid;
+			//int newid1;
+			//int newid2;
+			//cv::Point cogs;
+			
 	};
 }
 

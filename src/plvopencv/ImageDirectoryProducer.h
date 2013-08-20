@@ -136,19 +136,27 @@ namespace plvopencv
 		plv::CvMatDataOutputPin* m_imgOutputPinRGB;
         		
         plv::OutputPin<QString>* m_filePathOutputPin;
+		//ANNOTATION
+		//plv::OutputPin<unsigned int>* m_serialOutputPin;
+		//TODO check is int enough for this amount of numbers?
+		plv::OutputPin<int>* m_fileNameNrOutputPin;
+		plv::OutputPin<bool>* m_correctimagedirectoryboolOutputPin;
+
+
 		plv::Enum m_sort;
 		
     private:
 		QTime m_timeSinceLastFPSCalculation;
         QString m_directory;
-
+		
 		QFileInfoList m_entryInfoList;
 		//temp hack RGB
 		QFileInfoList m_entryInfoListRGB;
 		QString m_directoryRGB;
         
 		bool resetFile();
-		int readFile(QString filename);
+		bool zeroFile();
+		int readFile(QString filename, int backvalue);
 		QFileInfoList loadImageDir(QDir dir);
 
         int m_idx;
@@ -157,15 +165,24 @@ namespace plvopencv
 		int m_end;
 		int m_fps;
 		int m_trailingZeros;
+		
+
 		bool m_loop;
 		bool m_flagTimer;
 		bool m_flagpaused;
+
 		QString m_imgtype;
 		
 		//ugly solution:
 		bool m_annotation;
-		QString m_filename2;
+		QString m_filenameFrameNr;
 		//plv::InputPin<int>* m_changeFrame;
+		//ANNOTATION
+		bool m_signal;
+		int m_previousFrameNr;
+		int m_wantedFrameNr;
+		int m_lastDirection;
+		//unsigned int m_serialsend;
     };
 }
 

@@ -30,6 +30,7 @@
 #include "munkres.h"
 
 //#include <cmath>
+#include <QFile>
 #include <plvcore/CvMatData.h>
 #include <plvcore/CvMatDataPin.h>
 #include <opencv/cv.h>
@@ -45,12 +46,13 @@ BlobTracker::BlobTracker() :
 	m_averagePixelValue(false),
 	//why here and not in init?
 	m_thresholdremove(65534), //?is linked to cycling of update nr? should be linked to diethreshold? & <UINT_MAX is also important for the cycle speed of 
-	m_thresholdFramesMaxNrOfBlobs(3), //number of frames before a track is added 
+	m_thresholdFramesMaxNrOfBlobs(0), //used to be 2 changed to 0 for annotation //number of frames before a track is added 
 	m_blobSelector(0),
 	m_numberOfBlobsTracked(12),//;m_maxNrOfTrackedBlobs(12), //now set in the gui
 	m_maxNrOfBlobs(0), //the number of currently tracked blobs, a track is added only if there have been more blobs for some time.
 	m_biggerMaxCount(0),
 	m_allowNoOverlap(false),
+	m_filename_bcd("blobtrackchange.txt"),
 	m_factor(90) //should be in range 0-100
 
 {
@@ -62,10 +64,15 @@ BlobTracker::BlobTracker() :
 	m_inputImage->addSupportedChannels(1);
 
     m_inputBlobs = createInputPin< QList<plvblobtracker::Blob> >( "input blobs" , this );
-    m_outputImage = createCvMatDataOutputPin( "blob tracker image", this);
+	
+	m_correctimagedirectoryboolInputPin = createInputPin<bool>("signal of imagedir readtxtfile", this);
+	m_correctimagedirectoryboolInputPin->CONNECTION_OPTIONAL;
+	m_outputImage = createCvMatDataOutputPin( "blob tracker image", this);
 	m_outputImage2 = createCvMatDataOutputPin( "selected blob image", this);
 
-	m_outputAnnotationSituation = createOutputPin<bool>("annotation needed", this );
+	m_outputAnnotationNeeded = createOutputPin<bool>("annotation needed", this );
+	m_outputAnnotationSituation = createOutputPin<QList<plvblobtracker::PlvBlobTrackState>>("annotation state", this );
+	
 
 	m_outputBlobTracks = createOutputPin< QList<plvblobtracker::BlobTrack> >("tracks", this);
 }
@@ -90,6 +97,8 @@ bool BlobTracker::init()
 
 	//annotation
 	m_annotationneeded = false;
+	m_skipprocessbool = false;
+	m_correctimagedirectorybool = true;
 
 	return true;
 }
@@ -125,10 +134,65 @@ bool BlobTracker::stop()
     return true;
 }
 
+void BlobTracker::readFile(QString filename) 
+{
+	m_blobchanges.clear();
+	QFile inFile(filename);
+	if(inFile.exists())
+	{
+		if ( inFile.open( QIODevice::ReadOnly | QIODevice::Text ) ) 
+		{
+			QString processingserial,framechange;
+			//double processingserialDouble;
+			QTextStream stream( &inFile );
+			QString line;
+			BlobChangeData tempBCD;
+			int i= 0;
+			while(!stream.atEnd() )
+			{
+				//somehow firstline is empty
+				if (i!=0)
+				{
+					line = stream.readLine();
+					tempBCD.oldid = line.section('\t',1,1).toInt();
+					tempBCD.newid = line.section('\t',2,2).toInt();
+					if (m_debugstuff)
+						qDebug() << "RONALD IK LEES DE CHANGEDATA IN BIJ BLOBTRACKER" << "oldid " <<  tempBCD.oldid << ", newid " << tempBCD.newid;
+					//cogs will not be used:
+					tempBCD.cogs.x = line.section('\t',3,3).toFloat();//int, float or double?
+					tempBCD.cogs.x = line.section('\t',4,4).toFloat(); //int, float or double?
+					//need to convert to std string and then to the single char
+					//TODO DOESNT WORK!!
+					std::string tempqt = line.section('\t',6,6).toStdString();
+					tempBCD.changetype = tempqt[0];
+					//qDebug() << "debug readfile blobtracker old " << tempBCD.oldid << "new " << tempBCD.newid << "changetype " <<  tempBCD.changetype;
+					
+					//line to allow for creating the block state fake temp bcd
+					if (tempBCD.oldid >-1)
+						m_blobchanges.push_back(tempBCD);
+					else
+					{
+						if (tempBCD.newid>m_previousAnnoSerial)
+						{
+							//TOD check whether we will outrun scope of int in the processingserial! http://www.cplusplus.com/doc/tutorial/variables/ up to 2147483647 process loops....
+							qDebug() << "set skip process in blobtracker";
+							m_previousAnnoSerial = tempBCD.newid;
+							m_skipprocessbool =line.section('\t',5,5).toInt();
+						}
+					}
+					 
+				}
+				i++;
+			}	
+		}
+	}
+	inFile.close();
+}
+
 bool BlobTracker::process()
 {
-	//ANNOTATION
-	m_annotationneeded = false;
+	//for anno there is a lot of debug stuff, jsut turn it of or on with a bool
+	m_debugstuff = false;
 
 	//time based measurements
 	++m_numFramesSinceLastFPSCalculation;
@@ -136,111 +200,176 @@ bool BlobTracker::process()
 	
 	CvMatData image = m_inputImage->get();
     const cv::Mat& src = image;
-	
-	CvMatData out = CvMatData::create(image.width(),image.height(),16);
-	cv::Mat& dst = out;
-    dst = cv::Scalar(0,0,0);
-	
-	//not really newtracks, but the will be send tracks.
-	QList<BlobTrack> newTracks;
 
-	//MATCH BLOBS
-	unsigned int temptimesincefpscalc = m_timeSinceLastFPSCalculation.elapsed();
 	QList<plvblobtracker::Blob> newBlobs = m_inputBlobs->get();
-    matchBlobs(newBlobs, m_blobTracks);
 
 	CvMatData out2 = CvMatData::create(image.width(),image.height(),16);
 	cv::Mat& dst2 = out2;
     dst2 = cv::Scalar(0,0,0);
+
+	CvMatData out = CvMatData::create(image.width(),image.height(),16);
+	cv::Mat& dst = out;
+    dst = cv::Scalar(0,0,0);
+	unsigned int temptimesincefpscalc = m_timeSinceLastFPSCalculation.elapsed();
+
+	//not really newtracks, but the will be send tracks.
+	QList<BlobTrack> newTracks;
+
+	//TODO ANNOTATION STATE
+	m_annotationneeded = false;
+	m_blobtrackstate.clear();
+
+	//TODO RESET THE IDS based on the annotation
+	//??not a constant calling tracks but actually initializing a change of track
+	readFile(m_filename_bcd);
 	
-	//not a constant calling tracks but actually initializing a change of track
-	if(getAveragePixelValue()) //&& src)
+
+	if (m_skipprocessbool)
 	{
-		foreach( BlobTrack track, m_blobTracks )
-		{
-			if (track.getLastUpdate() >= (temptimesincefpscalc))
-			{
-				//qDebug() << "sourcetype" << src.type();
-				switch(src.type())
-				{
-					//GRAY case0 
-					//KINECT depth
-					case 2:
-					track.setAveragePixelValue(averagePixelsOfBlob(track.getLastMeasurement(), src));
-					break;
-					//if neccesary create option for averaging RGB
-				}
-			}
-		}
+		//create a try catch error!
+		m_correctimagedirectorybool = m_correctimagedirectoryboolInputPin->get();
+		if (m_correctimagedirectorybool)
+			m_skipprocessbool = false;
 	}
 
-	//clean up dead blobs, draw all tracks and draw GUI selected track.
-	for( int i=0; i < m_blobTracks.size(); i++ )
-    {
-        const BlobTrack& track = m_blobTracks.at(i);
-		
-		if (track.getLastUpdate() >= (temptimesincefpscalc))
-        {
-			//draw this track on the first pin
-			track.draw(dst);
-			//append the track to the track output pin
-			newTracks.append(track);
+	if (!m_skipprocessbool)
+	//if (true)
+	{
 
-			//draw in GUI selected blob
-			if ((track.getId() == getBlobSelector()) && (track.getState() != BlobTrackDead))
+		//make a temp list of blobtracks to update shit and then put it back into m_blobtracks being updated.
+		QList<BlobTrack> temp_m_blobTracks;
+	
+		//reset ids based on annotation and set averagez of the blob before matching
+		foreach( BlobTrack t, m_blobTracks )
+		{
+			//TODO check this logic
+			bool firsttimeoldid = true;
+			foreach( BlobChangeData bcd, m_blobchanges )
+			{
+				if (t.getId() == bcd.oldid)
+				{
+					if (firsttimeoldid)
+					{
+						t.setPID(bcd.newid);
+						firsttimeoldid = false;
+					}
+					else
+					{
+						//duplicate a merged track.
+						if (m_debugstuff)
+							qDebug()<< "pushed back track id" << t.getId() << "with pid" << t.getPID() << "and set to " << bcd.newid << " the changetype was" << bcd.changetype;
+						temp_m_blobTracks.push_back(t);
+						temp_m_blobTracks.last().setPID(bcd.newid);
+					}
+				
+				}
+			}
+		
+			//TODO for annotation always call?
+			if(true)//getAveragePixelValue()) //&& src)
+			{
+				if (t.getLastUpdate() >= (temptimesincefpscalc))
+				{
+					//qDebug() << "sourcetype" << src.type();
+					switch(src.type())
+					{
+						//GRAY case0 
+						//KINECT depth
+						case 2:
+						t.setAveragePixelValue(averagePixelsOfBlob(t.getLastMeasurement(), src));
+						break;
+						//if neccesary create option for averaging RGB
+					}
+				}			
+			}
+			temp_m_blobTracks.push_back(t);
+		}
+
+		//overwrite the set of blobtracks with the updated tracks
+		m_blobTracks = temp_m_blobTracks;
+		
+		//newtracks put into beginning
+
+		//MATCH BLOBS
+		//get is put in the beginning of this method to allow skipping alot of code when blocked
+		matchBlobs(newBlobs, m_blobTracks);
+
+		//initialisation of out2 and dst2 done in beginning of the process method
+	
+		//clean up dead blobs, draw all tracks and draw GUI selected track.
+		for( int i=0; i < m_blobTracks.size(); i++ )
+		{
+			const BlobTrack& track = m_blobTracks.at(i);
+		
+			//the track has been updated
+			if (track.getLastUpdate() >= (temptimesincefpscalc))
+			{
+				//draw this track on the first pin
+				track.draw(dst);
+				//append the track to the track output pin
+				newTracks.append(track);
+
+				//draw in GUI selected blob
+				if ((track.getId() == getBlobSelector()) && (track.getState() != BlobTrackDead))
+				{
+					const Blob& b = track.getLastMeasurement();
+					if (track.getState() == BlobTrackBirth)
+					{ //only limited amount of frames
+						b.drawContour(dst2,cv::Scalar(255,255,255),true);
+					}
+					else if (track.getState() == BlobTrackNormal)
+					{
+						b.drawContour(dst2,cv::Scalar(255,0,255),true);
+					}
+					else if (track.getState() == BlobTrackDead)
+					{ //unreachable
+						//b.drawContour(dst2,cv::Scalar(0,0,255),true);
+						b.drawContour(dst2,cv::Scalar(155,150,0),true);
+						//qDebug() << "Id off dead blob"  << (int)track.getId();
+			
+					}	
+				}			
+			
+			}
+			//track has not been updated or is new but not yet added to the tracks
+			else
 			{
 				const Blob& b = track.getLastMeasurement();
-				if (track.getState() == BlobTrackBirth)
-				{ //only limited amount of frames
-					b.drawContour(dst2,cv::Scalar(255,255,255),true);
-				}
-				else if (track.getState() == BlobTrackNormal)
+				//blue? or BGR --> orange!
+				b.drawContour(dst,cv::Scalar(0,100,255),true);
+			
+				//remove dead blobs:
+				if (track.getState() == BlobTrackDead)
 				{
-					b.drawContour(dst2,cv::Scalar(255,0,255),true);
-				}
-				else if (track.getState() == BlobTrackDead)
-				{ //unreachable
-					//b.drawContour(dst2,cv::Scalar(0,0,255),true);
-					b.drawContour(dst2,cv::Scalar(155,150,0),true);
+					//b.drawContour(dst2,cv::Scalar(155,150,0),true);
 					//qDebug() << "Id off dead blob"  << (int)track.getId();
-			
-				}	
-			}			
-			
-		}
-		else
-		{
-			const Blob& b = track.getLastMeasurement();
-			b.drawContour(dst,cv::Scalar(0,100,255),true);
-			
-			//remove dead blobs:
-			if (track.getState() == BlobTrackDead)
-			{
-				//b.drawContour(dst2,cv::Scalar(155,150,0),true);
-				//qDebug() << "Id off dead blob"  << (int)track.getId();
-				m_blobTracks.removeAt(i);
-				//TODO check logic whether a gone blob should have the same ID or not. maybe push_back makes more sense.
-				//m_idPool.push_front(track.getId());
-				m_idPool.push_back(track.getId());
+					m_blobTracks.removeAt(i);
+					//TODO check logic whether a gone blob should have the same ID or not. maybe push_back makes more sense.
+					//m_idPool.push_front(track.getId());
+					m_idPool.push_back(track.getId());
 
-				//ANNOTATION
-				m_annotationneeded = true;
-				qDebug() << "dead blobtrack: " << track.getId();
-			}
-			//draw selected blob on second output pin, indicating the current state as well, but now orange for normal as it is not updated and gray for newborns
-			else if (track.getId() == getBlobSelector())
-			{
-				if (track.getState() == BlobTrackBirth)
-				{ //only limited amount of frames
-					b.drawContour(dst2,cv::Scalar(220,220,220),true);
+					//ANNOTATION
+					m_annotationneeded = true;
+					m_blobtrackstate.push_back(LessBlobs);
+					if (m_debugstuff)
+						qDebug() << "dead blobtrack: " << track.getId();
 				}
-				else if (track.getState() == BlobTrackNormal)
+				//draw selected blob on second output pin, indicating the current state as well, but now orange for normal as it is not updated and gray for newborns
+				else if (track.getId() == getBlobSelector())
 				{
-					b.drawContour(dst2,cv::Scalar(0,100,255),true);
+					if (track.getState() == BlobTrackBirth)
+					{ //only limited amount of frames
+						b.drawContour(dst2,cv::Scalar(220,220,220),true);
+					}
+					else if (track.getState() == BlobTrackNormal)
+					{
+						//BGR???
+						b.drawContour(dst2,cv::Scalar(0,100,255),true);
+					}
 				}
 			}
 		}
-    }
+	} //end of skipprocess
 
 	//put the image all updated tracks
 	m_outputImage->put(out);
@@ -250,8 +379,9 @@ bool BlobTracker::process()
 	m_outputBlobTracks-> put( newTracks ) ;
 
 	//check whether manual annotation or optimalisation might be needed:
-	m_outputAnnotationSituation-> put(m_annotationneeded);
-	
+	m_outputAnnotationNeeded-> put(m_annotationneeded);
+	m_outputAnnotationSituation-> put(m_blobtrackstate);
+
 	if(elapsed > m_thresholdremove ) //10000
 	{		
 		// add one so elapsed is never 0 and
@@ -374,8 +504,6 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 					expectedy = (int) sin(track.getAvgDirection()-180 * PI / 180) *(track.getAvgVelocity()*timesinceupdate/1000) + track.getLastMeasurement().getCenterOfGravity().y ;
 				
 					distance = (double) sqrt((expectedx-blob.getCenterOfGravity().x)*(expectedx-blob.getCenterOfGravity().x)   +   (expectedy-blob.getCenterOfGravity().y)*(expectedy-blob.getCenterOfGravity().y));
-					//temp check
-					//distance = (double) track.getLastMeasurement().getCenterOfGravity().x-blob.getCenterOfGravity().x;
 				} 
 				else
 				{
@@ -452,7 +580,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	}
 	
 	//TODO if no overlap still plays a roll if the blob is near or further away, 
-	//we could do infinity-distance, but this might make the processor slower, 
+	//we could do infinity-distance
 	//maybe only do this if the number of tracks and blobs do not agree and if the cog are within a certain area
     
 	//swithed for multiple tracks in one blob
@@ -516,14 +644,15 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 		
 		if (multipletracks>1) 
 		{
-			
 			for( int k=0; k < multipletrackslist.size(); ++k )
 			{
 				BlobTrack& track = tracks[multipletrackslist.at(k)];
 				track.setMerged(true);
-				//ANNOTATION TOOL;
+				//TODO ANNOTATION TOOL, maybe this is not always neccesary to annotate lets check! 
 				m_annotationneeded = true;
-				qDebug() <<  "multiple tracks exist for a blob in track:" << track.getId();
+				m_blobtrackstate.push_back(MultipleTracks);
+				if (m_debugstuff)
+					qDebug() <<  "multiple tracks exist for a blob in track:" << track.getId();
 			}
 		}
     }
@@ -595,7 +724,9 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				track.notMatched( timesinceupdate );
 
 				m_annotationneeded = true;
-				qDebug() << "track " << track.getId() << "has no overlap";
+				m_blobtrackstate.push_back(NoOverlap);
+				if (m_debugstuff)
+					qDebug() << "track " << track.getId() << "has no overlap";
 				//track.setID(m_idPool.front());
 			}
         }
@@ -615,9 +746,13 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				timesinceupdate = m_timeSinceLastFPSCalculation.elapsed() + m_thresholdremove - track.getLastUpdate();
 			}
 			track.notMatched( timesinceupdate );
-
+			//TODO directly remove?
+			
 			m_annotationneeded = true;
-			qDebug() << "track " << track.getId() << "has not matched a blob";
+			//TODO check whether neccesary
+			m_blobtrackstate.push_back(NotMatched);
+			if (m_debugstuff)
+				qDebug() << "track " << track.getId() << "has not matched a blob";
 			//track.setID(m_idPool.front());		
 		}
     }
@@ -630,18 +765,22 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	{
 		m_biggerMaxCount++;
 		
-		// if a track has not been updated this frame it will still ask for newid but if the number of blobs is on maximum the id is not yet given free. So it will be set to 999
-		//at least search one id per frame to reassign the 999 to a proper id.
+		//if a track has not been updated this frame it will still ask for newid 
+		//but if the number of blobs is on maximum the id is not yet given free. So it will be set to 999
+		//reassign the 999 to a proper id if possible
 		int id = getNewId();
+		//TODO check 999 state and error stuff
 		if (id!=999)
 		{ 
 			bool flag = true;
 			for( int i=0; i < tracks.size(); ++i )
 			{
 				BlobTrack& track = tracks[i];
+				//assign IDs to unassigned tracks
 				if ((track.getId() ==999) && flag)
 				{
 					track.setID(id);
+					track.setPID(id);
 					m_idPool.removeOne(id);
 					flag = false;
 				}
@@ -665,7 +804,8 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	//for several frames and 
 	//they still exist
 	// add some of these blobs
-	if (m_biggerMaxCount>m_thresholdFramesMaxNrOfBlobs && blobs.size()>m_maxNrOfBlobs)
+	//TODO FOR ANNOTATION:
+	if (blobs.size()>tracks.size())
 	{
 		m_maxNrOfBlobs= blobs.size();
 		for( int j=0; j < blobs.size(); j++ )
@@ -681,9 +821,12 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 				m_idPool.removeOne(id);
 				track.setLastUpdate(m_timeSinceLastFPSCalculation.elapsed());
 				track.setTimeSinceLastUpdate((int) 1000/m_fps);
+				//ADDED
+				track.setPID(id);
 				tracks.append(track);
 				//ANNOTATION
-				qDebug()<< "a new track" << track.getId() << "is created";
+				if (m_debugstuff)
+					qDebug()<< "a new track" << track.getId() << "is created";
 			}
 		}
 		//reset the trigger or only the number of blobs ?? entering would ressult in multiple blobs should then be waited the threshold number of frames again
@@ -691,6 +834,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 		
 		//ANNOTATION
 		m_annotationneeded=true;
+		m_blobtrackstate.push_back(NewBlob);
 	}
 
 	// a blob can match multiple tracks

@@ -41,7 +41,7 @@ ImageDirectoryProducer::ImageDirectoryProducer() :
 	m_nr(1),
 	m_end(65000),
 	m_imgtype(".jpg"),
-	m_filename2("framenr.txt"),
+	m_filenameFrameNr("framenr.txt"),
 	m_trailingZeros(0),
 	m_flagTimer(true),
 	m_flagpaused(false)
@@ -78,6 +78,11 @@ ImageDirectoryProducer::ImageDirectoryProducer() :
     m_imgOutputPin = createCvMatDataOutputPin("image_output", this );
 	m_filePathOutputPin  = createOutputPin<QString>("file path", this );
 	
+	//ANNOTATIOM
+	//m_serialOutputPin = createOutputPin<unsigned int>("read in serial", this );
+	m_fileNameNrOutputPin = createOutputPin<int> ("the nr for annotation", this );
+	m_correctimagedirectoryboolOutputPin = createOutputPin<bool> ("a signal of textfile anno", this );
+
 	//RGB value for annotation temp hack!
 	m_imgOutputPinRGB  = createCvMatDataOutputPin("RGB_output", this );
 
@@ -305,9 +310,13 @@ QFileInfoList ImageDirectoryProducer::loadImageDir(QDir dir)
 
 bool ImageDirectoryProducer::init()
 {
+	m_previousFrameNr = 0;
+	m_signal = true;
+	m_wantedFrameNr = -1;
+	m_lastDirection = 1;
 
-	//reset file for annotation tool":///////////////////////////////
-	resetFile();
+	//reset file for annotation tool, instead zerofile on init.
+	zeroFile();
 
 	if (m_flagTimer)
 		m_timeSinceLastFPSCalculation.start();
@@ -327,6 +336,7 @@ bool ImageDirectoryProducer::init()
 	{
 		m_idx = getStartNumber();
 		m_nr = getStartNumber();
+		m_previousFrameNr = m_nr;
 	}
 	return true;
 }
@@ -348,60 +358,94 @@ bool ImageDirectoryProducer::readyToProduce() const
 	return true;
 }
 
-bool ImageDirectoryProducer::resetFile()
+//reset the framenr change file to read 0 change of framnr, as long no interference was needed by a block later on in the pipeline
+bool ImageDirectoryProducer::zeroFile()
 {
 	//UGLY SOLUTION!!!!
 	if (getAnnotation())
 	{
 		QString changeframe = QString("%1 \t %2").arg("0").arg("0");
-		QFile file2(m_filename2);
+		QFile file2(m_filenameFrameNr);
+		//overwrites as it is QIODevice with truncate
 		bool ret2 = file2.open(QIODevice::WriteOnly | QIODevice::Truncate);
 		Q_ASSERT(ret2);
-		////Q_ASSERT(blobString.size()>0);
 		QTextStream s(&file2);
 		s << changeframe;
-		//for (int i = 0; i < blobTabString.size(); ++i)
-		//	s << blobTabString.at(i);// << '\n';
-		////file.write(blobString);
-		////file.write("APPEND new Line");
 		ret2 = file2.flush();
 		Q_ASSERT(ret2);
 		file2.close();
-		///////////////////////////////////////////
 	}
 	return true;
 }
 
-//tdo merge to general function somewhere, it is used at trackannotation as well.
-int ImageDirectoryProducer::readFile(QString filename) 
+
+//reset the framenr change file to read 0 change of framnr, as long no interference was needed by a block later on in the pipeline
+bool ImageDirectoryProducer::resetFile()
 {
-	int framechangeInt = 0;
+	//QString toimageproducer = QString("%1 \t %2 \t %3").arg(back).arg(back+filenamenr).arg(true);
+	//jibberish values that can be recognised, only the back value needs to be maintained
+	
+	//arg 1 used to be m_lastdirection
+	QString toimagproducerorannotation = QString("%1 \t %2 \t %3").arg(-2).arg(-1).arg(false);
+			
+	qDebug() << "resetfileline in imagedir " << toimagproducerorannotation;
+	QFile file2(m_filenameFrameNr);
+	bool ret2 = file2.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	Q_ASSERT(ret2);
+	////Q_ASSERT(blobString.size()>0);
+	QTextStream s(&file2);
+	s << toimagproducerorannotation;
+	//for (int i = 0; i < blobTabString.size(); ++i)
+	//	s << blobTabString.at(i);// << '\n';
+	////file.write(blobString);
+	////file.write("APPEND new Line");
+	ret2 = file2.flush();
+	Q_ASSERT(ret2);
+	file2.close();
+	///////////////////////////////////////////
+	return true;
+}
+
+//QString toimageproducer = QString("%1 \t %2 \t %3").arg(back).arg(back+filenamenr).arg(true);
+int ImageDirectoryProducer::readFile(QString filename, int backvalue) 
+{
+	int back = -2;
+	int newframe = -1;
 	QFile inFile(filename);
 	if(inFile.exists())
 	{
 		if ( inFile.open( QIODevice::ReadOnly | QIODevice::Text ) ) 
 		{
-			QString processingserial,framechange;
-			double processingserialDouble;
+			//QString processingserial,framechange;
 			
 			QTextStream stream( &inFile );
 			QString line;
 
 			for (int counter = 1; counter < 2; counter++) {
 				line = stream.readLine(); 
-				// line of text excluding '\n'
 			}
 
-			processingserialDouble = line.section('\t', 0,0).toDouble();
-			framechangeInt = line.section('\t', 1,1).toInt();
-			//qDebug() << "processingserial" << this->getProcessingSerial() << " read" << processingserialDouble << "change val" << framechangeInt;
+			//we can read that value to know whether to go back.
+			//at init it should be set to 0,0 ??
+			back = line.section('\t', 0,0).toInt();
+			newframe = line.section('\t', 1,1).toInt();
+			//actually only bool allowed
+			//this bool is only true if it is read from a trackannotation save to the readfile
+			//as long as the direction is remained a signal is not needed, if it changes images will be purged until the signal frame is found
+			m_signal = line.section('\t', 2,2).toInt();
+			qDebug() << "debug readfile imagedirectoryproducer" << "direction the framechangeInt" << back << " newframe" << newframe<< ", signal" << m_signal ;
 			//do stuff with the temp strings
 			
 			//if (processingserialDouble < (this->getProcessingSerial()) && processingserialDouble > (this->getProcessingSerial()-3) )
 		}
 	}
 	inFile.close();
-	return framechangeInt;
+
+	//overwrite the file after each read with recognisable jibberish
+	if (backvalue == 1)
+		return newframe;
+	
+	return back;
 }
 
 bool ImageDirectoryProducer::produce()
@@ -409,41 +453,73 @@ bool ImageDirectoryProducer::produce()
 //	m_timeSinceLastFPSCalculation.restart();
 //	m_timeSinceLastFPSCalculation.elapsed() > track.getLastUpdate()) 
 	 
-	//cycles are prevented
+	//cycles are prevented (which makes some sense)
 	/*if( m_changeFrame->isConnected() && m_changeFrame->hasData() )
     {
         int frames = m_changeFrame->get();
 		qDebug() << "output of pin" << frames;
      }*/
 	
-	//instead an ugly solution
+	//instead an ugly solution using a txt file at the end of the pipeline to change the next loop
 	if (getAnnotation())
 	{
-		//WHY if key for currentframe is pressed for long time in annotation will it result in nextframe (on release) every now and then? Is the read and write to slow?
-		int framechangeInt= readFile(m_filename2);
+		//TODO WHY if key for currentframe is pressed for long time in annotation will it result in nextframe (on release) every now and then? Is the read and write to slow?
+		//m_previousFrameNr = readFile(m_filenameFrameNr);
+		//compensate for the +1 later on
+		m_lastDirection = readFile(m_filenameFrameNr, 0)-1;
+		m_wantedFrameNr = readFile(m_filenameFrameNr, 1);
+		//m_signalFile = readFile(m_filenameFrameNr, 2); //is allready set on every readFile.
+		
+		//TODO did this commenting change anything?
+		//int framechangeInt= readFile(m_filenameFrameNr);
 		
 		//qDebug() << "framechangeint is" << framechangeInt;
-		int temp = m_idx+framechangeInt;
-		int temp2 = m_nr+framechangeInt; 
-		qDebug() << "idx:" << m_idx << "idxtemp" << temp << " , m_nr:" << m_nr << "nr temp:" << temp2;
+		//TODO set if uesd!
+		int temp = m_idx+m_lastDirection; 
+		
+		//int temp2 = m_nr+m_previousFrameNr;
+		int temp2 =  m_previousFrameNr;
+		if (m_wantedFrameNr != -1)
+		{
+			temp2 = m_wantedFrameNr; //+1 later on
+			qDebug() << "set to wantedframenr"<< m_wantedFrameNr;
+		}
+		else if(m_lastDirection != -3)
+		{
+			temp2 = m_nr+m_lastDirection;
+			qDebug() << "set to anotherdir"<< m_lastDirection;
+		}
+		//TODO ??? m_nr and temp2 give the actual frames
+		//qDebug() << "idx:" << m_idx << "idxtemp" << temp << " , m_nr:" << m_nr << "nr temp:" << temp2;
+		qDebug() << "m_nr:" << m_nr << "last direction" << m_lastDirection << "nr temp:" << temp2;
 
-		//WHY doesnt  m_nr get lower?
 		if (temp>=getStartNumber() && temp<=getEndNumber())
 		{
 			m_idx = temp;
-			//qDebug() << "SMALLER BIGGER idx put back:" << m_idx << " , m_nr:" << m_nr;
 		}
 		
 		if (temp2>=getStartNumber() && temp2<=getEndNumber())
 		{
 			m_nr = temp2;
-			//qDebug() << "SMALLER BIGGER idx put back:" << m_idx << " , m_nr:" << m_nr;
+			qDebug() << "m_nr " <<m_nr << ",will be loaded";
+		}
+		else if (temp2<=getStartNumber())
+		{
+			m_nr = getStartNumber();
+			qDebug() << "m_nr not in range set to startnumber";
+		}
+		else if (temp2>=getEndNumber())
+		{
+			m_nr = getEndNumber();
+			qDebug() << "m_nr too big, not in range so set back to endnumber";
+		}
+		else
+		{
+			qDebug() << "strange!!! m_nr not in range but somehow not bigger or smaller than the range!";
 		}
 		
-		if (framechangeInt > 0)
-		{
-			resetFile();
-		}
+		//TODO took out the if statement m_previousFrameNr != 0 previously <2
+		resetFile();
 	}
 
 	//QFileInfo fileInfo;
@@ -455,7 +531,6 @@ bool ImageDirectoryProducer::produce()
 	//filenames = QString("%1.jpg").arg(m_nr);
 	//QFileInfo fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 	
-
     QFileInfo fileInfo ;
 	QFileInfo fileInfoRGB;
 	cv::Mat image;
@@ -516,6 +591,9 @@ bool ImageDirectoryProducer::produce()
 		//qDebug() << "selectedvalue is eleven";
 		//QString filenames;
 		//not set to -1 doesn't seem right
+		if ( (m_nr<getEndNumber()+1) && m_wantedFrameNr == -1)
+			m_nr++;
+
 		if (m_nr>=(unsigned int) getEndNumber())
 		{
 			if (m_nr!=getEndNumber()+1)
@@ -605,9 +683,12 @@ bool ImageDirectoryProducer::produce()
 			return false;
 		}
 		
-		if (m_nr!=(getEndNumber()+1))
-			m_nr++;
-		
+		//if (m_nr!=(getEndNumber()+1) && m_wantedFrameNr == -1)
+		//	m_nr++;
+	
+
+		//save last framenr
+		m_previousFrameNr = m_nr;
 		//m_idx-- ;
 	} //if not with own number case
 
@@ -623,9 +704,12 @@ bool ImageDirectoryProducer::produce()
 	//RGB
 	m_imgOutputPinRGB->put( CvMatData(rgbimage));
 	//TODO add video feeds as frame based input;
-
+	//should somehow be linked to the actual number of the frame so we can load the correct file directly from the textfile of annotation shit. 
 	m_fileNameOutputPin->put( fileInfo.fileName() );
-    m_filePathOutputPin->put( fileInfo.absolutePath() );
+    m_fileNameNrOutputPin->put(m_nr);
+	m_correctimagedirectoryboolOutputPin-> put(m_signal);
+	m_filePathOutputPin->put( fileInfo.absolutePath() );
+
 
     //m_imgOutputPin->put( CvMatData(image) );
     //m_fileNameOutputPin->put( fileInfo.fileName() );
@@ -633,6 +717,7 @@ bool ImageDirectoryProducer::produce()
 
 	int elapsed = m_timeSinceLastFPSCalculation.elapsed();
 	bool setwaiting =false;
+
 	//TODO insert a more reliable maxFPS setter that does not rely solely on the producer but also on the tracker
 	while (elapsed < (1000/getWantedFPS()))
 	{

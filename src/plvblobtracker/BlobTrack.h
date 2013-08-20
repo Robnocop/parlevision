@@ -32,6 +32,7 @@ namespace plvblobtracker
             historySize(_historySize),
             trackSize(_trackSize),
 			avgOver(_avgOver),
+			pid(0),
 			averagepixel(0),
             age(0),
 			direction(361),
@@ -60,6 +61,7 @@ namespace plvblobtracker
 		//longer age
         unsigned int age;
 		unsigned int averagepixel;
+		unsigned int pid;
 		
 		//not unsigned to be able compare to GUI set values.
         int historySize;
@@ -111,11 +113,11 @@ namespace plvblobtracker
     public:
         BlobTrack(unsigned int id,
                   Blob& blob,
-                  int birthThreshold=3, //legacy naming, actually number of frames a previous dead frame has been given a value before it seen as a normal track again, //number of frames before a track is added is set in BlobTracker.cpp now
-				  int dieThreshold=30, //number of frames a track has not been updated before it is removed from the list was 400, ?should be quite long i guess, 1-60s seems reasonable, actually removed from list 
-                  int historySize=10, //10 number of complete blobs in the track vector that can be recalled
-                  int trackSize=90, //drawn and saved tail length also arraysize of recallable speed and rotation values
-				  int avgOver= 2); //value over which the direction and speed are averaged, now set to 5 suiting
+                  int birthThreshold=1, //legacy naming, actually number of frames a previous dead frame has been given a value before it seen as a normal track again, //number of frames before a track is added is set in BlobTracker.cpp now
+				  int dieThreshold=2, //30 number of frames a track has not been updated before it is removed from the list was 400, ?should be quite long i guess, 1-60s seems reasonable, actually removed from list, TODO set to 2 frames for annotation 
+                  int historySize=2, //10 number of complete blobs in the track vector that can be recalled, TODO make GUI setting and is set to 3 frames for annotation
+                  int trackSize=60, //90 drawn and saved tail length also arraysize of recallable speed and rotation values, TODO set to 60 for annotationtool
+				  int avgOver= 2); //value over which the direction and speed are averaged, now set to 5 suiting, TODO is this possible and needed for annotation?
 
         virtual ~BlobTrack();
 
@@ -130,6 +132,7 @@ namespace plvblobtracker
         }
 
         inline unsigned int getId() const { return d->id; }
+		inline unsigned int getPID() const { return d->pid; }
 		inline unsigned int getDirection() const { return d->direction; }
 		inline unsigned int getVelocity() const { return d->velocity; }
 		//Framebased
@@ -165,6 +168,8 @@ namespace plvblobtracker
 
 		/** resets the ID based on an external measurement in the blob */
 		void setID(int id);
+
+		void setPID(int id);
 		
 		/** saves the last x slots with measured bits*/
 		//void BlobTrack::setBits(bool bit, int slot);

@@ -29,6 +29,7 @@
 
 #include "Blob.h"
 #include "BlobTrack.h"
+#include "BlobChangeData.h"
 
 namespace plv
 {
@@ -38,6 +39,16 @@ namespace plv
 
 namespace plvblobtracker
 {
+	enum PlvBlobTrackState {
+			Ok, //everything is fine
+			NoOverlap,//there was a track assigned without overlap, some mismatch is expected
+			NewBlob,  //there are more blobs than tracks, ids will be needed for the newly created tracks
+			LessBlobs, //there are less blobs than tracks, an id has been removed is this correct?
+			MultipleTracks,//TODO there is at least one blob that have been assigned to more than one tracks.
+			NotMatched //there is no blob matched to a certain track
+	};
+
+
     class BlobTracker : public plv::PipelineProcessor
     {
         Q_OBJECT
@@ -91,12 +102,22 @@ namespace plvblobtracker
         plv::InputPin< QList<plvblobtracker::Blob> >* m_inputBlobs;
         plv::CvMatDataOutputPin* m_outputImage;
 		plv::CvMatDataOutputPin* m_outputImage2;
-		plv::OutputPin<bool>* m_outputAnnotationSituation;
+		plv::OutputPin<bool>* m_outputAnnotationNeeded;
+		plv::OutputPin< QList<plvblobtracker::PlvBlobTrackState> >* m_outputAnnotationSituation;
 		plv::OutputPin< QList<plvblobtracker::BlobTrack> >* m_outputBlobTracks;
 		//plv::CvMatDataOutputPin* m_outputImage3;
 		//plv::CvMatDataOutputPin* m_outputImage4;
 		//plv::CvMatDataOutputPin* m_outputImage5;
         QList<BlobTrack> m_blobTracks;
+
+		plv::InputPin<bool>* m_correctimagedirectoryboolInputPin;
+		
+		//TODO
+		QList<plvblobtracker::BlobChangeData> m_blobchanges;
+		QList<plvblobtracker::PlvBlobTrackState> m_blobtrackstate;
+
+		QString m_filename_bcd;
+		void readFile(QString filename);
 
 		//unsigned??
 		unsigned int m_blobSelector;
@@ -128,7 +149,11 @@ namespace plvblobtracker
 
 		//ANNOTATION TOOL
 		bool m_annotationneeded;
-
+		bool m_debugstuff;
+		bool m_skipprocessbool;
+		float m_previousAnnoSerial;
+		bool m_correctimagedirectorybool;
     };
-}
+}//need to add metatype in order to use it for pins. //TODO doesnt work
+Q_DECLARE_METATYPE( QList<plvblobtracker::PlvBlobTrackState> )
 #endif // BLOBTRACKER_H
