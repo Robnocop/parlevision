@@ -223,17 +223,15 @@ bool BlobTracker::process()
 	//??not a constant calling tracks but actually initializing a change of track
 	readFile(m_filename_bcd);
 	
+	m_correctimagedirectorybool = m_correctimagedirectoryboolInputPin->get();
 
 	if (m_skipprocessbool)
 	{
-		//create a try catch error!
-		m_correctimagedirectorybool = m_correctimagedirectoryboolInputPin->get();
 		if (m_correctimagedirectorybool)
 			m_skipprocessbool = false;
 	}
 
 	if (!m_skipprocessbool)
-	//if (true)
 	{
 
 		//make a temp list of blobtracks to update shit and then put it back into m_blobtracks being updated.

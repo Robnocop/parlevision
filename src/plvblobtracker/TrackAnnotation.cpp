@@ -373,8 +373,10 @@ bool TrackAnnotation::process()
 		//the current solution is to always skip frames and set the framenr in trackannotations file to imagedir
 		//if something is changed and not just proceeding with loop, one needs to trash a lot of frames.
 		
+		//
+
 		//as long we keep on going in the same forward direction we might not need to skip the frames, for backward it is easier to do so.
-		if (back!=m_back_prev || back!=1 || m_plvannotationwidget.m_blobchanges.size()>0 )
+		if (back!=m_back_prev || back!=1 ||  m_plvannotationwidget.m_blobchanges.size()>0)
 		{
 			m_skipprocessloop = true;
 
