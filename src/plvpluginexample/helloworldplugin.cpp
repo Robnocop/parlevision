@@ -3,6 +3,7 @@
 #include <QtDebug>
 
 #include "helloworldprocessor.h"
+//#include "StitchColor.h"
 
 using namespace plv;
 
@@ -20,6 +21,7 @@ void HelloWorldPlugin::onLoad()
 {
     qDebug() << "HelloWorldPlugin onLoad";
     plvRegisterPipelineElement<HelloWorldProcessor>();
+	//plvRegisterPipelineElement<StitchColor>();
 }
 
 Q_EXPORT_PLUGIN2(hello_world_plugin, HelloWorldPlugin)
