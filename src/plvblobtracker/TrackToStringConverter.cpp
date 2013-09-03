@@ -30,10 +30,10 @@ bool TrackToStringConverter::init()
 		QTextStream s(&file);
 		QString dateAndTime = QTime().currentTime().toString(); //QString("blobs of frame %1").arg(this->getProcessingSerial());
 		file.write("\n");
-		file.write("tabbed format:"); 
-		file.write("\n");
-		file.write("BEGIN_MARKER#MARKER_ID: \t #MARKER_CENTER_X: \t #MARKER_CENTER_Y: \t #DIRECTION: \t #SPEED: \t #AVERAGEZ: \t #AGE:");
-		file.write("\n");
+		//file.write("tabbed format:"); 
+		//file.write("\n");
+		//file.write("BEGIN_MARKER#MARKER_ID: \t #MARKER_CENTER_X: \t #MARKER_CENTER_Y: \t #DIRECTION: \t #SPEED: \t #AVERAGEZ: \t #AGE:");
+		//file.write("\n");
 		file.write("init time:");
 		for (int i = 0; i < dateAndTime.size(); ++i)
 			s << dateAndTime.at(i);// << '\n';
@@ -49,22 +49,6 @@ bool TrackToStringConverter::init()
 void TrackToStringConverter::setSaveToFile(bool b)
 {
 	m_saveToFile = b;
-	//if (b)
-	//{
-	//	QFile file(m_filename);
-	//	bool ret = file.open(QIODevice::WriteOnly | QIODevice::Append);
-	//	Q_ASSERT(ret);
-	//	QTextStream s(&file);
-	//	file.write("set to save time:");
-	//	QString dateAndTime = QTime().currentTime().toString(); //QString("blobs of frame %1").arg(this->getProcessingSerial());
-	//	for (int i = 0; i < dateAndTime.size(); ++i)
-	//		s << dateAndTime.at(i);// << '\n';
-	//	file.write("\n");	
-	//	ret = file.flush();
-	//	Q_ASSERT(ret);
-	//	file.close();
-	//	//m_timenotset = false;
-	//}
 	emit (saveToFileChanged(b));
 }
 
@@ -98,6 +82,7 @@ bool TrackToStringConverter::process()
 			Q_ASSERT(ret);
 			file.close();
 	}
+
     // convert coordinates to what the virtual playground expects (legacy) otherwise save the info per updated track tab delimited. 
     foreach( BlobTrack t , tracks )
     {
@@ -107,16 +92,19 @@ bool TrackToStringConverter::process()
 		//playgroundQString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#").arg(t.getID()).arg(p.x).arg(p.y);
 		//legacy format, change to tab formatted if in order
 		QString blobString;
-		if (getLegacyFormat())
-			blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
-		else
-			blobString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+//		if (getLegacyFormat())
+//		blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+//		else
+		//NOT NEEDED FOR ANNO blobString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+		QString blobTabString = QString("%1 \t %2 \t %3 \t %4").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAveragePixel());
 		out.append(blobString);
 		out.append("\n");
 		if (getSaveToFile())
 		{
 			//maybe better to save the values instead of calling them twice. although none of these values seem to require much proccesing power, they only return a value. 
-			QString blobTabString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+			//NOT NEEDED FOR ANNO 
+			QString blobTabString = QString("%1 \t %2 \t %3 \t %4").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAveragePixel());
+			//QString blobTabString = QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6 \t %7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
 			QFile file(m_filename);
 			bool ret = file.open(QIODevice::WriteOnly | QIODevice::Append);
 			Q_ASSERT(ret);

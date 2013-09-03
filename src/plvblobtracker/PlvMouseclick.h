@@ -18,7 +18,11 @@
 
 #include <QWidget>
 
+#include <plvcore/PipelineProcessor.h>
+#include <plvcore/Pin.h>
 #include <plvcore/CvMatData.h>
+#include <plvcore/CvMatDataPin.h>
+
 #include "BlobChangeData.h"
 using namespace plv;
 //using namespace plvblobtracker;
@@ -43,19 +47,25 @@ namespace plvblobtracker
 
 	enum PlvBlobSetting {
 			Neutral, //N: everything is fine
-			Exchange,//E: two tracks have been switched, different than assigning as otherwise order would matter (e.g. 3=2 and then 2=3 would assign 3=3 instead of 3=2,2=3
-			//E, id1, id2 --> swap id1 and id2
-			Assign,  //A: a track needs another id name
-			//A, oldid, newid1
-			Merged, //M: one track has two blobs we need to duplicate the track and assign two ids and perhaps different cogs to it.
-			//M, oldid, newid#1,  newid#2,
-			Divided,    //D: blob has been split due to erode dilate or whatever, two tracks need to have same ID and same cog. 
-			//D, id1, id2, newid (id1 && id2 == newid)
-			Boring, //B this is a non-interesting fram to annotate, e.g. recess or empty frame
-			//Prevent Switch and Split to have the same letter
-			Undo 
+			Add,
+			Remove,
+			Undo,
+			Insert,
+			//adding a pid without a recognised blob
+			New
 			//Escape 
 			//TODO deal with problem: only at the frame a blob is split it will result in an error! Later on it will keep tracking it seemingly "correctly". However every frame it needs to be manually annotated. 
+			//---------OLD-------------------------
+			//	Exchange,//E: two tracks have been switched, different than assigning as otherwise order would matter (e.g. 3=2 and then 2=3 would assign 3=3 instead of 3=2,2=3
+			////E, id1, id2 --> swap id1 and id2
+			//Assign,  //A: a track needs another id name
+			////A, oldid, newid1
+			//Merged, //M: one track has two blobs we need to duplicate the track and assign two ids and perhaps different cogs to it.
+			////M, oldid, newid#1,  newid#2,
+			//Divided,    //D: blob has been split due to erode dilate or whatever, two tracks need to have same ID and same cog. 
+			////D, id1, id2, newid (id1 && id2 == newid)
+			//Boring, //B this is a non-interesting fram to annotate, e.g. recess or empty frame
+			////Prevent Switch and Split to have the same letter
 	};
 	
 	
@@ -89,13 +99,14 @@ namespace plvblobtracker
 			void closeEvent(QCloseEvent *event);
 			void testFunction();
 			bool toPaint(CvMatData& image);
+			//void drawCenterOfGravity( cv::Mat& target, cv::Scalar color, cv::Point mousep);
 			void createPopUp();
-			void processInit();
-			void setTheState(char c);
-			
+			void processInit(int framenr);
+			void setTheState(QString c);
+			void closeDown();
 			QList<plvblobtracker::BlobChangeData> m_blobchanges;
 
-			
+			QString m_filename;
 
 		protected:
 			void mouseReleaseEvent(QMouseEvent *event);
@@ -104,14 +115,19 @@ namespace plvblobtracker
 			virtual void keyReleaseEvent(QKeyEvent * event);
 
 		private:
+			int m_framenr;
 			QWidget* m_popupWidget;
 			QLabel m_imlab1;
 			bool donotcontinue;
-			QString m_filename;
+			
 			bool m_firstid;
 			bool m_secondid;
 			int m_inputnr;
 			void numberKeyHandling(int i, bool comma);
+			QString m_filenameBCD;
+			void saveBlobChangeDataToFileOnEnter(QString filename,  BlobChangeData bcd);
+			//QString saveTrackToAnnotation(QString filename, BlobTrack t, cv::Point p, QString annotationstate, int newid);
+			//QString m_filenameLog;
 	};
 
 	

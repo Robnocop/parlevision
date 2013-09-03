@@ -2,6 +2,7 @@
 #define TRACKANNOTATION_H
 
 #include <plvcore/PipelineProcessor.h>
+#include <plvcore/Pin.h>
 #include <plvcore/CvMatDataPin.h>
 #include <plvcore/CvMatData.h>
 #include <opencv/cv.h>
@@ -58,8 +59,6 @@ namespace plvblobtracker
 		bool stop();
 		QString getFilenameLog();
 
-		int readFile(QString m_filename2, bool previous);
-
 		/** required standard method declaration for plv::PipelineProcessor */
 		PLV_PIPELINE_PROCESSOR
 	signals:
@@ -72,7 +71,8 @@ namespace plvblobtracker
 		//void setSaveToFile(bool b);
 		void setSaveToFile(bool b) {m_saveToFile = b; emit (saveToFileChanged(b));}
 		void setLegacyFormat(bool b) {m_legacyFormat = b; emit (legacyFormatChanged(b));}
-		void setFilenameLog(const QString& filename) {m_filenameLog = filename; emit (filenameLogChanged(filename));}
+		//void setFilenameLog(const QString& filename) {m_filenameLog = filename; emit (filenameLogChanged(filename));}
+		void setFilenameLog(const QString& filename); //{m_filenameLog = filename; emit (filenameLogChanged(filename));}
 
 	private slots:
 		//void timeout();
@@ -81,15 +81,22 @@ namespace plvblobtracker
 	private:
 		plv::InputPin< QList<plvblobtracker::BlobTrack> >* m_inputBlobs;
 		plv::InputPin< bool >* m_inputAnnotationNeeded;
-		
+				
 		plv::InputPin<QString>* m_fileNameInputPin;
 		plv::InputPin<int>* m_fileNameNrInputPin;
 		plv::InputPin<bool>* m_correctimagedirectoryboolInputPin;
 		plv::InputPin<QList<plvblobtracker::PlvBlobTrackState>>* m_inputBlobTrackState;
-		
+				
 		plv::OutputPin<QString>* m_outputPin;
-		plv::CvMatDataInputPin* m_inputImage;
-			
+		plv::CvMatDataInputPin* m_inputImage; //blob track image
+		
+		//just passing through for the cueing problem
+		plv::CvMatDataInputPin*	m_inputDepthImage; //original depth image
+		plv::CvMatDataOutputPin* m_outputImage2;
+		
+		plv::CvMatDataInputPin*	m_inputVideoImage;
+		plv::CvMatDataOutputPin* m_outputImage3;
+					
 		PlvMouseclick m_plvannotationwidget;
 
 		QWidget* m_popupWidget;
@@ -99,10 +106,12 @@ namespace plvblobtracker
 		bool m_skipprocesslooptrack; //todo seperate the two blocking situations
 		bool m_correctimagedirectorybool;
 		bool debugging;
+		bool m_annoneededthisframe;
 		unsigned int m_waitserial;
 		int m_back_prev;
 
-		QString saveTrackToAnnotation(QString filename, BlobTrack t, cv::Point p, char annotationstate, int newid);
+		QString saveTrackToAnnotation(QString filename, BlobTrack t, cv::Point p, QString annotationstate, int newid);
+		QString saveBCDwithoutTrackToAnnotation(QString filename, cv::Point p, QString annotationstate, int newid);
 		void saveBlobChangeDataToFile(QString filename);
 
 		//QString m_filename;

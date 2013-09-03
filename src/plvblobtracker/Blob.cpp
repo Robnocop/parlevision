@@ -79,7 +79,11 @@ bool Blob::overlappingAreaRect( const Blob& other, cv::Rect& area ) const
 
 void Blob::drawString( cv::Mat& target, const QString& str, cv::Scalar color ) const
 {
-    cv::putText(target, str.toAscii().constData(), d->cog, CV_FONT_HERSHEY_SIMPLEX, 0.5, color, 1, CV_AA, false );
+	cv::Point temppoint = d->cog;
+	if (temppoint.x>(4*target.cols)/5)
+		temppoint.x = target.cols*4/5;
+    //cv::putText(target, str.toAscii().constData(), d->cog, CV_FONT_HERSHEY_SIMPLEX, 0.5, color, 1, CV_AA, false );
+	cv::putText(target, str.toAscii().constData(), temppoint, CV_FONT_HERSHEY_SIMPLEX, 0.5, color, 1, CV_AA, false );
 }
 
 void Blob::drawContour( cv::Mat& target, cv::Scalar color, bool fill ) const
@@ -103,6 +107,23 @@ void Blob::drawBoundingRect( cv::Mat& target, cv::Scalar color ) const
 
 void Blob::drawCenterOfGravity( cv::Mat& target, cv::Scalar color ) const
 {
-    cv::line( target, d->cog, d->cog, color );
+	//draw a small cross
+	cv::Point cogtouse = d->cog;
+	cv::Point tempcog = cogtouse;
+	cv::Point tempcog2 = cogtouse;
+	cv::Point tempcog3 = cogtouse;
+	cv::Point tempcog4 = cogtouse;
+	int crossdim = 5;
+	tempcog.x = cogtouse.x-crossdim;
+	tempcog.y = cogtouse.y-crossdim;
+	tempcog2.x = cogtouse.x+crossdim;
+	tempcog2.y = cogtouse.y+crossdim;
+	tempcog3.x = cogtouse.x-crossdim;
+	tempcog3.y = cogtouse.y+crossdim;
+	tempcog4.x = cogtouse.x+crossdim;
+	tempcog4.y = cogtouse.y-crossdim;
+
+	cv::line( target, tempcog, tempcog2, color );
+	cv::line( target, tempcog3, tempcog4, color );
 }
 

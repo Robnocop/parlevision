@@ -39,6 +39,7 @@ namespace plv
     public:
         Application(QCoreApplication* app);
         virtual ~Application();
+		virtual bool notify(QObject *rec, QEvent *ev);
         void init();
         void deinit();
 

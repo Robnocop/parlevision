@@ -84,6 +84,8 @@ namespace plvopencv
         QString m_directory; /** the directory which contains the image. */
         bool m_putImage;
 
+
+
         /** This method checks whether the extension of the filename is one of the
           * accepted extensions for images by OpenCV. See:
           * http://opencv.willowgarage.com/documentation/c/reading_and_writing_images_and_video.html */

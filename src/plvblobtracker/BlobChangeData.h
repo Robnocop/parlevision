@@ -35,8 +35,8 @@ namespace plvblobtracker
 			int oldid;
 			int newid;
 			cv::Point cogs;
-			char changetype;
-			
+			//char changetype;
+			QString changetype;
 			//todo shouldnt it be
 			//char changetype;
 			//int oldid;

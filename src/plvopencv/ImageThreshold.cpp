@@ -44,10 +44,12 @@ ImageThreshold::ImageThreshold() :
 
     m_inputPin->addSupportedChannels(1);
     m_inputPin->addSupportedDepth(CV_8U);
+	m_inputPin->addSupportedDepth(CV_16U);
     m_inputPin->addSupportedDepth(CV_32F);
 
     m_outputPin->addSupportedChannels(1);
     m_outputPin->addSupportedDepth(CV_8U);
+	m_inputPin->addSupportedDepth(CV_16U);
     m_outputPin->addSupportedDepth(CV_32F);
 }
 
@@ -59,16 +61,47 @@ bool ImageThreshold::process()
     CvMatData out = CvMatData::create( in.width(), in.height(), in.type() );
 
     const cv::Mat& src = in;
-    cv::Mat& dst = out;
+	cv::Mat& dst = out;
 
-    // perform threshold operation on the image
-    cv::threshold( src, dst, m_threshold, m_maxValue, m_method.getSelectedValue() );
+	if (src.type()==CV_16U)
+	{
+		double v = 0;
+		double maxvaluetoset = 65535.0;
+		//x
+		for( int i=0; i < in.width(); i++ )
+		{
+			for(int j=0; j <in.height(); j++ )
+			{
+				v = src.at<unsigned short>(j,i);
+				if ( v > m_threshold )
+				{
+					dst.at<unsigned short>(j,i) = maxvaluetoset; 
+				}
+				else
+				{
+					dst.at<unsigned short>(j,i) = 0;
+				}
+			}
+		}
+	}
+	else if (src.type()==CV_32F)
+	{
+		cv::threshold( src, dst, m_threshold, m_maxValue, m_method.getSelectedValue() );
+	}
+	else
+	{
+		// perform threshold operation on the image
+		cv::threshold( src, dst, m_threshold, m_maxValue, m_method.getSelectedValue() );
+	}
+
+    
 
     // publish the new image
     m_outputPin->put( out );
 
     return true;
 }
+
 
 /** propery methods */
 plv::Enum ImageThreshold::getMethod() const

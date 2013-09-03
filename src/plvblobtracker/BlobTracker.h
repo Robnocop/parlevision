@@ -53,39 +53,44 @@ namespace plvblobtracker
     {
         Q_OBJECT
         Q_DISABLE_COPY( BlobTracker )
-        Q_CLASSINFO("author", "Richard, changed a lot by Roberdus")
+        Q_CLASSINFO("author", "Roberdus, some basics by Richard")
         Q_CLASSINFO("name", "Blob Tracker")
         Q_CLASSINFO("description", "Tracks blobs, blobselector can be used to see one blob by its ID, the factor can be set to have tracker respond on either its direction or its overlap, in a range of 0 to 100, zero indicating totaly based on direction 100 totaly based on overlap. For very fast moving tracking where ther might be no overlap one might select the boolean allow no overlap. This results in more noisy results (flickering back and forth positions). The orange colored blobs have not been updated in the particular frame and are thus not send over the tracks pin. They might for instance be not overlapping, or merged to another id. " )
 		Q_PROPERTY( int numberOfBlobsTracked READ getNumberOfBlobsTracked WRITE setNumberOfBlobsTracked  NOTIFY numberOfBlobsTrackedChanged  )
 		Q_PROPERTY( int blobSelector READ getBlobSelector WRITE setBlobSelector NOTIFY blobSelectorChanged )
-		Q_PROPERTY( int factorDirOverlap READ getFactorDirOverlap WRITE setFactorDirOverlap NOTIFY factorDirOverlapChanged )
-		Q_PROPERTY( bool averagePixelValue READ getAveragePixelValue WRITE setAveragePixelValue NOTIFY averagePixelValueChanged  )
-		Q_PROPERTY( bool allowNoOverlap READ getAllowNoOverlap WRITE setAllowNoOverlap NOTIFY allowNoOverlapChanged  )
+		
+		
+		
+		//not for annotation
+		//Q_PROPERTY( bool allowNoOverlap READ getAllowNoOverlap WRITE setAllowNoOverlap NOTIFY allowNoOverlapChanged  )
+		//Q_PROPERTY( int factorDirOverlap READ getFactorDirOverlap WRITE setFactorDirOverlap NOTIFY factorDirOverlapChanged )
+        //Q_PROPERTY( bool averagePixelValue READ getAveragePixelValue WRITE setAveragePixelValue NOTIFY averagePixelValueChanged  )
+		//int getFactorDirOverlap() const;
+		//bool getAllowNoOverlap() {return m_allowNoOverlap;}
+		//bool getAveragePixelValue() {return m_averagePixelValue;}
 
-        /** required standard method declaration for plv::PipelineProcessor */
+		/** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
 		
 		int getBlobSelector() const;
-		int getFactorDirOverlap() const;
-		int getNumberOfBlobsTracked() const;
-		//{return m_numberOfBlobsTracked;}
-		bool getAveragePixelValue() {return m_averagePixelValue;}
-		bool getAllowNoOverlap() {return m_allowNoOverlap;}
+		
+		int getNumberOfBlobsTracked() const;	
 
 	public slots:
 		void setBlobSelector(int blobid);
-		void setFactorDirOverlap(int factor);
-		//his is the boolean deciding whether or not to average the values in the track
-		void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
-		void setAllowNoOverlap(bool b) {m_allowNoOverlap = b; emit (allowNoOverlapChanged(b));}
 		void setNumberOfBlobsTracked(int i) {m_numberOfBlobsTracked = i; emit (numberOfBlobsTrackedChanged(i));}
-		
+			
+		//dont do this stuff for annotation: this is the boolean deciding whether or not to average the values in the track
+		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
+		//void setAllowNoOverlap(bool b) {m_allowNoOverlap = b; emit (allowNoOverlapChanged(b));}
+		//void setFactorDirOverlap(int factor);
 	signals:
 		void blobSelectorChanged (int s);
-		void factorDirOverlapChanged (int s);
-		void averagePixelValueChanged(bool value);
 		void numberOfBlobsTrackedChanged(int i);
-		void allowNoOverlapChanged(bool value);
+		
+		//void allowNoOverlapChanged(bool value);
+		//void factorDirOverlapChanged (int s);
+		//void averagePixelValueChanged(bool value);
 
 	public:
         BlobTracker();
@@ -98,13 +103,27 @@ namespace plvblobtracker
         bool stop();
 
     private:
-        plv::CvMatDataInputPin* m_inputImage;
+        //plv::CvMatDataInputPin* m_inputImage;
+		plv::CvMatDataInputPin*	m_inputDepthImage;
         plv::InputPin< QList<plvblobtracker::Blob> >* m_inputBlobs;
-        plv::CvMatDataOutputPin* m_outputImage;
-		plv::CvMatDataOutputPin* m_outputImage2;
+        
+		plv::InputPin<QString>* m_fileNameInputPin;
+		plv::InputPin<int>* m_fileNameNrInputPin;
+		//plv::InputPin<bool>* m_correctimagedirectoryboolInputPin;
+
+		plv::OutputPin<QString>* m_fileNameOutputPin;
+		plv::OutputPin<int>* m_fileNameNrOutputPin;
+		plv::OutputPin<bool>* m_correctimagedirectoryboolOutputPin;
+		
+		plv::CvMatDataOutputPin* m_outputImage;
 		plv::OutputPin<bool>* m_outputAnnotationNeeded;
 		plv::OutputPin< QList<plvblobtracker::PlvBlobTrackState> >* m_outputAnnotationSituation;
+		plv::CvMatDataOutputPin* m_outputImage2;
 		plv::OutputPin< QList<plvblobtracker::BlobTrack> >* m_outputBlobTracks;
+		
+		plv::CvMatDataInputPin*	m_inputVideoImage;
+		plv::CvMatDataOutputPin* m_outputImage3;
+
 		//plv::CvMatDataOutputPin* m_outputImage3;
 		//plv::CvMatDataOutputPin* m_outputImage4;
 		//plv::CvMatDataOutputPin* m_outputImage5;
@@ -112,46 +131,46 @@ namespace plvblobtracker
 
 		plv::InputPin<bool>* m_correctimagedirectoryboolInputPin;
 		
-		//TODO
 		QList<plvblobtracker::BlobChangeData> m_blobchanges;
 		QList<plvblobtracker::PlvBlobTrackState> m_blobtrackstate;
 
-		QString m_filename_bcd;
+		QString m_filenameBCD;
 		void readFile(QString filename);
 
 		//unsigned??
 		unsigned int m_blobSelector;
-		unsigned int m_factor;
-		bool m_averagePixelValue;
-		bool m_allowNoOverlap;
+
+		//not for annotation 
+		//unsigned int m_factor;
+		//bool m_averagePixelValue;
+		//bool m_allowNoOverlap;
 
         void matchBlobs(QList<Blob>& newBlobs, QList<BlobTrack>& blobTracks);
 		unsigned int averagePixelsOfBlob(Blob blob,const cv::Mat& src);
-        //void setTrackID(QList<BlobTrack>& blobTracks, int ID, int i);
-		//void setTrackID(BlobTrack& trackunit);
-		//int getIDBySum(int sum);
+      
 		unsigned int m_idCounter;
 		unsigned int m_iterations;
 		int m_biggerMaxCount;
 		int m_maxNrOfBlobs; //max nr of seen blobs
-		//int m_maxNrOfTrackedBlobs; //needs to be adjustable if it works!
+		
 		unsigned int m_numberOfBlobsTracked;
 		int m_thresholdFramesMaxNrOfBlobs;
-		int m_thresholdremove;
-        //inline unsigned int getNewId() { return ++m_idCounter; }
+		        
 		QList<unsigned int> m_idPool;
 		inline unsigned int getNewId() { if(!m_idPool.isEmpty()) {return m_idPool.first();} else{return 999;}; }
 		
+		//don't use this for annotation
 		//TEST FPS callback from plugin
-		QTime m_timeSinceLastFPSCalculation;
-		int m_numFramesSinceLastFPSCalculation;
-		float m_fps; /** running avg of fps */
+		//QTime m_timeSinceLastFPSCalculation;
+		//int m_numFramesSinceLastFPSCalculation;
+		//float m_fps; /** running avg of fps */
 
 		//ANNOTATION TOOL
 		bool m_annotationneeded;
 		bool m_debugstuff;
 		bool m_skipprocessbool;
-		float m_previousAnnoSerial;
+		bool m_firstloop;
+		int m_previousAnnoSerial;
 		bool m_correctimagedirectorybool;
     };
 }//need to add metatype in order to use it for pins. //TODO doesnt work

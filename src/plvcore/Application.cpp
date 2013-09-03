@@ -22,6 +22,9 @@
 #include "Application.h"
 
 #include <QCoreApplication>
+//#include <QApplication>
+#include <QEvent>
+
 #include <QDir>
 #include <QPluginLoader>
 
@@ -154,4 +157,22 @@ void Application::initLoggers()
     // take over as Qt message handler
     qxtLog->installAsMessageHandler();
 }
+
+//TODO to catch errors correctly!
+bool Application::notify(QObject *rec, QEvent *ev)
+{
+    qDebug() << "MyApplication::nofity";
+    try {
+        //return QApplication::notify(rec, ev);
+		//cyclic?
+		//this->staticMetaObject.
+		return m_app->notify(rec, ev);
+    }
+    catch( ... ) {
+        qDebug() << "Unknown Exception: Terminating!";
+        exit(0);
+    }
+    return false;
+}
+
 

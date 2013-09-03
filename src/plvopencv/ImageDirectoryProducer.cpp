@@ -33,7 +33,6 @@ using namespace plv;
 using namespace plvopencv;
 
 ImageDirectoryProducer::ImageDirectoryProducer() : 
-	m_idx(0),
 	m_start(1),
 	m_fps(30),
 	m_loop(true),
@@ -72,19 +71,20 @@ ImageDirectoryProducer::ImageDirectoryProducer() :
 	//PLV_ENUM_ADD( m_sort, QDir::IgnoreCase);
 	//PLV_ENUM_ADD( m_sort, QDir::LocaleAware);
 
-    setSortType( m_sort );
+    //setSortType( m_sort );
 
-    m_fileNameOutputPin  = createOutputPin<QString>("file name", this );
-    m_imgOutputPin = createCvMatDataOutputPin("image_output", this );
-	m_filePathOutputPin  = createOutputPin<QString>("file path", this );
-	
+    m_filePathOutputPin  = createOutputPin<QString>("file path", this );
+
+	m_fileNameOutputPin  = createOutputPin<QString>("file name", this );
+    	
 	//ANNOTATIOM
 	//m_serialOutputPin = createOutputPin<unsigned int>("read in serial", this );
 	m_fileNameNrOutputPin = createOutputPin<int> ("the nr for annotation", this );
 	m_correctimagedirectoryboolOutputPin = createOutputPin<bool> ("a signal of textfile anno", this );
 
+	 m_imgOutputPin = createCvMatDataOutputPin("depth image output", this );
 	//RGB value for annotation temp hack!
-	m_imgOutputPinRGB  = createCvMatDataOutputPin("RGB_output", this );
+	m_imgOutputPinRGB  = createCvMatDataOutputPin("video output", this );
 
 	//to allow a cyclic influence, asking for problems should be used carefully! Needed for trackannotation.
 	//m_changeFrame = createInputPin<int>( "num frames", this, IInputPin::CONNECTION_OPTIONAL, IInputPin::CONNECTION_ASYNCHRONOUS );
@@ -135,7 +135,7 @@ void ImageDirectoryProducer::setDirectory(const QString& directory)
 	//init(); //guess we will need that
 }
 
-void ImageDirectoryProducer::setDirectoryRGB(const QString& directory)
+void ImageDirectoryProducer::setDirectoryVideos(const QString& directory)
 {	
     //replace all '\' characters with '/' characters
     QString path = directory;
@@ -151,8 +151,8 @@ void ImageDirectoryProducer::setDirectoryRGB(const QString& directory)
     if( dir.exists() )
     {
         QMutexLocker lock( m_propertyMutex );
-        m_directoryRGB = path;
-        qDebug() << "New RGB directory selected:" << m_directoryRGB;
+        m_directoryVideos = path;
+        qDebug() << "New RGB directory selected:" << m_directoryVideos;
     }
 	else
 	{
@@ -166,142 +166,63 @@ QFileInfoList ImageDirectoryProducer::loadImageDir(QDir dir)
 {
 	QFileInfoList entryInfoListOut;
 
-	if (getSortType().getSelectedValue() != 11)
-    {
-		//taken out!
-		//QDir dir(m_directory);
-		if( !dir.exists() )
-		{
-			qDebug() << "Directory is invalid";
-		    setError( PlvPipelineInitError, "Directory is invalid");
-	        return entryInfoListOut;
-	    }
-	    dir.setFilter(QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks | QDir::Readable);
-	
-		//just in case not set properly later on
-		dir.setSorting(QDir::Name );
-		
-		//set the sorttype based on the fitting int number, could net get the QDir sortflag as an enum.
-		switch (getSortType().getSelectedValue())
-		{
-			case 0:
-			dir.setSorting(QDir::Name );
-			break;
-
-			case 1:
-			dir.setSorting(QDir::Time );
-			break;
-
-			case 2:
-			dir.setSorting( QDir::Size );
-			qDebug() << "size";
-			break;
-
-			case 3:
-			dir.setSorting( QDir::Type);
-			break;
-
-			case 4:
-			dir.setSorting( QDir::Unsorted);
-			break;
-
-			case 5:
-			dir.setSorting( QDir::NoSort);
-			break;
-
-			case 6:
-			dir.setSorting( QDir::DirsFirst);
-			break;
-
-			case 7:
-			dir.setSorting( QDir::DirsLast);
-			break;
-
-			case 8:
-			dir.setSorting( QDir::Reversed);
-			break;
-
-			case 9:
-			dir.setSorting( QDir::IgnoreCase);
-			break;
-
-			case 10:
-			dir.setSorting( QDir::LocaleAware);
-			break;
-
-			case 11:
-			qDebug()<< "this state is supposed to beunreachable";
-			break;
-		}
-
-		QStringList filters;
-		filters << "*.jpg" << "*.jpeg" << "*.bmp" << "*.sr" << "*.png" << "*.pdm";
-		dir.setNameFilters(filters);
-
-		//m_entryInfoList = dir.entryInfoList();
-		entryInfoListOut = dir.entryInfoList();
-
-	} 
-	else 
+	//if (getSortType().getSelectedValue() != 11) //taken out always use nr method
+   
+	QFileInfo fileInfo ;
+	//added ability to  set to preceeding zeros, based on a gui so 0 will remain the same, more will add preceeding zeros
+	QStringList filters;
+	filters << ".jpg" << ".jpeg" << ".bmp" << ".sr" << ".png" << ".pdm";
+	QString filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(0)).toUpper();
+	fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
+	if (!fileInfo.exists()) 
 	{
-		qDebug()<< "no Qdir set to fasten up process using string instead";
-		QFileInfo fileInfo ;
-		//added ability to  set to preceeding zeros, based on a gui so 0 will remain the same, more will add preceeding zeros
-		QStringList filters;
-		filters << ".jpg" << ".jpeg" << ".bmp" << ".sr" << ".png" << ".pdm";
-		QString filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(0)).toUpper();
+		filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(1)).toUpper();
 		fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 		if (!fileInfo.exists()) 
 		{
-			filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(1)).toUpper();
+			filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(2)).toUpper();
 			fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 			if (!fileInfo.exists()) 
 			{
-				filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(2)).toUpper();
+				filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(3)).toUpper();
 				fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 				if (!fileInfo.exists()) 
 				{
-					filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(3)).toUpper();
+					filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(4)).toUpper();
 					fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 					if (!fileInfo.exists()) 
 					{
-						filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(4)).toUpper();
+						filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(5)).toUpper();
 						fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 						if (!fileInfo.exists()) 
 						{
-							filenames = QString("%1%2").arg(getStartNumber(), getTrailingZeros(), 10, QChar('0')).arg(filters.at(5)).toUpper();
-							fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
-							if (!fileInfo.exists()) 
-							{
-								qDebug() << "no files img file (.jpg .jpeg .bmp .png .sr .pdm) found with startnumber in this directory";
-							}
-							else
-							{
-								m_imgtype = ".pdm";
-							}
+							qDebug() << "no files img file (.jpg .jpeg .bmp .png .sr .pdm) found with startnumber in this directory";
 						}
 						else
 						{
-							m_imgtype = ".png";
+							m_imgtype = ".pdm";
 						}
 					}
 					else
 					{
-						m_imgtype = ".sr";
+						m_imgtype = ".png";
 					}
 				}
 				else
 				{
-					m_imgtype = ".bmp";
+					m_imgtype = ".sr";
 				}
 			}
 			else
 			{
-				m_imgtype = ".jpeg";
+				m_imgtype = ".bmp";
 			}
-			
 		}
-		
+		else
+		{
+			m_imgtype = ".jpeg";
+		}
+			
 	}
 
 	return entryInfoListOut = dir.entryInfoList();
@@ -313,28 +234,29 @@ bool ImageDirectoryProducer::init()
 	m_previousFrameNr = 0;
 	m_signal = true;
 	m_wantedFrameNr = -1;
-	m_lastDirection = 1;
+	m_lastDirection = 1; //check was 1
 
 	//reset file for annotation tool, instead zerofile on init.
-	zeroFile();
+	//zeroFile();
+	resetFile();
 
 	if (m_flagTimer)
 		m_timeSinceLastFPSCalculation.start();
 	else
 		m_timeSinceLastFPSCalculation.restart();
 	m_flagTimer = false;
-	qDebug() << "init with case is:" << getSortType().getSelectedValue();
+	
 	//wasn't able to put the qdir::sortflags directly in the plv enum so used a ugly workaround
 	QDir dir(m_directory);
 	m_entryInfoList = loadImageDir(dir);
 
-	QDir dir2(m_directoryRGB);
+	QDir dir2(m_directoryVideos);
 	m_entryInfoListRGB = loadImageDir(dir2);
 
 	
 	if (!m_flagpaused)
 	{
-		m_idx = getStartNumber();
+		qDebug() << "flagpaused in init";
 		m_nr = getStartNumber();
 		m_previousFrameNr = m_nr;
 	}
@@ -347,7 +269,6 @@ bool ImageDirectoryProducer::deinit() throw ()
     m_entryInfoList.clear();
 	m_entryInfoListRGB.clear();
 	//does that really need to be here i don't think so!
-	//m_idx = getStartNumber();
 	//m_nr = getStartNumber();
     return true;
 }
@@ -386,9 +307,11 @@ bool ImageDirectoryProducer::resetFile()
 	//jibberish values that can be recognised, only the back value needs to be maintained
 	
 	//arg 1 used to be m_lastdirection
-	QString toimagproducerorannotation = QString("%1 \t %2 \t %3").arg(-2).arg(-1).arg(false);
-			
-	qDebug() << "resetfileline in imagedir " << toimagproducerorannotation;
+	//TODO what happens if we don't reset m_lastdirection
+	//QString toimagproducerorannotation = QString("%1 \t %2 \t %3").arg(-2).arg(-1).arg(false);
+	QString toimagproducerorannotation = QString("%1 \t %2 \t %3").arg(m_lastDirection).arg(-2).arg(false);
+	
+	//qDebug() << "resetfileline in imagedir " << toimagproducerorannotation;
 	QFile file2(m_filenameFrameNr);
 	bool ret2 = file2.open(QIODevice::WriteOnly | QIODevice::Truncate);
 	Q_ASSERT(ret2);
@@ -402,6 +325,7 @@ bool ImageDirectoryProducer::resetFile()
 	ret2 = file2.flush();
 	Q_ASSERT(ret2);
 	file2.close();
+
 	///////////////////////////////////////////
 	return true;
 }
@@ -433,7 +357,8 @@ int ImageDirectoryProducer::readFile(QString filename, int backvalue)
 			//this bool is only true if it is read from a trackannotation save to the readfile
 			//as long as the direction is remained a signal is not needed, if it changes images will be purged until the signal frame is found
 			m_signal = line.section('\t', 2,2).toInt();
-			qDebug() << "debug readfile imagedirectoryproducer" << "direction the framechangeInt" << back << " newframe" << newframe<< ", signal" << m_signal ;
+			//qDebug() << "debug readfile imagedirectoryproducer" << "direction the framechangeInt" << back << " newframe" << newframe<< ", signal" << m_signal ;
+			
 			//do stuff with the temp strings
 			
 			//if (processingserialDouble < (this->getProcessingSerial()) && processingserialDouble > (this->getProcessingSerial()-3) )
@@ -443,65 +368,50 @@ int ImageDirectoryProducer::readFile(QString filename, int backvalue)
 
 	//overwrite the file after each read with recognisable jibberish
 	if (backvalue == 1)
-		return newframe;
+		return back;
 	
-	return back;
+	return newframe;
 }
 
 bool ImageDirectoryProducer::produce()
 {
-//	m_timeSinceLastFPSCalculation.restart();
-//	m_timeSinceLastFPSCalculation.elapsed() > track.getLastUpdate()) 
-	 
-	//cycles are prevented (which makes some sense)
-	/*if( m_changeFrame->isConnected() && m_changeFrame->hasData() )
-    {
-        int frames = m_changeFrame->get();
-		qDebug() << "output of pin" << frames;
-     }*/
-	
+
+	//cycles are prevented in parlevision (which makes some sense)
 	//instead an ugly solution using a txt file at the end of the pipeline to change the next loop
 	if (getAnnotation())
 	{
 		//TODO WHY if key for currentframe is pressed for long time in annotation will it result in nextframe (on release) every now and then? Is the read and write to slow?
 		//m_previousFrameNr = readFile(m_filenameFrameNr);
 		//compensate for the +1 later on
-		m_lastDirection = readFile(m_filenameFrameNr, 0)-1;
-		m_wantedFrameNr = readFile(m_filenameFrameNr, 1);
+		m_wantedFrameNr = readFile(m_filenameFrameNr, 0);
+		m_lastDirection = readFile(m_filenameFrameNr, 1);
 		//m_signalFile = readFile(m_filenameFrameNr, 2); //is allready set on every readFile.
 		
 		//TODO did this commenting change anything?
 		//int framechangeInt= readFile(m_filenameFrameNr);
 		
-		//qDebug() << "framechangeint is" << framechangeInt;
-		//TODO set if uesd!
-		int temp = m_idx+m_lastDirection; 
-		
+
 		//int temp2 = m_nr+m_previousFrameNr;
 		int temp2 =  m_previousFrameNr;
-		if (m_wantedFrameNr != -1)
+		if (m_wantedFrameNr != -2)
 		{
-			temp2 = m_wantedFrameNr; //+1 later on
-			qDebug() << "set to wantedframenr"<< m_wantedFrameNr;
+			temp2 = m_wantedFrameNr; 
+			//qDebug() << "set to wantedframenr"<< m_wantedFrameNr;
 		}
+		//m_lastdirection should not be reset, so this will no longer be reached until proven otherwise
 		else if(m_lastDirection != -3)
 		{
 			temp2 = m_nr+m_lastDirection;
-			qDebug() << "set to anotherdir"<< m_lastDirection;
-		}
-		//TODO ??? m_nr and temp2 give the actual frames
-		//qDebug() << "idx:" << m_idx << "idxtemp" << temp << " , m_nr:" << m_nr << "nr temp:" << temp2;
-		qDebug() << "m_nr:" << m_nr << "last direction" << m_lastDirection << "nr temp:" << temp2;
-
-		if (temp>=getStartNumber() && temp<=getEndNumber())
-		{
-			m_idx = temp;
+			//qDebug() << "set to anotherdir"<< m_lastDirection;
 		}
 		
+		qDebug() << "m_nr:" << m_nr << "last direction" << m_lastDirection << "nr temp,will be loaded" << temp2;
+
+	
 		if (temp2>=getStartNumber() && temp2<=getEndNumber())
 		{
 			m_nr = temp2;
-			qDebug() << "m_nr " <<m_nr << ",will be loaded";
+			//qDebug() << "m_nr " <<m_nr << ",will be loaded";
 		}
 		else if (temp2<=getStartNumber())
 		{
@@ -511,14 +421,13 @@ bool ImageDirectoryProducer::produce()
 		else if (temp2>=getEndNumber())
 		{
 			m_nr = getEndNumber();
-			qDebug() << "m_nr too big, not in range so set back to endnumber";
+			qDebug() << "m_nr too big, not in range so set to endnumber";
 		}
 		else
 		{
 			qDebug() << "strange!!! m_nr not in range but somehow not bigger or smaller than the range!";
 		}
 		
-		//TODO took out the if statement m_previousFrameNr != 0 previously <2
 		resetFile();
 	}
 
@@ -534,187 +443,112 @@ bool ImageDirectoryProducer::produce()
     QFileInfo fileInfo ;
 	QFileInfo fileInfoRGB;
 	cv::Mat image;
-	cv::Mat rgbimage;
+	
+	CvMatData outx = CvMatData::create(720,480,CV_8U,3);
+	cv::Mat& rgbimage = outx;
+    //rgbimage = cv::Scalar(0,0,0);
+	
+	//cv::Mat rgbimage;
 
-	if (getSortType().getSelectedValue()!= 11)
+	if (m_nr>=(unsigned int) getEndNumber())
 	{
-		fileInfo = m_entryInfoList.at(m_idx);
-		fileInfoRGB = m_entryInfoListRGB.at(m_idx);
-		//load the image
-		//	const std::string& path = fileInfo.absoluteFilePath().toStdString();
-		//cv::Mat image = cv::imread(path, CV_LOAD_IMAGE_UNCHANGED);
-		//image = cv::imread(path, CV_LOAD_IMAGE_UNCHANGED);
-		QFile file(fileInfo.absoluteFilePath());
-        if( file.exists() )
+		if (m_nr!=getEndNumber()+1)
 		{
-			image = cv::imread(fileInfo.absoluteFilePath().toStdString(), CV_LOAD_IMAGE_UNCHANGED);
-			if (getAnnotation())
-			{
-				rgbimage = cv::imread(fileInfoRGB.absoluteFilePath().toStdString(), CV_LOAD_IMAGE_UNCHANGED);
-			}
+			//qDebug() << "I have run out of scope";
+		}
+		outofscope=true;
+	}
+
+	if (outofscope)
+	{
+		if (getLoopIt())
+		{
+			//qDebug() << "You selected loop so i will start over" ;
+			m_nr = getStartNumber();
+			outofscope=false;
 		}
 		else
 		{
-			if (m_idx!=(getEndNumber()+1 ))
-				qDebug() << tr("filename did not exist with qdir method: %1 which should have been the %2th file").arg(fileInfo.absoluteFilePath()).arg(m_idx);
+			if (m_nr==getEndNumber())
+				qDebug() << "You did not select loop so i will stop loading images now" ;
+			
+			//WHY?
+			m_nr =getEndNumber()+1;
 		}
-
-		m_idx++;
-		//assume one will not use the number method for loop intensive things
-		if (m_idx>getEndNumber())
-		{
-			//qDebug() << "runoutofscope is" ;
-			if (getLoopIt()) 
-			{
-				//qDebug() << "reset" ;
-				m_idx=getStartNumber();
-			}
-			else
-			{
-				//prevent out of scope
-				m_idx=getEndNumber()+1;
-				return false;
-			}
-		}
-
-		if(image.data == 0 && m_idx!=(getEndNumber()+1))
-		{
-			//setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1.").arg(fileInfo.absolutePath()));
-			qDebug("failed to load existing file image with qdir method");
-			return false;
-		}
-		
-
 	}
-	else //if (getSortType().getSelectedValue()== 11)
+		
+	//add dir directly
+	QString filenames = QString("%1%2%3").arg(m_directory).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(m_imgtype).toUpper();
+	QString  alejandroprefab = "syncedVT";
+	if (getAnnotation())
 	{
-		//qDebug() << "selectedvalue is eleven";
-		//QString filenames;
-		//not set to -1 doesn't seem right
-		if ( (m_nr<getEndNumber()+1) && m_wantedFrameNr == -1)
-			m_nr++;
-
-		if (m_nr>=(unsigned int) getEndNumber())
-		{
-			if (m_nr!=getEndNumber()+1)
-			{
-				//qDebug() << "I have run out of scope";
-			}
-			outofscope=true;
-		}
-
-		if (outofscope)
-		{
-			if (getLoopIt())
-			{
-				//qDebug() << "You selected loop so i will start over" ;
-				m_nr = getStartNumber();
-				outofscope=false;
-			}
-			else
-			{
-				if (m_nr==getEndNumber())
-					qDebug() << "You did not select loop so i will stop loading images now" ;
-				//deinit();
-				//stop();
-				//if (m_nr==getEndNumber())
-				//	setError( PlvPipelineRuntimeError, tr("Failed to stop properly but run out of scope %1 is bigger than %2.").arg(m_nr).arg(getEndNumber()-1));
-				//return false;
-				//while (!getLoopIt());
-
-				//WHY?
-				m_nr =getEndNumber()+1;
-			}
-		}
-		
-		//to make cleaner not every f-ing frame but set it at start (init maybe)
-		//added dir directly
-		//QStringList filters;
-		//filters << "*.jpg" << "*.jpeg" << "*.bmp" << "*.sr" << "*.png" << "*.pdm";
-		QString filenames = QString("%1%2%3").arg(m_directory).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(m_imgtype).toUpper();
-		if (getAnnotation())
-		{
-			QString filenamesRGB = QString("%1%2%3").arg(m_directoryRGB).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(m_imgtype).toUpper();
-			if (!outofscope)
-			{
-				QFile filergb(filenamesRGB);
-				if( filergb.exists() )
-				{
-					rgbimage = cv::imread(filenamesRGB.toStdString(), CV_LOAD_IMAGE_UNCHANGED);
-					if(rgbimage.data == 0)
-					{
-						setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1.").arg(fileInfo.absolutePath()));
-						//qDebug() << tr("image with filename : %1, could not be loaded").arg(filenames);
-						//qDebug("failed to load image with number method");
-						return false;
-					}
-				}
-			}
-		}
-
-		//QString filenames = QString("%1%2%3").arg(m_directory).arg(m_nr).arg(m_imgtype); 
-		fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
-		
-		//const std::string& pathalt = fileInfo.absoluteFilePath().toStdString();
-		 
-		/*if(!outofscope)
-		{*/	
-		//maybe to expensive operation?
+		QString filenamesRGB = QString("%1%2%3%4").arg(m_directoryVideos).arg(alejandroprefab).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(".jpg").toUpper();
 		if (!outofscope)
 		{
-			QFile file(filenames);
-			if( file.exists() )
-				image = cv::imread(filenames.toStdString(), CV_LOAD_IMAGE_UNCHANGED);
-		}
-	/*	else
-			if (m_nr !=(getEndNumber()+1))
-		*/		
-		if(image.data == 0 && !outofscope)
-		{
-			setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1.").arg(fileInfo.absolutePath()));
-			//qDebug() << tr("image with filename : %1, could not be loaded").arg(filenames);
-			//qDebug("failed to load image with number method");
-			return false;
-		}
+			QFile filergb(filenamesRGB);
+			if( filergb.exists() )
+			{
+				rgbimage = cv::imread(filenamesRGB.toStdString(), CV_LOAD_IMAGE_UNCHANGED);
+				if(rgbimage.data == 0)
+				{
+					setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1.").arg(fileInfo.absolutePath()));
+					//qDebug() << tr("image with filename : %1, could not be loaded").arg(filenames);
+					qDebug("failed to load RGB image with number method");
+					//create an empty file instead
+					return false;
+				}
+			}
+			else
+			{
+				qDebug() << filenamesRGB << "does not exist";
+				//create an empty file instead;
 
-		if(image.data == 0 && outofscope)
-		{
-			setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1. This is probabaly because it is out of scope").arg(fileInfo.absolutePath()));
-			return false;
+			}
+
 		}
+	}
+
+	//QString filenames = QString("%1%2%3").arg(m_directory).arg(m_nr).arg(m_imgtype); 
+	fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 		
-		//if (m_nr!=(getEndNumber()+1) && m_wantedFrameNr == -1)
-		//	m_nr++;
+	if (!outofscope)
+	{
+		QFile file(filenames);
+		if( file.exists() )
+			image = cv::imread(filenames.toStdString(), CV_LOAD_IMAGE_UNCHANGED);
+	}
 	
+	if(image.data == 0 && !outofscope)
+	{
+		setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1.").arg(fileInfo.absolutePath()));
+		//qDebug() << tr("image with filename : %1, could not be loaded").arg(filenames);
+		qDebug("failed to load image, either empty or outofscope");
+		return false;
+	}
 
-		//save last framenr
-		m_previousFrameNr = m_nr;
-		//m_idx-- ;
-	} //if not with own number case
-
-	
-	//if(image.data == 0)
-	//{
-	//	qDebug() << "not a proper file:" << "dir" << m_directory << "absolute path" << fileInfo.absoluteFilePath();
-	//	setError( PlvPipelineRuntimeError, tr("Failed to load image %1.").arg(fileInfo.absolutePath()));
-	//	return false;
-	//}
-
+	if(image.data == 0 && outofscope)
+	{
+		setError( PlvPipelineRuntimeError, tr("Failed to load image with own numbermethod %1. This is probabaly because it is out of scope").arg(fileInfo.absolutePath()));
+		return false;
+	}
+		
+	//save last framenr
+	m_previousFrameNr = m_nr;
+					
 	m_imgOutputPin->put( CvMatData(image));
 	//RGB
 	m_imgOutputPinRGB->put( CvMatData(rgbimage));
 	//TODO add video feeds as frame based input;
 	//should somehow be linked to the actual number of the frame so we can load the correct file directly from the textfile of annotation shit. 
+	
+	//fileInfo.fileName() or filenames doesn't really matter
 	m_fileNameOutputPin->put( fileInfo.fileName() );
-    m_fileNameNrOutputPin->put(m_nr);
+    
+	m_fileNameNrOutputPin->put(m_nr);
 	m_correctimagedirectoryboolOutputPin-> put(m_signal);
 	m_filePathOutputPin->put( fileInfo.absolutePath() );
 
-
-    //m_imgOutputPin->put( CvMatData(image) );
-    //m_fileNameOutputPin->put( fileInfo.fileName() );
-    //m_filePathOutputPin->put( fileInfo.absolutePath() );
-
+	
 	int elapsed = m_timeSinceLastFPSCalculation.elapsed();
 	bool setwaiting =false;
 
@@ -729,18 +563,6 @@ bool ImageDirectoryProducer::produce()
 	//{
 	//	//qDebug()<< "I waited as the frame rate was lower than I processed";
 	//}
-
-	return true;
-}
-
-void ImageDirectoryProducer::setSortType(plv::Enum e)
-{
-
-    // update selection
-    m_sort = e;
-	//??
-	init();
-    // update GUI
-    emit( sortTypeChanged(e) );
 	
+	return true;
 }

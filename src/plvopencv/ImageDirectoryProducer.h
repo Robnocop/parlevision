@@ -58,8 +58,8 @@ namespace plvopencv
         Q_CLASSINFO("description", "A producer that loads all the images in a directory. We recommend only to use the WithNumbers method for large directories of image files.");
 
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
-		Q_PROPERTY( QString directoryRGB READ getDirectoryRGB WRITE setDirectoryRGB NOTIFY directoryRGBChanged )
-		Q_PROPERTY( plv::Enum sortType READ getSortType WRITE setSortType NOTIFY sortTypeChanged )
+		Q_PROPERTY( QString directoryVideos READ getDirectoryVideos WRITE setDirectoryVideos NOTIFY directoryVideosChanged )
+		//Q_PROPERTY( plv::Enum sortType READ getSortType WRITE setSortType NOTIFY sortTypeChanged )
 		Q_PROPERTY( int startNumber READ getStartNumber WRITE setStartNumber NOTIFY startNumberChanged )
 		Q_PROPERTY( int endNumber READ getEndNumber WRITE setEndNumber NOTIFY endNumberChanged )
 		Q_PROPERTY( int wantedFPS READ getWantedFPS WRITE setWantedFPS NOTIFY wantedFPSChanged )
@@ -75,7 +75,7 @@ namespace plvopencv
         virtual ~ImageDirectoryProducer();
 
 		/** propery methods */
-        plv::Enum getSortType() { return m_sort; }
+        //plv::Enum getSortType() { return m_sort; }
 		int getStartNumber() {return m_start;}
 		int getEndNumber() {return m_end;}
 		int getWantedFPS() {return m_fps;}
@@ -86,7 +86,7 @@ namespace plvopencv
 		//is the mutexlocker needed here?
 		QString getDirectory() {QMutexLocker lock( m_propertyMutex ); return m_directory; };
 
-		QString getDirectoryRGB() {QMutexLocker lock( m_propertyMutex ); return m_directoryRGB; };
+		QString getDirectoryVideos() {QMutexLocker lock( m_propertyMutex ); return m_directoryVideos; };
 
 		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
 
@@ -100,9 +100,9 @@ namespace plvopencv
     signals:
         void directoryChanged(const QString& newValue);
 		//RGB
-		void directoryRGBChanged(const QString& newValueRGB);
+		void directoryVideosChanged(const QString& newValueRGB);
 
-		void sortTypeChanged(plv::Enum newValue);
+		//void sortTypeChanged(plv::Enum newValue);
 		void startNumberChanged(int i);
 		void endNumberChanged(int i);
 		void wantedFPSChanged(int i);
@@ -117,11 +117,12 @@ namespace plvopencv
 		//???void setDirectory(const QString& newDir); dont know the results 
 		void setDirectory(const QString& newValue);
 		//RGB
-		void setDirectoryRGB(const QString& newValueRGB);
+		void setDirectoryVideos(const QString& newValueRGB);
 
-		void setSortType(plv::Enum e);
+		//void setSortType(plv::Enum e);
+
 		//allows to reset the number, we now don't set it twice in init as it allows for a pause and return
-		void setStartNumber(int i) {m_start = i; m_nr = m_start; m_idx = m_start; emit (startNumberChanged(i)); } //init();
+		void setStartNumber(int i) {m_start = i; m_nr = m_start;  emit (startNumberChanged(i)); } //init(); //m_idx = m_start;
 		void setEndNumber(int i) {m_end = i; emit (endNumberChanged(i)); } //init();
 		void setWantedFPS(int i) {m_fps = i; emit (wantedFPSChanged(i));}
 		void setLoopIt(bool b) {m_loop = b; emit (loopItChanged(b));}
@@ -152,14 +153,14 @@ namespace plvopencv
 		QFileInfoList m_entryInfoList;
 		//temp hack RGB
 		QFileInfoList m_entryInfoListRGB;
-		QString m_directoryRGB;
+		QString m_directoryVideos;
         
 		bool resetFile();
 		bool zeroFile();
 		int readFile(QString filename, int backvalue);
 		QFileInfoList loadImageDir(QDir dir);
 
-        int m_idx;
+        //int m_idx;
 		unsigned int m_nr;
 		int m_start;
 		int m_end;

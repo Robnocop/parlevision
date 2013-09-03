@@ -43,7 +43,7 @@ namespace plvopencv
     {
         Q_OBJECT
         Q_DISABLE_COPY( ImageThreshold )
-        Q_CLASSINFO("author", "Niek Hoeijmakers, Richard Loos")
+        Q_CLASSINFO("author", "Niek Hoeijmakers, Richard Loos, Robby van Delden (16u proof)")
         Q_CLASSINFO("name", "Threshold")
         Q_CLASSINFO("description", "A processor that removes all image data above or below a given threshold."
                     "This processor uses cv::threshold, see "
@@ -84,7 +84,7 @@ namespace plvopencv
         plv::Enum m_method;
         double m_threshold;
         double m_maxValue;
-
+	
     };//class ImageThreshold
 
 }//namespace plvopencv

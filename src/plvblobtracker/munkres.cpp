@@ -53,7 +53,7 @@ int
 Munkres::step1(void) {
   for ( int row = 0 ; row < matrix.rows() ; row++ )
     for ( int col = 0 ; col < matrix.columns() ; col++ )
-      if ( matrix(row,col) == 0 ) {
+      if ( matrix(row,col) == 0 ) {			//so if cost of input matrix is 0, check whether it is allready starred, or whether the mask matrix starred it?, if not star it.
         bool isstarred = false;
         for ( int nrow = 0 ; nrow < matrix.rows() ; nrow++ )
           if ( mask_matrix(nrow,col) == STAR ) {
@@ -287,17 +287,17 @@ Munkres::solve(Matrix<double> &m) {
   //this setting to highvalue instead of inifinity is added to the munkres algorithm but i do not see why it is needed.
   double highValue = 0;
   //added comment: saves the highest cost in the matrix 
-  for ( int row = 0 ; row < m.rows() ; row++ ) {
-    for ( int col = 0 ; col < m.columns() ; col++ ) {
-      if ( m(row,col) != INFINITY && m(row,col) > highValue )
-        highValue = m(row,col);
-    }
-  }
+  //for ( int row = 0 ; row < m.rows() ; row++ ) {
+  //  for ( int col = 0 ; col < m.columns() ; col++ ) {
+  //    if ( m(row,col) != INFINITY && m(row,col) > highValue )
+  //      highValue = m(row,col);
+  //  }
+  //}
  
-  for ( int row = 0 ; row < m.rows() ; row++ )
-    for ( int col = 0 ; col < m.columns() ; col++ )
-      if ( m(row,col) == INFINITY )
-        m(row,col) = highValue;
+  //for ( int row = 0 ; row < m.rows() ; row++ )
+  //  for ( int col = 0 ; col < m.columns() ; col++ )
+  //    if ( m(row,col) == INFINITY )
+  //      m(row,col) = highValue;
 
   //here normal munkres proceeds again.
   bool notdone = true;

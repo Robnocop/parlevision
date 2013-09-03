@@ -76,7 +76,13 @@ bool BlobDetector::process()
 
     QList<Blob> newBlobs;
 
-    int mode = CV_RETR_LIST;
+    //int mode = CV_RETR_LIST;
+//	//CV_RETR_EXTERNAL  seem more appropriat than CV_RETR_LIST
+//	CV_RETR_EXTERNAL gives "outer" contours, so if you have (say) one contour enclosing another (like concentric circles), only the outermost is given.
+//CV_RETR_LIST gives all the contours and doesn't even bother calculating the hierarchy -- good if you only want the contours and don't care whether one is nested inside another.
+//CV_RETR_CCOMP gives contours and organises them into outer and inner contours. Every contour is either the outline of an object, or the outline of an object inside another object (i.e. hole). The hierarchy is adjusted accordingly. This can be useful if (say) you want to find all holes.
+//CV_RETR_TREE calculates the full hierarchy of the contours. So you can say that object1 is nested 4 levels deep within object2 and object3 is also nested 4 levels deep.
+	 int mode = CV_RETR_EXTERNAL ;
     int method = CV_CHAIN_APPROX_NONE;
     std::vector< std::vector< cv::Point > > contours;
     std::vector< cv::Vec4i > hierarchy;
