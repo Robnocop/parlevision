@@ -39,11 +39,12 @@ ImageDirectoryProducer::ImageDirectoryProducer() :
 	m_annotation(false),
 	m_nr(1),
 	m_end(65000),
-	m_imgtype(".jpg"),
+	m_imgtype(".png"), //png makes more sense for annotation
 	m_filenameFrameNr("framenr.txt"),
 	m_trailingZeros(0),
 	m_flagTimer(true),
-	m_flagpaused(false)
+	m_flagpaused(false),
+	alejandroprefab("syncedVF")
 {
 	 //first one added is default
 	PLV_ENUM_ADD( m_sort, WITHNUMBERS);
@@ -109,7 +110,6 @@ ImageDirectoryProducer::~ImageDirectoryProducer()
 
 void ImageDirectoryProducer::setDirectory(const QString& directory)
 {
-	
     //replace all '\' characters with '/' characters
     QString path = directory;
     path.replace('\\','/');
@@ -162,6 +162,7 @@ void ImageDirectoryProducer::setDirectoryVideos(const QString& directory)
 	//init(); //guess we will need that
 }
 
+//not needed for annotation
 QFileInfoList ImageDirectoryProducer::loadImageDir(QDir dir)
 {
 	QFileInfoList entryInfoListOut;
@@ -248,11 +249,11 @@ bool ImageDirectoryProducer::init()
 	
 	//wasn't able to put the qdir::sortflags directly in the plv enum so used a ugly workaround
 	QDir dir(m_directory);
-	m_entryInfoList = loadImageDir(dir);
+	//m_entryInfoList = loadImageDir(dir);
 
 	QDir dir2(m_directoryVideos);
-	m_entryInfoListRGB = loadImageDir(dir2);
-
+	//m_entryInfoListRGB = loadImageDir(dir2);
+	m_imgtype = ".png";
 	
 	if (!m_flagpaused)
 	{
@@ -266,8 +267,10 @@ bool ImageDirectoryProducer::init()
 bool ImageDirectoryProducer::deinit() throw ()
 {
 	m_flagpaused = true;
-    m_entryInfoList.clear();
-	m_entryInfoListRGB.clear();
+    //not needed for annotation
+	//m_entryInfoList.clear();
+	//m_entryInfoListRGB.clear();
+	
 	//does that really need to be here i don't think so!
 	//m_nr = getStartNumber();
     return true;
@@ -479,7 +482,7 @@ bool ImageDirectoryProducer::produce()
 		
 	//add dir directly
 	QString filenames = QString("%1%2%3").arg(m_directory).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(m_imgtype).toUpper();
-	QString  alejandroprefab = "syncedVT";
+	
 	if (getAnnotation())
 	{
 		QString filenamesRGB = QString("%1%2%3%4").arg(m_directoryVideos).arg(alejandroprefab).arg(m_nr, getTrailingZeros(), 10, QChar('0')).arg(".jpg").toUpper();

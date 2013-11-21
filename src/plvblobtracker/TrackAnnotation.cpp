@@ -406,7 +406,7 @@ bool TrackAnnotation::process()
 						{
 							p = pbackup;
 						}
-						changedblob = true;
+						//changedblob = true;
 						if(debugging)
 							qDebug() << "N in trackannotation savetobcdwithout track anno";
 						out.append(saveBCDwithoutTrackToAnnotation(filename, p,"N",bcd.newid));

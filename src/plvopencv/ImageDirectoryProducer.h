@@ -92,6 +92,7 @@ namespace plvopencv
 
 		virtual bool init();
         virtual bool deinit() throw ();
+		QString  alejandroprefab ;
 
         
         //is this used??

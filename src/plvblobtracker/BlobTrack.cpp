@@ -342,7 +342,8 @@ void BlobTrack::drawInfo( cv::Mat& target ) const
     // draw last measurement
     const Blob& b = getLastMeasurement();
 	
-	QString info = QString("ID: %1 M: %2 Z: %3 PID").arg(getId()).arg(d->merged).arg(getAveragePixel());
+	//QString info = QString("ID: %1 M: %2 Z: %3 PID").arg(getId()).arg(d->merged).arg(getAveragePixel());
+	QString info = QString("ID: %1 Z: %2 PID").arg(getId()).arg(getAveragePixel());
 	QString toappend2 = QString(",");
 	for (int i=0; i<d->pids.size(); i++)
 	{
