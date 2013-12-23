@@ -59,6 +59,7 @@ public slots:
 private:
     plv::CvMatDataInputPin* m_inputPin;
     plv::CvMatDataOutputPin* m_outputPin;
+	plv::OutputPin<QString>* m_outputPin2;
 
     int m_someInt;
     double m_someDouble;
