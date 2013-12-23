@@ -29,6 +29,12 @@
 #include <plvcore/CvMatData.h>
 #include <QMutex>
 
+//for facetracking include C:\Program Files\Microsoft SDKs\Kinect\Developer Toolkit v1.8.0\inc or something similar
+#include "FaceTrackLib.h"
+#include <QThread>
+//#include "C:\Program Files\Microsoft SDKs\Kinect\Developer Toolkit v1.8.0\inc\FaceTrackLib.h"
+//#include <NuiApi.h>
+
 namespace plvmskinect
 {
     class KinectDevice : public QThread
@@ -136,12 +142,56 @@ namespace plvmskinect
 		int TransformationToRealworldEucledianPointX(int x, USHORT z);
 		int TransformationToRealworldEucledianPointY(int x, USHORT z);
 		BYTE Nui_ShortToIntensity( USHORT s);
+		
+		////for facetracking
+		void CheckCameraInput();
+		
+		////an added boolean to check whether facetracking is even needed
+		bool m_facetracking;
+		bool m_LastTrackSucceeded;
+		FLOAT       m_ZoomFactor;   // video frame zoom factor (it is 1.0f if there is no zoom)
+		POINT       m_ViewOffset;
+		IFTImage*   m_DepthBuffer;
+		IFTImage*   m_VideoBuffer;
+		IFTResult*                  m_pFTResult;
+		IFTFaceTracker*             m_pFaceTracker;
+		 //IFTIMAGE is not exactly the same type used for opencv/parlevision so we copy it
+		//one easily switch from iftimage to iplimage/cvmat data with http://www.benbarbour.com/Convert_Kinect_Color_IFTImage_To_IplImage
+		
+		//8u???
+		//cvCreateImage(cvSize(kinectImage->getWidth(), kinectImage->getHeight(), IPL_DEPTH_8U, 4);
+		//memcpy(img->imageData, kinectImage->GetBuffer(), kinectImage->GetBufferSize());
+		IFTImage*                   m_colorImage;
+		IFTImage*                   m_depthImage;
+		float                       m_XCenterFace;
+		float                       m_YCenterFace;
+		FT_VECTOR3D                 m_hint3D[2];
+		bool m_DrawMask;
+		NUI_IMAGE_RESOLUTION m_depthRes;
+		mutable QMutex m_ftMutex;
+
+		//methods:
+		HRESULT GetVideoConfiguration(FT_CAMERA_CONFIG* videoConfig);
+		HRESULT GetDepthConfiguration(FT_CAMERA_CONFIG* depthConfig);
+		
+		float GetXCenterFace()      { return(m_XCenterFace);}
+		float GetYCenterFace()      { return(m_YCenterFace);}
+		////keep in min that there is a difference between BOOL and bool
+		BOOL SubmitFraceTrackingResult(IFTResult* pResult);
+		void SetCenterOfImage(IFTResult* pResult);
+		
+		FT_VECTOR3D m_HeadPoint[NUI_SKELETON_COUNT];
+		FT_VECTOR3D m_NeckPoint[NUI_SKELETON_COUNT];
+		bool        m_SkeletonTracked[NUI_SKELETON_COUNT];
 
     signals:
         void newDepthFrame( int deviceIndex, plv::CvMatData frame );
         void newVideoFrame( int deviceIndex, plv::CvMatData frame );
         void newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonFrame frame );
         void deviceFinished( int deviceIndex );
+
+		 /** stops the facetracker thread */
+		void stopFaceTracker();
 
     public slots:
         virtual void start();
@@ -159,11 +209,33 @@ namespace plvmskinect
 		int getAngle();
 		void setAngle(int angle);
 		void setMaxScale(int x, int y);
+		
+		//for facetracking
+		//void setFaceTracking(bool change) {m_facetracking = change;};
+		IFTImage*   GetVideoBuffer(){ return(m_VideoBuffer); };
+		IFTImage*   GetDepthBuffer(){ return(m_DepthBuffer); };
+		float       GetZoomFactor() { return(m_ZoomFactor); };
+		POINT*      GetViewOffSet() { return(&m_ViewOffset); };
+		HRESULT     GetClosestHint(FT_VECTOR3D* pHint3D);
+
+
 
     };
 	////callback in plvm
 	//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);
+
+
 }
+
+//no clue why this should be here but it is in the server with qtthreading
+//class FaceTrackCheck;
+
+/** Helper class for a QThread to run its own event loop */
+class QThreadEx : public QThread
+{
+protected:
+    void run() { exec(); }
+};
 
 #endif // PLVKINECTDEVICE_H
 

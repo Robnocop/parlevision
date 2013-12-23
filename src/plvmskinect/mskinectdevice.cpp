@@ -22,6 +22,16 @@
 #include "mskinectdevice.h"
 #include "NuiSensor.h"
 #include "NuiImageCamera.h"
+#include "stdint.h"
+#include "FaceTrackCheck.h"
+
+//added this header to the mskinect folder, 
+
+//fo facetracking
+//todo check if it doesn't interfere with some of qt's function as stdafx imports severeal standard libraries
+//#include "./Visualize.h"
+#include "./FaceTrackLib.h"
+
 #define PI 3.14159265
 #define PINT 31416 //to use as an integer unsigned __int16 : 0 to 65,535 
 
@@ -31,7 +41,16 @@
 using namespace plv;
 using namespace plvmskinect;
 //TODO add newer high resolution for the kinect for windows unit.
-//
+
+//for facetracking
+//#include <math.h>
+//#include "StdAfx.h"
+//from windef.h but we don't need the other stuff there that might conflict
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+
 
 
 KinectDevice::KinectDevice(int id, QObject* parent) :
@@ -51,6 +70,20 @@ KinectDevice::KinectDevice(int id, QObject* parent) :
 	m_infrared = false;
 	m_highres = false;
     connect( this, SIGNAL( finished()), this, SLOT( threadFinished()) );
+	
+	//for facetracking
+	m_facetracking = true;
+	m_pFTResult = NULL;
+	m_XCenterFace = 0;
+    m_YCenterFace = 0;
+	m_LastTrackSucceeded = false;
+	m_DrawMask = TRUE;
+	m_DepthBuffer = NULL;
+	m_VideoBuffer = NULL;
+	m_depthRes = NUI_IMAGE_RESOLUTION_INVALID;
+	m_ZoomFactor = 1.0f;
+	m_ViewOffset.x = 0;
+    m_ViewOffset.y = 0;
 }
 
 KinectDevice::~KinectDevice()
@@ -108,7 +141,7 @@ bool KinectDevice::init()
 	//see: http://www.microsoft.com/en-us/kinectforwindows/develop/release-notes.aspx#_6._known_issues 
 	//and http://social.msdn.microsoft.com/Forums/en-US/kinectsdknuiapi/thread/0c62b444-bf05-4700-a1e7-a9b3a1a2dcec
 	//I needed it to run outside KinectDevice otherwise
-//	NuiSetDeviceStatusCallback((NuiStatusProc)&KinectStatusProc, NULL);
+	//NuiSetDeviceStatusCallback((NuiStatusProc)&KinectStatusProc, NULL);
 	hr = NuiCreateSensorByIndex( m_id, &m_nuiInstance );
     if( FAILED( hr ) )
     {
@@ -119,10 +152,10 @@ bool KinectDevice::init()
 
 	//for current Kinect declared in header
 	//we changed name of nuisensor to nuiinstance
-	//used in nui_statusproc in the producer claas that deals with status changes
+	//used in nui_statusproc in the producer class that deals with status changes
 
-	//    INuiSensor *            m_pNuiSensor;
-	//    BSTR                    m_instanceId;
+	//INuiSensor *            m_pNuiSensor;
+	//BSTR                    m_instanceId;
 	//SysFreeString(m_instanceId);
 	//m_instanceId = m_nuiInstance->NuiDeviceConnectionId();
 
@@ -131,48 +164,65 @@ bool KinectDevice::init()
     m_hNextSkeletonEvent   = CreateEvent( NULL, TRUE, FALSE, NULL );
    // m_hEvNuiProcessStop    = CreateEvent( NULL, FALSE,FALSE, NULL);
 
-	//    hr = NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX |
-	//                        NUI_INITIALIZE_FLAG_USES_SKELETON |
-	//                        NUI_INITIALIZE_FLAG_USES_COLOR );
+	//TODO for facetracking add NUI_INITIALIZE_FLAG_USES_SKELETON
+	if (m_facetracking)
+	{	 //DWORD dwNuiInitDepthFlag = (depthType == NUI_IMAGE_TYPE_DEPTH)? NUI_INITIALIZE_FLAG_USES_DEPTH : NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX;
+		 DWORD dwNuiInitDepthFlag = false? NUI_INITIALIZE_FLAG_USES_DEPTH : NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX;
 
-    //hr = m_nuiinstance->nuiinitialize( nui_initialize_flag_uses_depth
-    //                    // | nui_initialize_flag_uses_skeleton
-    //                     | nui_initialize_flag_uses_color
+	/*	hr = NuiInitialize(dwNuiInitDepthFlag | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR);
+			if (FAILED(hr))
+			{
+				return hr;
+			}
+		*/
+	
+		hr = m_nuiInstance->NuiInitialize( dwNuiInitDepthFlag | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR);
+		if ( E_NUI_SKELETAL_ENGINE_BUSY == hr )
+		{
+			qDebug()<<"error in skeletal engine bussy";
+			dwNuiInitDepthFlag = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
+			hr = m_nuiInstance->NuiInitialize( dwNuiInitDepthFlag) ;
 
-	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
-	//DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON |  NUI_INITIALIZE_FLAG_USES_COLOR;
-    hr = m_nuiInstance->NuiInitialize( nuiFlags);
-	//old fail protocol
-	
-    //if( FAILED( hr ) )
-    //{
-    //    //MessageBoxResource(m_hWnd,IDS_ERROR_NUIINIT,MB_OK | MB_ICONHAND);
-    //    qDebug() << tr("Kinect device with id %1 failed NuiInitialize with return handle %2.").arg(m_id).arg(hr);
-    //    return false;
-    //}
-	
-   // hr = m_pNuiSensor->NuiInitialize( nuiFlags );
-    if ( E_NUI_SKELETAL_ENGINE_BUSY == hr )
-    {
-        qDebug()<<"error in skeletal engine bussy";
-		nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
-        hr = m_nuiInstance->NuiInitialize( nuiFlags) ;
-    }
+			if ( FAILED( hr ) )
+			{
+				if ( E_NUI_DEVICE_IN_USE == hr )
+				{
+					qDebug()<<"error NUI in use";
+				}
+				else
+				{
+					qDebug()<<"error something in initialisation went wrong";
+				}
+				return hr;
+			}
+		}
+	}
+	else
+	{
+
+		DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
+		//DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON |  NUI_INITIALIZE_FLAG_USES_COLOR;
+		hr = m_nuiInstance->NuiInitialize( nuiFlags);
+		if ( E_NUI_SKELETAL_ENGINE_BUSY == hr )
+		{
+			qDebug()<<"error in skeletal engine bussy";
+			nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH |  NUI_INITIALIZE_FLAG_USES_COLOR;
+			hr = m_nuiInstance->NuiInitialize( nuiFlags) ;
+		}
   
-    if ( FAILED( hr ) )
-    {
-        if ( E_NUI_DEVICE_IN_USE == hr )
-        {
-            //MessageBoxResource( IDS_ERROR_IN_USE, MB_OK | MB_ICONHAND );
-			qDebug()<<"error NUI in use";
-        }
-        else
-        {
-            //MessageBoxResource( IDS_ERROR_NUIINIT, MB_OK | MB_ICONHAND );
-			qDebug()<<"error somewhere else in init";
-        }
-        return hr;
-    }
+		if ( FAILED( hr ) )
+		{
+			if ( E_NUI_DEVICE_IN_USE == hr )
+			{
+				qDebug()<<"error NUI in use";
+			}
+			else
+			{
+				qDebug()<<"error something in initialisation went wrong";
+			}
+			return hr;
+		}
+	}
 
     //hr = m_nuiInstance->NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, 0 );
 	//turned of skeleton shit hr =  m_nuiInstance->NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, 0 );
@@ -183,8 +233,42 @@ bool KinectDevice::init()
     //    return false;
     //}
 
+	//TODO for facetracking perhaps reimplement the skeletontracking in seated mode
+	DWORD dwSkeletonFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE;
+    //is set to false in the example if (bSeatedSkeletonMode)
+	if (true)
+    {
+        dwSkeletonFlags |= NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+		dwSkeletonFlags |= NUI_SKELETON_TRACKING_FLAG_SUPPRESS_NO_FRAME_DATA;
+    }
+	
+	//block
+	if (m_facetracking)//)
+	{
+		//DWORD dwSkeletonFlagsTemp = NUI_SKELETON_TRACKING_FLAG_SUPPRESS_NO_FRAME_DATA;
+		hr = NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, dwSkeletonFlags); 
+		//instead of , as this has the skeletonflag with near range enabled perhapss leading to an error
+		//hr = NuiSkeletonTrackingEnable( m_hNextSkeletonEvent, dwSkeletonFlags );
+		if (FAILED(hr))
+		{
+			qDebug() << "fail skeletontrackionenable" << hr;
+			return hr;
+		}
+		else
+		{
+			qDebug() << "passed enabling skeletontracking";
+		}
+		//and for the hints
+		for (int i = 0; i < NUI_SKELETON_COUNT; ++i)
+		{
+			m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+			m_SkeletonTracked[i] = false;
+		}
+	}
+
 	//NUI_IMAGE_TYPE_COLOR_INFRARED
 	//NUI_IMAGE_TYPE_COLOR
+
 	if(m_infrared)
     {
 		hr = m_nuiInstance->NuiImageStreamOpen(
@@ -207,6 +291,16 @@ bool KinectDevice::init()
 			m_hNextVideoFrameEvent,
 			&m_pVideoStreamHandle );
 		}
+		/*else if(m_pFaceTracker)
+		{
+			hr = m_nuiInstance->NuiImageStreamOpen(
+				NUI_IMAGE_TYPE_COLOR,
+				NUI_IMAGE_RESOLUTION_640x480, 
+				0,
+				2,
+				m_hNextVideoFrameEvent,
+				&m_pVideoStreamHandle );
+		}*/
 		else
 		{
 			hr = m_nuiInstance->NuiImageStreamOpen(
@@ -217,6 +311,7 @@ bool KinectDevice::init()
 			m_hNextVideoFrameEvent,
 			&m_pVideoStreamHandle );
 		}
+
 	}
 	if( FAILED( hr ) )
     {
@@ -225,31 +320,63 @@ bool KinectDevice::init()
         return false;
     }
 
-//    hr = NuiImageStreamOpen(
-//        NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
-//        NUI_IMAGE_RESOLUTION_320x240,
-//        0,
-//        2,
-//        m_hNextDepthFrameEvent,
-//        &m_pDepthStreamHandle );
-//	OLD
-	
-    hr = m_nuiInstance->NuiImageStreamOpen(
-        NUI_IMAGE_TYPE_DEPTH,
-        NUI_IMAGE_RESOLUTION_640x480, //not for depth http://msdn.microsoft.com/en-us/library/microsoft.kinect.depthimageformat.aspx NUI_IMAGE_RESOLUTION_1280x960
-        0,
-        2,
-        m_hNextDepthFrameEvent,
-        &m_pDepthStreamHandle );
-		//Might be neccesary but was also used in beta sdk example
-  /*  hr = m_nuiInstance->NuiImageStreamOpen(
-        HasSkeletalEngine(m_nuiInstance) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
-        NUI_IMAGE_RESOLUTION_320x240,
-        0,
-        2,
-        m_hNextDepthFrameEvent,
-        &m_pDepthStreamHandle );
-	*/
+	if(m_facetracking) 
+	{
+		
+		BOOL bNearMode = true;
+		BOOL bFallbackToDefault =true;
+		//enum _NUI_IMAGE_RESOLUTION resdepth = NUI_IMAGE_RESOLUTION_320x240;
+		enum _NUI_IMAGE_RESOLUTION resdepth = NUI_IMAGE_RESOLUTION_640x480;
+		hr = m_nuiInstance->NuiImageStreamOpen(
+			//NUI_IMAGE_TYPE_DEPTH, //ok but no results!
+			NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
+			resdepth, //not for depth http://msdn.microsoft.com/en-us/library/microsoft.kinect.depthimageformat.aspx NUI_IMAGE_RESOLUTION_1280x960
+			(bNearMode)? NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE : 0, 
+			2,
+			m_hNextDepthFrameEvent,
+			&m_pDepthStreamHandle );
+		
+		if (FAILED(hr))
+		{
+			qDebug() << "no near depthmode possible";
+			if(bNearMode && bFallbackToDefault)
+			{
+				hr = NuiImageStreamOpen(
+					NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX,
+					resdepth,
+					0,
+					2,
+					m_hNextDepthFrameEvent,
+					&m_pDepthStreamHandle );
+			}
+
+			if(FAILED(hr))
+			{
+				qDebug() << tr("Failed to open depth stream on Kinect with id %1. If in facetrack mode").arg(m_id);
+				return hr;
+			}
+		}
+		
+	}
+	else
+	{
+		hr = m_nuiInstance->NuiImageStreamOpen(
+			NUI_IMAGE_TYPE_DEPTH,
+			NUI_IMAGE_RESOLUTION_640x480, //not for depth http://msdn.microsoft.com/en-us/library/microsoft.kinect.depthimageformat.aspx NUI_IMAGE_RESOLUTION_1280x960
+			0,
+			2,
+			m_hNextDepthFrameEvent,
+			&m_pDepthStreamHandle );
+			//Might be neccesary but was also used in beta sdk example
+	  /*  hr = m_nuiInstance->NuiImageStreamOpen(
+			HasSkeletalEngine(m_nuiInstance) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
+			NUI_IMAGE_RESOLUTION_320x240,
+			0,
+			2,
+			m_hNextDepthFrameEvent,
+			&m_pDepthStreamHandle );
+		*/
+	}
 	if( FAILED( hr ) )
     {
         //MessageBoxResource(m_hWnd,IDS_ERROR_DEPTHSTREAM,MB_OK | MB_ICONHAND);
@@ -272,10 +399,107 @@ bool KinectDevice::init()
 	//TODO
 	//m_angleKinect1 = 0;
 
+	//FOR facetracking
+	
+	if (m_facetracking)
+	{
+		m_VideoBuffer = FTCreateImage();
+		if (!m_VideoBuffer)
+		{
+			qDebug() <<  "outofmemory ftcreateimage for videobuffer";
+			return E_OUTOFMEMORY;
+		}
+
+		DWORD widthft = 0;
+		DWORD heightft = 0;
+
+		//assume normal color image for now NUI_IMAGE_RESOLUTION_640x480
+		NUI_IMAGE_RESOLUTION colorRes = NUI_IMAGE_RESOLUTION_640x480; 
+		NuiImageResolutionToSize(colorRes, widthft, heightft);
+
+		hr = m_VideoBuffer->Allocate(widthft, heightft, FTIMAGEFORMAT_UINT8_B8G8R8X8);
+		if (FAILED(hr))
+		{
+			qDebug() <<  "failed in allocate videobuffer";
+			return hr;
+		}
+
+		m_DepthBuffer = FTCreateImage();
+		if (!m_DepthBuffer)
+		{
+			qDebug() <<  "unable to create depthbuffer pointer in device";
+			return E_OUTOFMEMORY;
+		}
+
+		//NUI_IMAGE_RESOLUTION_320x240
+		NUI_IMAGE_RESOLUTION depthRes  = NUI_IMAGE_RESOLUTION_640x480;
+		//try with 640x480
+
+		//i set at init and thus assume everywhere that i have a depthres of 640x480 not 320x240 as in the facetrackexample!
+		//NUI_IMAGE_RESOLUTION depthRes  = NUI_IMAGE_RESOLUTION_640x480;
+		NuiImageResolutionToSize(depthRes, widthft, heightft);
+		
+		hr = m_DepthBuffer->Allocate(widthft, heightft, FTIMAGEFORMAT_UINT16_D13P3);
+		if (FAILED(hr))
+		{
+			return hr;
+		}
+
+
+		//qDebug() << "facetracking";
+		//TODO find bug:
+
+		////put in the static stuff
+		QMutexLocker lock(&m_ftMutex);
+		////TODO make global?
+		KinectDevice* pKinectDeviceThis = this;
+		FaceTrackCheck* facetrack = new FaceTrackCheck(pKinectDeviceThis); //m_depthType, m_depthRes, m_bNearMode, m_colorType, 
+		//facetrack ->setAcknowledgeNeeded(true);
+		lock.unlock();
+
+		////TODO proper error handling, skiped for now
+		////   // let errors go through the error reporting signal of this class
+		////   connect( this, SIGNAL( onError(PlvErrorType,QString)),
+		////            connection, SIGNAL(onError(PlvErrorType,QString)));
+
+		////move the connection to its own thread. 
+		QThreadEx* m_ftThread = new QThreadEx();
+		facetrack->moveToThread(m_ftThread);
+
+		// when the tracker is done it is scheduled for deletion
+		connect( facetrack, SIGNAL(finished()),
+		         facetrack, SLOT(deleteLater()));
+
+		//doesnt make sense
+		connect( facetrack, SIGNAL(finished()),
+		        facetrack, SLOT(stop()));
+
+
+		// when the connection is done, it stops its thread 
+		connect( facetrack, SIGNAL(finished()),
+		         m_ftThread, SLOT(quit()));
+
+		// start the tracker when its thread is started
+		connect( m_ftThread, SIGNAL(started()),
+		         facetrack, SLOT(start()));
+
+		//when the device is done try to stop the facetracker main loop, doesnt work perhaps because the facetrack does not exist outside the method?
+		connect( this, SIGNAL(stopFaceTracker()),
+				 facetrack, SLOT(stop()));
+
+		////perhaps set the stuff before starting it and resetting it every frame?
+		m_ftThread->start();
+		
+		//seems succesfull!
+		qDebug() << "all ft init is succesfull";
+		
+	}
+
 	setState( KINECT_INITIALIZED );
 	
     return true;
 }
+
 
 bool KinectDevice::deinit()
 {
@@ -283,6 +507,48 @@ bool KinectDevice::deinit()
 	//reodered part of deinit to bottom of deinit
 	//in the nuiimpl they do not use compare to NULL
 	//in the old nuiimpl neither, only in the parlevision v
+	//release the facetracker after use
+	if (m_facetracking)
+	{
+		
+		//TODO the buffers etc. are not released, if they are parlevision will crash on exit probablyu beacause one of them cant be released. 
+		//qDebug() << "deinit facetracker stuff in the device";
+
+		/*if (m_pFaceTracker != NULL)
+		{
+			qDebug() << "releasing facetracker in deinit";
+			m_pFaceTracker->Release();
+			m_pFaceTracker = NULL;
+		}
+		if(m_colorImage)
+		{
+			m_colorImage->Release();
+			m_colorImage = NULL;
+		}
+
+		if(m_depthImage) 
+		{
+			m_depthImage->Release();
+			m_depthImage = NULL;
+		}
+
+		if(m_pFTResult)
+		{
+			m_pFTResult->Release();
+			m_pFTResult = NULL;
+		}
+
+		if (m_VideoBuffer != NULL)
+		{
+			m_VideoBuffer->Release();
+			m_VideoBuffer = NULL;
+		}
+		if (m_DepthBuffer!= NULL)
+		{
+			m_DepthBuffer->Release();
+			m_DepthBuffer = NULL;
+		}*/
+	}
 
 	if ( m_nuiInstance != NULL)
 	{
@@ -325,7 +591,7 @@ bool KinectDevice::deinit()
     }
 		
 	setState( KINECT_UNINITIALIZED );
-
+	
     return true;
 }
 
@@ -370,27 +636,55 @@ void KinectDevice::stop()
 {
 	QMutexLocker lock( &m_deviceMutex );
 
+	//release the facetracker after use
+	if (m_facetracking)
+	{
+		//TODO the buffers etc. are not released, if they are parlevision will crash on exit probablyu beacause one of them cant be released. 
+		qDebug() << "releasing facetracker stuff in stop";
+		emit stopFaceTracker();
+		//m_ftThread->deleteLater();
+		
+		//emit 
+		/*if (m_VideoBuffer != NULL)
+		{
+			m_VideoBuffer->Release();
+			m_VideoBuffer = NULL;
+		}
+		if (m_DepthBuffer != NULL)
+		{
+			m_DepthBuffer->Release();
+			m_DepthBuffer = NULL;
+		}
+		if (m_pFaceTracker != NULL)
+		{
+			
+			m_pFaceTracker->Release();
+			m_pFaceTracker = NULL;
+		}*/
+	}
+
     switch( getState() )
     {
-    case KINECT_RUNNING:
-        // Stop the Nui processing thread
-        // Signal the thread
-		qDebug() << "i will stop the run and set case to stop request";
-        setState( KINECT_STOP_REQUESTED );
-        // switching m_state to KINECT_STOP_REQUESTED
-        // will cause the run loop to exit eventually.
-        // wait for that here.
-        QThread::wait();
-        //fallthrough
-    case KINECT_INITIALIZED:
-        // the thread is not running, so it's safe to release the capture device.
-        // fallthrough
-    case KINECT_UNINITIALIZED:
-    case KINECT_STOP_REQUESTED:
-        return;
+		case KINECT_RUNNING:
+			// Stop the Nui processing thread
+			// Signal the thread
+			qDebug() << "i will stop the run and set case to stop request";
+			setState( KINECT_STOP_REQUESTED );
+			// switching m_state to KINECT_STOP_REQUESTED
+			// will cause the run loop to exit eventually.
+			// wait for that here.
+			QThread::wait();
+			//fallthrough
+		case KINECT_INITIALIZED:
+			// the thread is not running, so it's safe to release the capture device.
+			// fallthrough
+		case KINECT_UNINITIALIZED:
+		case KINECT_STOP_REQUESTED:
+		return;
     }
 }
 
+//Comments on threading: probably inherited bij qtthread
 void KinectDevice::run()
 {
 	setState(KINECT_RUNNING);
@@ -418,22 +712,6 @@ void KinectDevice::run()
 		}
 
 
-		// Perform FPS processing
-//        t = timeGetTime( );
-//        if( this->m_LastFPStime == -1 )
-//        {
-//            this->m_LastFPStime = t;
-//            this->m_LastFramesTotal = this->m_FramesTotal;
-//        }
-//        dt = t - this->m_LastFPStime;
-//        if( dt > 1000 )
-//        {
-//            this->m_LastFPStime = t;
-//            int FrameDelta = this->m_FramesTotal - this->m_LastFramesTotal;
-//            this->m_LastFramesTotal = this->m_FramesTotal;
-//            SetDlgItemInt( this->m_hWnd, IDC_FPS, FrameDelta,FALSE );
-//        }
-
         // Perform skeletal panel blanking
 //        if( this->m_LastSkeletonFoundTime == -1 )
 //            this->m_LastSkeletonFoundTime = t;
@@ -452,7 +730,6 @@ void KinectDevice::run()
         {
             case 0:
                 this->Nui_GotDepthAlert();
-                //this->m_FramesTotal++;
                 break;
 
             case 1:
@@ -463,342 +740,586 @@ void KinectDevice::run()
                 this->Nui_GotSkeletonAlert();
                 break;
         }
+
+
+
+
     }
-	//apparently is set to unitialised at another point.
+	
 	setState( KINECT_INITIALIZED );
 }
 
 void KinectDevice::Nui_GotDepthAlert()
 {
-    //changed old const NUI_IMAGE_FRAME * pImageFrame = NULL;
-	//NUI_IMAGE_FRAME pImageFrame;
-	//for full depth not const
-	//const NUI_IMAGE_FRAME * pImageFrame = NULL;
 	NUI_IMAGE_FRAME pImageFrame;
 		 
 	HRESULT hr = m_nuiInstance->NuiImageStreamGetNextFrame(m_pDepthStreamHandle, 0, &pImageFrame);
 	//get full depth
 	//NUI_DEPTH_IMAGE_PIXEL *Iout;
-	BOOL bNearMode = false;
+	//TODO for facetrecking try to set near mode anyway for the windows kinect
+	BOOL bNearMode = false;	
 	INuiFrameTexture * pTexture = NULL;
 	hr = m_nuiInstance->NuiImageFrameGetDepthImagePixelFrameTexture(m_pDepthStreamHandle, &pImageFrame, &bNearMode, &pTexture);
 	if( FAILED( hr ) )
     {
+		qDebug() << "failed in getdepthimage";
         return;
     }
 
 	//no need to check, if( pImageFrame->eResolution == NUI_IMAGE_RESOLUTION_320x240 ) etc. Already set this flag to this resolution earlier on.
 	int width = 640;
     int height= 480;
-
-    //old SDK:
-	//NuiImageBuffer * pTexture = pImageFrame->pFrameTexture;
-    //KINECT_LOCKED_RECT LockedRect;
+	if (m_facetracking)
+	{
+		//qDebug()<<"facetracking is on";
+		//width = 320;
+		width = 640;
+		height = 480;
+	}
 	
-	//removed for full depth:
-	//INuiFrameTexture *  pTexture = pImageFrame->pFrameTexture;
-
 	NUI_LOCKED_RECT LockedRect;
-   
+	
 	//full depth
     pTexture->LockRect( 0, &LockedRect, NULL, 0 );
-    //instead of 
+	//instead of 
 	//BYTE* pBuffer = 0;
-    
+    //somehow image is not shown anymore after facetrack stuff. 
+	
+
 	 if( LockedRect.Pitch != 0 )
 	 {
+		
 		NUI_DEPTH_IMAGE_PIXEL * pBuffer =  (NUI_DEPTH_IMAGE_PIXEL *) LockedRect.pBits;
 		INuiCoordinateMapper* pMapper;
 		m_nuiInstance->NuiGetCoordinateMapper(&pMapper);
-		//check if int maxval < 307200 (640*480)
 		int j = 0;
-	
-		//USHORT* pBuffer =  (USHORT*) LockedRect.pBits;
-		//pBuffer = (BYTE*) LockedRect.pBits;
  
 		CvMatData img;
 		img = CvMatData::create(width, height, CV_16U, 1);
-		//If your application included NUI_INITIALIZE_FLAG_USES_DEPTH in the dwFlags argument to NuiInitialize, depth data is returned as a 16-bit value in which the low-order 12 bits (bits 0–11) contain the depth value in millimeters.
-		//might be remark of the old nui changed from beta to 1.0
-		
-		//full high depth
-		if(pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH )
-		{
-			// todo should be faster with memcpy something with 8-bit description
-
-			//full depth is also 16 bit but in a struct [depth & playerindex]
-			//img = CvMatData::create(width, height, CV_16U, 1);
-		
-			// draw the bits to the bitmap needs to be casted to unsigned shorts as sdk gives a signed short by default
-			//USHORT* pBufferRun = (USHORT*) pBuffer;
-			cv::Mat& mat = img;
-			bool realcoordtemp= getRealWorldCoord(); 
-			int cxl = getCutXL();
-			int cxr = getCutXR();
-			int cyu = getCutYU();
-			int cyd = getCutYD();
-			int cz = getCutZ();
-			//check if values are properly transmitted qDebug() << "x " <<cx << "y " << cy << "z "<<  cz; 
-
-			//int realx;
-			//int realy;
-			int realz; //? is this helping needed for the bithshift by one to meters
-			//Vector4 realPoints;
-			//Vector4 realPointsKinect;
-			Vector4 realPointsKinect2;
-			NUI_DEPTH_IMAGE_POINT test;
-			//floating point /single-value notation is unnecesary
-			
-			//old sdk: 
-			//faq gives sthe answer >>3 to get depth, actually upto 12 correct bits and max of 12 bits but given in 13bits and  in mm so I don't alter this here?
-			//Too near: 0x0000
-			//Too far: 0x7ff8
-			//Unknown: 0xfff8
-			//unsigned short maxValue = 0;
-			//unsigned short minValue = 15000; //should be 2^13 8192, unshifted it can become 31800 (<< 3 = 3975) thus bitshift once to create a better viewable image.
-			////maxvalue will then be around 62000
-			//http://www.i-programmer.info/ebooks/practical-windows-kinect-in-c/3802-using-the-kinect-depth-sensor.html?start=1
 				
-			//defined: ushort 0 - 65535
-			//int max = 32767, uint=65535, schar=127, uchar= 255, although std http://msdn.microsoft.com/en-us/library/s086ab1z(v=vs.71).aspx
-        
-			////to check real space dependencies
-			//float minx = 15000.0f;
-			//float maxx = 0.0f;
-			//float miny = 15000.0f;
-			//float maxy = 0.0f;
-			//float minz = 15000.0f;
-			//float maxz = 0.0f;
-
-			// todo should be faster with memcpy
-			if (realcoordtemp)
+		//check if factracking is needed
+		//TODO make use of the other image drawing method separate of the m_facetracking
+		if (m_facetracking)
+		{
+			pTexture->LockRect( 0, &LockedRect, NULL, 0 );
+			if( LockedRect.Pitch != 0 )
 			{
-				//for always gettig the closest point it is wise to start with x,y 0 and loop the two ways, it is probably faster to draw over than it is to check whether the point has been drawn and is closer.
-				for( int y = height/2 ; y < height ; y++ )
+				BYTE * pBuffer = (BYTE*) LockedRect.pBits;
+				NUI_DEPTH_IMAGE_PIXEL * pBuffer2 =  (NUI_DEPTH_IMAGE_PIXEL *) LockedRect.pBits;
+				
+				//when I apply this memcpy I will not get an image any more it might go beyond bounds...
+				//perhaps becasue the min function was reimplemented as it required a conflicting file. 
+				memcpy(m_DepthBuffer->GetBuffer(), PBYTE(LockedRect.pBits), min(m_DepthBuffer->GetBufferSize(), UINT(pTexture->BufferLen())));
+				//memcpy(m_DepthBuffer->GetBuffer(), PBYTE(LockedRect.pBits), 1228800);
+				
+				cv::Mat& mat = img;
+				//qDebug() << "additional memcpy stuff depth, h:" << m_DepthBuffer->GetHeight() << "w " << m_DepthBuffer->GetWidth() << m_DepthBuffer->GetFormat() << "enum value uint16_d16" << FTIMAGEFORMAT_UINT16_D16;
+
+				//result is not correct but atleast it shows we probably get the depth
+				/*IplImage* img2 = cvCreateImage(cvSize(m_DepthBuffer->GetWidth(), m_DepthBuffer->GetHeight()), IPL_DEPTH_8U, 1);
+				char* depthData = (char*)m_DepthBuffer->GetBuffer();
+				for (int i = 0, j = 0; i < m_DepthBuffer->GetBufferSize(); i+=2, ++j)
+					img2->imageData[j] = (((depthData[i + 1] << 5) + (depthData[i] >> 3)) / 4096.0) * 255.0;*/
+				
+				//http://stackoverflow.com/questions/15966722/capture-rgb-from-kinnect-with-openni-and-show-with-opencv
+				cv::Mat frame;
+				
+				frame.create(m_DepthBuffer->GetHeight(), m_DepthBuffer->GetWidth(), CV_16U); 
+				//uint16_t requires stdint.h 
+				//example for color and openni , from  http://stackoverflow.com/questions/15966722/capture-rgb-from-kinnect-with-openni-and-show-with-opencv
+				//	color.readFrame(&colorFrame);
+				//const openni::RGB888Pixel* imageBuffer = (const openni::RGB888Pixel*)colorFrame.getData();
+				//frame.create(colorFrame.getHeight(), colorFrame.getWidth(), CV_8UC3);
+				//memcpy( frame.data, imageBuffer, 3*colorFrame.getHeight()*colorFrame.getWidth()*sizeof(uint8_t) );
+				//cv::cvtColor(frame,frame,CV_BGR2RGB); //this will put colors right
+
+				//not right: memcpy( frame.data, PBYTE(LockedRect.pBits), m_DepthBuffer->GetHeight()*m_DepthBuffer->GetWidth()*sizeof(uint16_t) );
+				for (int y = 0 ; y < m_DepthBuffer->GetHeight() ; y++ )
 				{
-					for( int x = width/2 ; x < width ; x++ )	
+					for (int x = 0 ; x < m_DepthBuffer->GetWidth() ; x++ )
 					{
-						//I(robby) did the following for new sdk 
-						//the number of bits has been changed (and probably significant/unsignificant bits changed?) showing 15bit max , accroding to doc still the lower 12 bits are used, but faq says higher 13-bits and typo of doc
-						//anyway to convert to m use >> 4 in rest of program, which throws away the lower values which should not exist due to minimum range. 
-						//optimalisation could be to use an 8 bit image (representing values 2^8-2^16) and if transformation to meters has to be done
-						//to show it we use more clearly in viewer we use << 1.
-						
-						//TODO DANGEROUS functions one of the two results in crash, switched x and y value.
-						//TODO  calculate values by own function, the realpoint values are probably influenced by the floor cut-off plane which will be inconsistent for the kinects
-						//realPoints = NuiTransformDepthImageToSkeleton(y,x,pBuffer[j].depth);
-						//realz = pBuffer[j].depth>>1;
-						//assume it is actual depth in mm
-						//j = y*width+x
-						//realz = pBuffer[j].depth>>1;
-						realz = pBuffer[y*width+x].depth; 
-						//based on emperical results with cutz value a cz would cut image after 2m 
-						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
-						{
-							//KINECT realpoint transformation just give it up!
-							//maybe we should transorm by 3 instead of two so assuming depth is allready in mm
-							//using the non bitshifted function for the other method: NOT >>3, NOT >>2, not <<3, 
-							/*realPointsKinect = NuiTransformDepthImageToSkeleton(x,y,pBuffer[j].depth<<2);
-							realPointsKinect.x = realPointsKinect.x *1000;
-							realPointsKinect.y = realPointsKinect.y *1000;*/
-
-							//http://msdn.microsoft.com/en-us/library/nuisensor.inuicoordinatemapper.mapdepthpointtoskeletonpoint.aspx
-							//this actually works and gives same results as own functions but with y flipped
-							
-							test.x = x;
-							test.y = y;
-							test.depth = pBuffer[y*width+x].depth; //commentout the bitshift >>1
-							// INuiCoordinateMapper* pMapper;
-							// m_nuiInstance->NuiGetCoordinateMapper(&pMapper);
-							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-
-							//if (pBuffer[j].depth == 0)
-							if (pBuffer[y*width+x].depth == 0)
-							{ 
-								//debug: check if if-statement is behaving as it should
-								qDebug() << "WTF @ " << x << " " << y;
-							}
-
-							// to check if we can loop from center outward
-							//if (j != y*width+x) qDebug() << "j is " << j << "x is" << x << "y is" << y;
-							//j max is 307199
-							
-							//optimize the cutoff!
-							//TODO if realx is beyond point dont calc y, remove check from frontal, if y beyond cy dont do frontal.
-							//realPoints = TransformationToRealworldEucledianPoints(x,y,realz); //apperantly bitshift by one (smaller) to get mm
-							//realx = TransformationToRealworldEucledianPointX(x,realz);
-							//realy = TransformationToRealworldEucledianPointY(y,realz);
-							
-							//debug the values
-							/*if (x>600 && x < 620 && y< 330 && y>310 )
-							{
-								qDebug() << "check x" << realPoints.x << "kinectx " << realPointsKinect.x << "mapped" << realPointsKinect2.x *1000 << "int x" << realx; 
-								qDebug() << "check y" << realPoints.y << "kinecty " << realPointsKinect.y << "mapped" << realPointsKinect2.y *1000 << "int y" << realy << "z "<< realz; 
-							}*/
-							
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
-						}
-					
-						/*if (realPoints.x < minx)
-						{
-							minx = realPoints.x;
-						}
-						if (realPoints.x > maxx)
-						{
-							maxx = realPoints.x;
-						}
-						if (realPoints.y > maxy)
-						{
-							maxy = realPoints.y;
-						}
-						if (realPoints.y < miny)
-						{
-							miny = realPoints.y;
-						}
-						if (realPoints.z < minz && realPoints.z > 0)
-						{
-							minz = realPoints.z;
-						}
-						if (realPoints.z > maxz)
-						{
-							maxz = realPoints.z;
-						}*/
-						
-						//j++;
-
-						//pre-full depth:
-						//realPoints = NuiTransformDepthImageToSkeleton(y,x,(*pBufferRun));
-						//FrontalImage(mat, realPoints, *pBufferRun); 
-						//pBuffer++;
-
-						//mat.at<USHORT>(y,x)  = Nui_ShortToIntensity(*pBufferRun);
-						//pBufferRun++;
-					}
-					for( int x = width/2 ; x > 0; x-- )	
-					{
-						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth;
-						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
-						{
-							test.x = x;
-							test.y = y;
-							test.depth = pBuffer[y*width+x].depth;
-							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
-						}
-						//j++;
+						//for visualisation bit shift, now with player index guess that is not so good.
+						frame.at<SHORT>(y,x)  = pBuffer2[y*width+x].depth <<3;
+						//projection.at<USHORT>(479-y,639-x) = (bufferpoint);
 					}
 				}
-				for( int y = height/2 ; y>0 ; y-- )
-				{
 
-					for( int x = width/2 ; x<width; x++ )	
-					{
-						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth;
-						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
-						{
-							test.x = x;
-							test.y = y;
-							test.depth = pBuffer[y*width+x].depth;
-							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
-						}
-						//j++;
-					}
 
-					for( int x = width/2 ; x > 0; x-- )	
-					{
-						//neater to make a function of it as it has to be done 4 times
-						realz = pBuffer[y*width+x].depth;
-						if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
-						{
-							test.x = x;
-							test.y = y;
-							test.depth = pBuffer[y*width+x].depth;
-							pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
-							FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
-						}
-						//j++;
-					}
-				}
-			} //end if realcoord
+				mat = frame;
+				////TODO still create an image
+				//memcpy(&mat, m_DepthBuffer->GetBuffer(), m_DepthBuffer->GetBufferSize());
+
+				//qDebug() << "additional memcpy finished";
+				//qDebug()<< "length is of buffer" << pTexture->BufferLen() << " and of buffersize "<< m_DepthBuffer->GetBufferSize() << "and \n min gives " << min(m_DepthBuffer->GetBufferSize(), UINT(pTexture->BufferLen()));
+			}
 			else
 			{
+				qDebug()<< "the rect copy is zero in the video";
+			}
+		}
+		//if not factracking proceed like normal
+		else
+		{
+			//OutputDebugString( L"Buffer length of received texture is bogus\r\n" );
+		
+			//full high depth
+			if(pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH )
+			{
+				//full depth is also 16 bit but in a struct [depth & playerindex]
+				//img = CvMatData::create(width, height, CV_16U, 1);
+		
+				// draw the bits to the bitmap needs to be casted to unsigned shorts as sdk gives a signed short by default
+				//USHORT* pBufferRun = (USHORT*) pBuffer;
+				cv::Mat& mat = img;
+				bool realcoordtemp= getRealWorldCoord(); 
+				int cxl = getCutXL();
+				int cxr = getCutXR();
+				int cyu = getCutYU();
+				int cyd = getCutYD();
+				int cz = getCutZ();
+				//check if values are properly transmitted qDebug() << "x " <<cx << "y " << cy << "z "<<  cz; 
+
+				//int realx;
+				//int realy;
+				int realz; //? is this helping needed for the bithshift by one to meters
+				Vector4 realPointsKinect2;
+				NUI_DEPTH_IMAGE_POINT test;
+				//floating point /single-value notation is unnecesary
+			
+				//old sdk: 
+				//faq gives sthe answer >>3 to get depth, actually upto 12 correct bits and max of 12 bits but given in 13bits and  in mm so I don't alter this here
+				//Too near: 0x0000
+				//Too far: 0x7ff8
+				//Unknown: 0xfff8
+				//unsigned short maxValue = 0;
+				//unsigned short minValue = 15000; 
+				//should be 2^13 8192, unshifted it can become 31800 (<< 3 = 3975) thus bitshift once to create a better viewable image.
+				////maxvalue will then be around 62000
+				//http://www.i-programmer.info/ebooks/practical-windows-kinect-in-c/3802-using-the-kinect-depth-sensor.html?start=1
+				
+				//defined: ushort 0 - 65535
+				//int max = 32767, uint=65535, schar=127, uchar= 255, although std http://msdn.microsoft.com/en-us/library/s086ab1z(v=vs.71).aspx
+        
+				if (realcoordtemp)
+				{
+					//for always getting the closest point it is wise to start with x,y 0 and loop the two ways, it is probably faster to draw over than it is to check whether the point has been drawn and is closer. A more acurate model would be a circle instead of lines
+					for( int y = height/2 ; y < height ; y++ )
+					{
+						for( int x = width/2 ; x < width ; x++ )	
+						{
+							//I(robby) did the following for new sdk 
+							//the number of bits has been changed (and probably significant/unsignificant bits changed?) showing 15bit max , accroding to doc still the lower 12 bits are used, but faq says higher 13-bits and typo of doc
+							//anyway to convert to m use >> 4 in rest of program, which throws away the lower values which should not exist due to minimum range. 
+							//optimalisation could be to use an 8 bit image (representing values 2^8-2^16) and if transformation to meters has to be done
+							//to show it we use more clearly in viewer we use << 1.
+						
+							//realPoints = NuiTransformDepthImageToSkeleton(y,x,pBuffer[j].depth);
+							//realz = pBuffer[j].depth>>1;
+							//assume it is actual depth in mm
+							//j = y*width+x
+							//realz = pBuffer[j].depth>>1;
+							realz = pBuffer[y*width+x].depth; 
+							//based on emperical results with cutz value a cz would cut image after 2m 
+							if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
+							{
+								//KINECT realpoint transformation
+								//maybe we should transorm by 3 instead of two so assuming depth is allready in mm
+								//using the non bitshifted function for the other method: NOT >>3, NOT >>2, not <<3, 
+								/*realPointsKinect = NuiTransformDepthImageToSkeleton(x,y,pBuffer[j].depth<<2);
+								realPointsKinect.x = realPointsKinect.x *1000;
+								realPointsKinect.y = realPointsKinect.y *1000;*/
+
+								//http://msdn.microsoft.com/en-us/library/nuisensor.inuicoordinatemapper.mapdepthpointtoskeletonpoint.aspx
+								//this actually works and gives same results as own functions but with y flipped
+							
+								test.x = x;
+								test.y = y;
+								test.depth = pBuffer[y*width+x].depth; //commentout the bitshift >>1
+								// INuiCoordinateMapper* pMapper;
+								// m_nuiInstance->NuiGetCoordinateMapper(&pMapper);
+								pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
+
+								//if (pBuffer[j].depth == 0)
+								if (pBuffer[y*width+x].depth == 0)
+								{ 
+									//debug: check if if-statement is behaving as it should
+									qDebug() << "WTF @ " << x << " " << y;
+								}
+
+								// to check if we can loop from center outward
+								//if (j != y*width+x) qDebug() << "j is " << j << "x is" << x << "y is" << y;
+								//j max is 307199
+							
+								//optimize the cutoff!
+								//TODO if realx is beyond point dont calc y, remove check from frontal, if y beyond cy dont do frontal.
+								//realPoints = TransformationToRealworldEucledianPoints(x,y,realz); //apperantly bitshift by one (smaller) to get mm
+								//realx = TransformationToRealworldEucledianPointX(x,realz);
+								//realy = TransformationToRealworldEucledianPointY(y,realz);
+							
+								//debug the values
+								/*if (x>600 && x < 620 && y< 330 && y>310 )
+								{
+									qDebug() << "check x" << realPoints.x << "kinectx " << realPointsKinect.x << "mapped" << realPointsKinect2.x *1000 << "int x" << realx; 
+									qDebug() << "check y" << realPoints.y << "kinecty " << realPointsKinect.y << "mapped" << realPointsKinect2.y *1000 << "int y" << realy << "z "<< realz; 
+								}*/
+							
+								FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
+							}
+					
+						}
+						for( int x = width/2 ; x > 0; x-- )	
+						{
+							//neater to make a function of it as it has to be done 4 times
+							realz = pBuffer[y*width+x].depth;
+							if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
+							{
+								test.x = x;
+								test.y = y;
+								test.depth = pBuffer[y*width+x].depth;
+								pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
+								FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
+							}
+							//j++;
+						}
+					}
+					for( int y = height/2 ; y>0 ; y-- )
+					{
+
+						for( int x = width/2 ; x<width; x++ )	
+						{
+							//neater to make a function of it as it has to be done 4 times
+							realz = pBuffer[y*width+x].depth;
+							if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
+							{
+								test.x = x;
+								test.y = y;
+								test.depth = pBuffer[y*width+x].depth;
+								pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
+								FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
+							}
+							//j++;
+						}
+
+						for( int x = width/2 ; x > 0; x-- )	
+						{
+							//neater to make a function of it as it has to be done 4 times
+							realz = pBuffer[y*width+x].depth;
+							if ((realz > 0) && !(((realz) > cz) && (cz > 0)) )
+							{
+								test.x = x;
+								test.y = y;
+								test.depth = pBuffer[y*width+x].depth;
+								pMapper->MapDepthPointToSkeletonPoint(NUI_IMAGE_RESOLUTION_640x480, &test, &realPointsKinect2);
+								FrontalImage(mat, realPointsKinect2, pBuffer[y*width+x].depth, cxl, cxr, cyu, cyd);
+							}
+							//j++;
+						}
+					}
+				} //end if realcoord
+				else
+				{
+					for( int y = 0 ; y < height ; y++ )
+					{
+						for( int x = 0 ; x < width ; x++ )	
+						{
+							//bitshift: << bigger , >>smaller
+							//full depth
+							//USHORT* pBufferRun = (USHORT*) pBuffer;
+						
+							//mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
+							//if the 16-bit depth isn't actually in meters, then probably only first 13 bits are used and one should bitshift by 5 to make it viewable
+							//proabaly/it seems still bitshift by 3 for viewing by << 1 for meters
+							mat.at<USHORT>(y,x) = pBuffer[j].depth << 3;
+							j++;
+							//pBufferRun++;
+							//pBuffer++;
+							//mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
+						}
+					}
+				}
+			
+				/*if (realcoordtemp)
+				{
+					qDebug() << tr("minx is %1 maxx %2 min y %3 max y %4 min z %5 max z%6").arg(minx).arg(maxx).arg(miny).arg(maxy).arg(minz).arg(maxz);
+				}*/
+
+				//if not bishifted:  "maxvalue is 31800 ...0"  qdebug 2^15=32768 what happend to the remaining 968? 2^10=1024
+
+				// the last 8 pixels are black.
+				// From http://groups.google.com/group/openkinect/browse_thread/thread/6539281cf451ae9e
+				// Turns out the scaled down raw IR image that we can stream from the
+				// Kinect is 640x488, so it loses 8 pixels in both the X and Y dimensions.
+				// We just don't see the lost Y because the image is truncated there, while
+				// the missing X pixels are padded.
+
+				// The actual raw IR acquisition image is likely 1280x976 (from a 1280x1024
+				// sensor, windowing off the extra Y pixels), and from that it derives a
+				// 632x480 depth map at 1:2 ratio and using 16 extra source pixels in X and Y. 
+			} //end of if statement: pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH 
+		
+			//If you included NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX in the dwFlags argument to NuiInitialize and did not use NuiImageFrameGetDepthImagePixelFrameTexture to get all depth data, then, depth data is returned as a 16-bit value that contains the following information:
+			//The low-order three bits (bits 0–2) contain the skeleton (player) ID.
+			//The high-order bits (bits 3–15) contain the depth value in millimeters. A depth data value of zero indicates that no depth data is available at that position because all of the objects were either too close to the camera or too far away from it.
+			//this is different for the beta sdk
+			else if( pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX )
+			{
+				qDebug() << "entered IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX "; //this is exceptional not intended to happen in the current version
+				img = CvMatData::create(width, height, CV_8U, 3);
+
+				// draw the bits to the bitmap
+				USHORT* pBufferRun = (USHORT*) pBuffer;
+				cv::Mat& mat = img;
+
 				for( int y = 0 ; y < height ; y++ )
 				{
-					for( int x = 0 ; x < width ; x++ )	
+					for( int x = 0 ; x < width ; x++ )
 					{
-						//bitshift: << bigger , >>smaller
-						//full depth
-						//USHORT* pBufferRun = (USHORT*) pBuffer;
-						
-						//mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
-						//TODO check if the 16-bit depth isn't actually in meters, then probably only first 13 bits are used and one should bitshift by 5 to make it viewable
-						//proabaly/it seems stull bitshift by 3 for viewing by << 1 for meters
-						mat.at<USHORT>(y,x) = pBuffer[j].depth << 3;
-						j++;
-						//pBufferRun++;
-						//pBuffer++;
-						//mat.at<USHORT>(y,x) = (*pBufferRun) << 1;
+						RGBQUAD quad = Nui_ShortToQuad_DepthAndPlayerIndex( *pBufferRun );
+
+						pBufferRun++;
+						mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
+						mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
+						mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
 					}
 				}
 			}
-			
-			/*if (realcoordtemp)
-			{
-				qDebug() << tr("minx is %1 maxx %2 min y %3 max y %4 min z %5 max z%6").arg(minx).arg(maxx).arg(miny).arg(maxy).arg(minz).arg(maxz);
-			}*/
-
-			//if not bishifted:  "maxvalue is 31800 ...0"  qdebug 2^15=32768 what happend to the remaining 968? 2^10=1024
-
-			// the last 8 pixels are black.
-			// From http://groups.google.com/group/openkinect/browse_thread/thread/6539281cf451ae9e
-			// Turns out the scaled down raw IR image that we can stream from the
-			// Kinect is 640x488, so it loses 8 pixels in both the X and Y dimensions.
-			// We just don't see the lost Y because the image is truncated there, while
-			// the missing X pixels are padded.
-
-			// The actual raw IR acquisition image is likely 1280x976 (from a 1280x1024
-			// sensor, windowing off the extra Y pixels), and from that it derives a
-			// 632x480 depth map at 1:2 ratio and using 16 extra source pixels in X and Y. 
-		} //end of if statement: pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH 
-		//If you included NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX in the dwFlags argument to NuiInitialize and did not use NuiImageFrameGetDepthImagePixelFrameTexture to get all depth data, then, depth data is returned as a 16-bit value that contains the following information:
-		//The low-order three bits (bits 0–2) contain the skeleton (player) ID.
-		//The high-order bits (bits 3–15) contain the depth value in millimeters. A depth data value of zero indicates that no depth data is available at that position because all of the objects were either too close to the camera or too far away from it.
-		//this is different for the beta sdk
-		else if( pImageFrame.eImageType == NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX )
-		{
-			qDebug() << "entered IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX "; //this is exceptional not intended to happen in the current version
-			img = CvMatData::create(width, height, CV_8U, 3);
-
-			// draw the bits to the bitmap
-			USHORT* pBufferRun = (USHORT*) pBuffer;
-			cv::Mat& mat = img;
-
-			for( int y = 0 ; y < height ; y++ )
-			{
-				for( int x = 0 ; x < width ; x++ )
-				{
-					RGBQUAD quad = Nui_ShortToQuad_DepthAndPlayerIndex( *pBufferRun );
-
-					pBufferRun++;
-					mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
-					mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
-					mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
-				}
-			}
+		
 		}
+
 		emit newDepthFrame( m_id, img );
 	} //end of if LockedRect.Pitch != 0
 	else 
 	{
+		qDebug() << "Buffer length of received texture is bogus\r\n";
 		OutputDebugString( L"Buffer length of received texture is bogus\r\n" );
 		return;
 	}
-	//changed back to old SDK way:
+	//changed back to old SDK way: //pImageFrame is an actuel frame the ref to this frame is similar to a pointer.
 	m_nuiInstance->NuiImageStreamReleaseFrame( m_pDepthStreamHandle, &pImageFrame);
 	//NuiImageStreamReleaseFrame( m_pDepthStreamHandle, pImageFrame );
+}
+
+void KinectDevice::Nui_GotVideoAlert()
+{
+	//qDebug() << "received video alert";
+
+	//todo change back
+	//const NUI_IMAGE_FRAME* pImageFrame = NULL;
+	//try to do as in depth, create actuel imageframe
+	NUI_IMAGE_FRAME pImageFrame;
+
+	//todo change back     HRESULT hr = NuiImageStreamGetNextFrame( m_pVideoStreamHandle, 0, &pImageFrame );
+	//NUI_IMAGE_FRAME pImageFrame;
+		 
+	//as in depth: 
+	//HRESULT hr = m_nuiInstance->NuiImageStreamGetNextFrame(m_pDepthStreamHandle, 0, &pImageFrame);
+	HRESULT hr = m_nuiInstance->NuiImageStreamGetNextFrame(m_pVideoStreamHandle, 0, &pImageFrame);
+    //HRESULT hr = NuiImageStreamGetNextFrame( m_pVideoStreamHandle, 0, pImageFrame );
+    if( FAILED( hr ) )
+    {
+		qDebug()<< "failed at get next video stream frame";
+        return;
+    }
+
+    //new??
+	//TODO change back to INuiFrameTexture*  pTexture = pImageFrame->pFrameTexture;
+	//pTexture->LockRect( 0, &LockedRect, NULL, 0 );
+
+    NUI_LOCKED_RECT LockedRect;
+	pImageFrame.pFrameTexture->LockRect( 0, &LockedRect, NULL, 0 );
+    
+	//pTexture->LockRect( 0, &LockedRect, NULL, 0 );
+    //if( LockedRect.Pitch != 0 )
+	if (LockedRect.Pitch)
+    {
+		if(!m_infrared)
+		{
+			// new res!! 640x480
+			CvMatData img;
+			//img = CvMatData::create(width, height, CV_16U, 1);
+			//TODO 1???
+			img = CvMatData::create(640, 480, CV_8UC3);
+
+			//actually should be:
+			//plv::CvMatData img = plv::CvMatData::create(640, 480, CV_8UC3);
+
+			if (m_facetracking)
+			{
+				//TODO
+				 //pTexture->LockRect( 0, &LockedRect, NULL, 0 );
+				//pTextureCopy->LockRect( 0, &LockedRectCopy, NULL, 0 );
+				//if( LockedRectCopy.Pitch != 0 )
+				//{
+				BYTE * pBufferCopy = (BYTE*) LockedRect.pBits;
+				
+				//todo change to
+				//memcpy(m_VideoBuffer->GetBuffer(), pBufferCopy, min(m_VideoBuffer->GetBufferSize(), UINT(pTexture->BufferLen())));
+				memcpy(m_VideoBuffer->GetBuffer(), pBufferCopy, min(m_VideoBuffer->GetBufferSize(), UINT(pImageFrame.pFrameTexture->BufferLen())));
+				//qDebug()<< "memcpy values, uint" << (UINT) pImageFrame.pFrameTexture->BufferLen() << " actual" <<  pImageFrame.pFrameTexture->BufferLen()<< " and of buffersize "<< m_VideoBuffer->GetBufferSize() << "and \n min gives " << min(m_DepthBuffer->GetBufferSize(), UINT(pImageFrame.pFrameTexture->BufferLen()));
+				
+				//memcpy(m_VideoBuffer->GetBuffer(), PBYTE(LockedRect.pBits), m_VideoBuffer->GetBufferSize());
+				cv::Mat& mat = img;
+				
+				
+				//qDebug() << "additional memcpy video stuff, h:" << m_VideoBuffer->GetHeight() << "w " << m_VideoBuffer->GetWidth() << m_VideoBuffer->GetFormat();
+				
+				////TODO still create an image
+			}
+
+			//memcpy might be faster, look at http://www.benbarbour.com/Convert_Kinect_Depth_IFTImage_to_IplImage
+			//memcpy(&mat, m_VideoBuffer->GetBuffer(), m_VideoBuffer->GetBufferSize());
+			//qDebug()<< "length of buffer" << pTexture->BufferLen() << " and of buffersize "<< m_DepthBuffer->GetBufferSize() << "and \n min gives " << min(m_DepthBuffer->GetBufferSize(), UINT(pTexture->BufferLen()));
+			BYTE * pBuffer = (BYTE*) LockedRect.pBits;
+			// draw the bits to the bitmap
+			RGBQUAD* pBufferRun = (RGBQUAD*) pBuffer;
+				
+			if(m_highres)
+			{
+				img = plv::CvMatData::create( 1280, 960, CV_8UC3 );
+			}
+			cv::Mat& mat = img;
+
+			if (m_highres)
+			{
+				for( int y = 0 ; y < 960 ; y++ )
+				{
+					for( int x = 0 ; x < 1280 ; x++ )
+					{
+						RGBQUAD quad = *pBufferRun;
+						pBufferRun++;
+						mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
+						mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
+						mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
+					}
+				}
+			}	
+			else	
+			{
+				for( int y = 0 ; y < 480 ; y++ )
+				{
+					for( int x = 0 ; x < 640 ; x++ )
+					{
+						RGBQUAD quad = *pBufferRun;
+						pBufferRun++;
+						mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
+						mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
+						mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
+					}
+				}
+			}
+
+			emit newVideoFrame( m_id, img );
+		}
+	   //////////////////////////////////////////////start of IR attempt/////////////////////////////
+		else
+		{
+			BYTE * pBuffer = (BYTE*) LockedRect.pBits;
+			int	width = 640;
+			int height = 480;
+			//}
+			CvMatData img;
+			img = CvMatData::create(width, height, CV_16U, 1);
+				
+			// draw the bits to the bitmap needs to be casted to unsigned shorts as sdk gives a signed short by default
+			USHORT* pBufferRun = (USHORT*) pBuffer;
+			cv::Mat& mat = img;
+	
+			// todo should be faster with memcpy
+			for( int y = 0 ; y < height ; y++ )
+			{
+				for( int x = 0 ; x < width ; x++ )
+				{
+					//bitshift: << bigger , >>smaller
+					mat.at<USHORT>(y,x) = (*pBufferRun);
+					pBufferRun++;
+					//mat.at<USHORT>(y,x)  = Nui_ShortToIntensity(*pBufferRun);
+					//pBufferRun++;
+				}
+			}
+			emit newVideoFrame( m_id, img );
+		}
+		///////////////////////////////////////////////end of attempt/////////////////////////////
+	}
+    else
+    {
+        OutputDebugString( L"Buffer length of received texture is bogus\r\n" );
+    }
+	
+	//m_nuiInstance->NuiImageStreamReleaseFrame( m_pDepthStreamHandle, &pImageFrame);
+	hr = m_nuiInstance->NuiImageStreamReleaseFrame( m_pVideoStreamHandle, &pImageFrame);
+	if( FAILED( hr ) )
+    {
+		qDebug()<< "failed at get next video stream frame";
+        return;
+    }
+}
+
+void KinectDevice::Nui_GotSkeletonAlert()
+{
+	//qDebug() << "skeleton alert";
+	//FOR facetracking
+	NUI_SKELETON_FRAME SkeletonFrame = {0};
+
+    HRESULT hr = NuiSkeletonGetNextFrame(0, &SkeletonFrame);
+    if(FAILED(hr))
+    {
+        return;
+    }
+
+    for( int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
+    {
+        if( SkeletonFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED &&
+            NUI_SKELETON_POSITION_TRACKED == SkeletonFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_HEAD] &&
+            NUI_SKELETON_POSITION_TRACKED == SkeletonFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_SHOULDER_CENTER])
+        {
+			//qDebug() << "skeleton head tracked";
+            m_SkeletonTracked[i] = true;
+            m_HeadPoint[i].x = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].x;
+            m_HeadPoint[i].y = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].y;
+            m_HeadPoint[i].z = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].z;
+            m_NeckPoint[i].x = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].x;
+            m_NeckPoint[i].y = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].y;
+            m_NeckPoint[i].z = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].z;
+        }
+        else
+        {
+            m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+            m_SkeletonTracked[i] = false;
+        }
+    }
+
+	//OLD:
+
+    //SkeletonFrame sf;
+    //HRESULT hr = NuiSkeletonGetNextFrame( 0, sf.getNuiSkeletonFramePointer() );
+    //if( FAILED( hr ) )
+    //{
+    //    return;
+    //}
+
+    //bool foundSkeleton = false;
+    //for( int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
+    //{
+    //    if( sf.getNuiSkeletonFramePointer()->SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED )
+    //    {
+    //        foundSkeleton = true;
+    //    }
+    //}
+
+    //// no skeletons!
+    //if( !foundSkeleton )
+    //{
+    //    return;
+    //}
+    //else
+    //{
+    //    sf.setValid();
+    //}
+
+    //// smooth out the skeleton data
+    //NuiTransformSmooth( sf.getNuiSkeletonFramePointer(), NULL );
+
+    //emit newSkeletonFrame( m_id, sf );
 }
 
 void KinectDevice::setMaxScale(int x, int y)
@@ -964,150 +1485,6 @@ void KinectDevice::FrontalImage(cv::Mat& projection, Vector4 realWorldCoord, USH
 //    return intensity;
 //}
 
-
-void KinectDevice::Nui_GotVideoAlert()
-{
-	const NUI_IMAGE_FRAME * pImageFrame = NULL;
-
-    HRESULT hr = NuiImageStreamGetNextFrame( m_pVideoStreamHandle, 0, &pImageFrame );
-    if( FAILED( hr ) )
-    {
-        return;
-    }
-
-    //old NuiImageBuffer* pTexture = pImageFrame->pFrameTexture;
-	//new??
-	INuiFrameTexture*  pTexture = pImageFrame->pFrameTexture;
-    //old KINECT_LOCKED_RECT LockedRect;
-	NUI_LOCKED_RECT LockedRect;
-    pTexture->LockRect( 0, &LockedRect, NULL, 0 );
-    if( LockedRect.Pitch != 0 )
-    {
-		BYTE * pBuffer = (BYTE*) LockedRect.pBits;
-		if(!m_infrared)
-		{
-			// draw the bits to the bitmap
-			RGBQUAD* pBufferRun = (RGBQUAD*) pBuffer;
-			// new res!! 640x480
-			plv::CvMatData img = plv::CvMatData::create(640, 480, CV_8UC3);
-			if(m_highres)
-			{
-				img = plv::CvMatData::create( 1280, 960, CV_8UC3 );
-			}
-			cv::Mat& mat = img;
-
-			if (m_highres)
-			{
-				for( int y = 0 ; y < 960 ; y++ )
-				{
-					for( int x = 0 ; x < 1280 ; x++ )
-					{
-						RGBQUAD quad = *pBufferRun;
-						pBufferRun++;
-						mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
-						mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
-						mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
-					}
-				}
-			}	
-			else	
-			{
-				for( int y = 0 ; y < 480 ; y++ )
-				{
-					for( int x = 0 ; x < 640 ; x++ )
-					{
-						RGBQUAD quad = *pBufferRun;
-						pBufferRun++;
-						mat.at<cv::Vec3b>(y,x)[0] = quad.rgbBlue;
-						mat.at<cv::Vec3b>(y,x)[1] = quad.rgbGreen;
-						mat.at<cv::Vec3b>(y,x)[2] = quad.rgbRed;
-					}
-				}
-			}
-
-			emit newVideoFrame( m_id, img );
-		}
-	   //////////////////////////////////////////////start of IR attempt/////////////////////////////
-		else
-		{
-			/*int width;
-			int height;
-			if( pImageFrame->eResolution == NUI_IMAGE_RESOLUTION_320x240 )
-			{
-				width = 320;
-				height = 240;
-			}
-			else
-			{*/
-			//new res
-			int	width = 640;
-			int height = 480;
-			//}
-			CvMatData img;
-			img = CvMatData::create(width, height, CV_16U, 1);
-				
-			// draw the bits to the bitmap needs to be casted to unsigned shorts as sdk gives a signed short by default
-			USHORT* pBufferRun = (USHORT*) pBuffer;
-			cv::Mat& mat = img;
-	
-			// todo should be faster with memcpy
-			for( int y = 0 ; y < height ; y++ )
-			{
-				for( int x = 0 ; x < width ; x++ )
-				{
-					//bitshift: << bigger , >>smaller
-					mat.at<USHORT>(y,x) = (*pBufferRun);
-					pBufferRun++;
-					//mat.at<USHORT>(y,x)  = Nui_ShortToIntensity(*pBufferRun);
-					//pBufferRun++;
-				}
-			}
-			emit newVideoFrame( m_id, img );
-		}
-		///////////////////////////////////////////////end of attempt/////////////////////////////
-	}
-    else
-    {
-        OutputDebugString( L"Buffer length of received texture is bogus\r\n" );
-    }
-
-    NuiImageStreamReleaseFrame( m_pVideoStreamHandle, pImageFrame );
-}
-
-void KinectDevice::Nui_GotSkeletonAlert()
-{
-    SkeletonFrame sf;
-    HRESULT hr = NuiSkeletonGetNextFrame( 0, sf.getNuiSkeletonFramePointer() );
-    if( FAILED( hr ) )
-    {
-        return;
-    }
-
-    bool foundSkeleton = false;
-    for( int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
-    {
-        if( sf.getNuiSkeletonFramePointer()->SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED )
-        {
-            foundSkeleton = true;
-        }
-    }
-
-    // no skeletons!
-    if( !foundSkeleton )
-    {
-        return;
-    }
-    else
-    {
-        sf.setValid();
-    }
-
-    // smooth out the skeleton data
-    NuiTransformSmooth( sf.getNuiSkeletonFramePointer(), NULL );
-
-    emit newSkeletonFrame( m_id, sf );
-}
-
 KinectDevice::KinectState KinectDevice::getState() const
 {
     QMutexLocker lock( &m_stateMutex );
@@ -1234,4 +1611,58 @@ void KinectDevice::threadFinished()
 	emit deviceFinished( m_id );
 }
 
+//add a pBuffer input
+//from windows kinect SDK 1.8 example facetracker basics
 
+HRESULT KinectDevice::GetClosestHint(FT_VECTOR3D* pHint3D)
+{
+    int selectedSkeleton = -1;
+    float smallestDistance = 0;
+
+    if (!pHint3D)
+    {
+        return(E_POINTER);
+    }
+
+	//TODO implement the skeleton tracking!
+    if (pHint3D[1].x == 0 && pHint3D[1].y == 0 && pHint3D[1].z == 0)
+    {
+        // Get the skeleton closest to the camera
+        for (int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
+        {
+			
+            if (m_SkeletonTracked[i] && (smallestDistance == 0 || m_HeadPoint[i].z < smallestDistance))
+            {
+                smallestDistance = m_HeadPoint[i].z;
+                selectedSkeleton = i;
+            }
+        }
+    }
+    else
+    {   // Get the skeleton closest to the previous position
+        for (int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
+        {
+            if (m_SkeletonTracked[i])
+            {
+                float d = abs(m_HeadPoint[i].x - pHint3D[1].x) +
+                    abs(m_HeadPoint[i].y - pHint3D[1].y) +
+                    abs(m_HeadPoint[i].z - pHint3D[1].z);
+                if (smallestDistance == 0 || d < smallestDistance)
+                {
+                    smallestDistance = d;
+                    selectedSkeleton = i;
+                }
+            }
+        }
+    }
+	
+	if (selectedSkeleton == -1)
+    {
+        return E_FAIL;
+    }
+
+    pHint3D[0] = m_NeckPoint[selectedSkeleton];
+    pHint3D[1] = m_HeadPoint[selectedSkeleton];
+
+    return S_OK;
+}

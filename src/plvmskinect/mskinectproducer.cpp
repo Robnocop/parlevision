@@ -229,6 +229,8 @@ bool MSKinectProducer::init()
 					break;
 			}
 		}
+
+		//check the gui and set the facetracker if neccesary
     }
 	
     return true;
