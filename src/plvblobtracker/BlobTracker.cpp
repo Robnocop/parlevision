@@ -440,12 +440,13 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	//maybe only do this if the number of tracks and blobs do not agree and if the cog are within a certain area
     
 	//swithed for multiple tracks in one blob
-	for( int j=0; j < blobs.size(); ++j )
+	//changed to j++ and i++
+	for( int j=0; j < blobs.size(); j++ )
     {
 		multipletracks = 0;
         multipletrackslist.clear();
         //swithed for multiple tracks in one blob
-		for( int i=0; i < tracks.size(); ++i )
+		for( int i=0; i < tracks.size(); i++ )
 		{
 			const BlobTrack& track = tracks.at(i);
             const Blob& blob = blobs.at(j);
