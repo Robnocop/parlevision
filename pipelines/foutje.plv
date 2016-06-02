@@ -1,0 +1,11 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::Xor">
+   <properties>
+    <sceneCoordX>226</sceneCoordX>
+    <sceneCoordY>199</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

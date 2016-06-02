@@ -1,0 +1,14 @@
+<pipeline>
+ <elements>
+  <element id="0" name="TCPClientProducer">
+   <properties>
+    <port>1337</port>
+    <serverIP>127.0.0.1</serverIP>
+    <autoReconnect>false</autoReconnect>
+    <sceneCoordX>179</sceneCoordX>
+    <sceneCoordY>82</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

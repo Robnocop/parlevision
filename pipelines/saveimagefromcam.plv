@@ -1,0 +1,34 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>199</sceneCoordX>
+    <sceneCoordY>170</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::SaveImageToFile">
+   <properties>
+    <directory>D:/videos/work/kiinect fps check/</directory>
+    <fileFormat>Portable Network Graphics - *.png</fileFormat>
+    <quality>0</quality>
+    <sceneCoordX>403</sceneCoordX>
+    <sceneCoordY>173</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

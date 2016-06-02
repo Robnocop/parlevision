@@ -1,0 +1,35 @@
+<pipeline>
+ <elements>
+  <element id="0" name="HelloWorldProcessor">
+   <properties>
+    <someInt>1337</someInt>
+    <someDouble>1.23456</someDouble>
+    <someBool>true</someBool>
+    <someString>hello</someString>
+    <sceneCoordX>340</sceneCoordX>
+    <sceneCoordY>180</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>151</sceneCoordX>
+    <sceneCoordY>234</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

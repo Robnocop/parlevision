@@ -1,0 +1,83 @@
+<pipeline>
+ <elements>
+  <element id="0" name="BlobProducer">
+   <properties>
+    <maxStep>3</maxStep>
+    <numBlobs>3</numBlobs>
+    <pixelShift>0</pixelShift>
+    <blobSize>50</blobSize>
+    <sceneCoordX>156</sceneCoordX>
+    <sceneCoordY>265</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvblobtracker::BlobDetector">
+   <properties>
+    <minBlobSize>2</minBlobSize>
+    <maxBlobSize>0</maxBlobSize>
+    <sceneCoordX>300</sceneCoordX>
+    <sceneCoordY>253</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvblobtracker::BlobTracker">
+   <properties>
+    <numberOfBlobsTracked>12</numberOfBlobsTracked>
+    <blobSelector>0</blobSelector>
+    <factorDirOverlap>2</factorDirOverlap>
+    <averagePixelValue>false</averagePixelValue>
+    <allowNoOverlap>false</allowNoOverlap>
+    <sceneCoordX>522</sceneCoordX>
+    <sceneCoordY>247</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvopencv::SaveImageToFile">
+   <properties>
+    <directory>D:/temp/</directory>
+    <fileFormat>Windows Bitmap - *.bmp</fileFormat>
+    <sceneCoordX>837</sceneCoordX>
+    <sceneCoordY>250</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>1</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>1</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

@@ -1,0 +1,36 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>90</sceneCoordX>
+    <sceneCoordY>210</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::CamShift">
+   <properties>
+    <reset>false</reset>
+    <minXPoint>300</minXPoint>
+    <minYPoint>300</minYPoint>
+    <width>50</width>
+    <height>50</height>
+    <sceneCoordX>411</sceneCoordX>
+    <sceneCoordY>36</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

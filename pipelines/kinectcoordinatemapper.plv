@@ -1,0 +1,35 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::ImageDirectoryProducer">
+   <properties>
+    <directory>D:/videos/work/kinect image/</directory>
+    <sortType>WITHNUMBERS</sortType>
+    <startNumber>1</startNumber>
+    <endNumber>79</endNumber>
+    <wantedFPS>30</wantedFPS>
+    <trailingZeros>6</trailingZeros>
+    <loopIt>true</loopIt>
+    <sceneCoordX>274</sceneCoordX>
+    <sceneCoordY>167</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvmskinect::KinectTransform">
+   <properties>
+    <sceneCoordX>612</sceneCoordX>
+    <sceneCoordY>248</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

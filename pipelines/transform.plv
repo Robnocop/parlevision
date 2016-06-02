@@ -1,0 +1,60 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::ImageDirectoryProducer">
+   <properties>
+    <directory>I:/RecordingsThursday19-4/Thursdaydepth/Thursdaydepth/</directory>
+    <sortType>WITHNUMBERS</sortType>
+    <startNumber>98410</startNumber>
+    <endNumber>123948</endNumber>
+    <wantedFPS>30</wantedFPS>
+    <trailingZeros>6</trailingZeros>
+    <loopIt>true</loopIt>
+    <sceneCoordX>75</sceneCoordX>
+    <sceneCoordY>231</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>640</x2>
+    <y1>0</y1>
+    <y2>480</y2>
+    <sceneCoordX>330</sceneCoordX>
+    <sceneCoordY>207</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvmskinect::KinectTransformmask">
+   <properties>
+    <cutXL>1500</cutXL>
+    <cutXR>1500</cutXR>
+    <cutYU>1500</cutYU>
+    <cutYD>1500</cutYD>
+    <cutZ>6500</cutZ>
+    <sceneCoordX>480</sceneCoordX>
+    <sceneCoordY>203</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

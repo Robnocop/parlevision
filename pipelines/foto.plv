@@ -1,0 +1,51 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::Snapshot">
+   <properties>
+    <makeSnapshot>true</makeSnapshot>
+    <keepSending>false</keepSending>
+    <sceneCoordX>397</sceneCoordX>
+    <sceneCoordY>421</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::SaveImageToFile">
+   <properties>
+    <directory>c:/Temp/</directory>
+    <fileFormat>Windows Bitmap - *.bmp</fileFormat>
+    <sceneCoordX>631</sceneCoordX>
+    <sceneCoordY>433</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>130</sceneCoordX>
+    <sceneCoordY>424</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

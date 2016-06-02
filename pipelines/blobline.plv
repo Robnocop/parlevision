@@ -1,0 +1,107 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>91</sceneCoordX>
+    <sceneCoordY>141</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::BackgroundSubtractor">
+   <properties>
+    <method>gray</method>
+    <reset>false</reset>
+    <replacement>255</replacement>
+    <threshold>27</threshold>
+    <sceneCoordX>309</sceneCoordX>
+    <sceneCoordY>204</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::Snapshot">
+   <properties>
+    <makeSnapshot>false</makeSnapshot>
+    <keepSending>false</keepSending>
+    <sceneCoordX>107</sceneCoordX>
+    <sceneCoordY>409</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvopencv::ImageProducer">
+   <properties>
+    <filename>321.bmp</filename>
+    <directory>C:/temp/</directory>
+    <sceneCoordX>56</sceneCoordX>
+    <sceneCoordY>268</sceneCoordY>
+   </properties>
+  </element>
+  <element id="4" name="plvblobtracker::BlobDetector">
+   <properties>
+    <minBlobSize>15</minBlobSize>
+    <sceneCoordX>729</sceneCoordX>
+    <sceneCoordY>138</sceneCoordY>
+   </properties>
+  </element>
+  <element id="5" name="plvopencv::DilateErode">
+   <properties>
+    <erosionIterations>6</erosionIterations>
+    <dilationIterations>30</dilationIterations>
+    <order>erode then delate</order>
+    <sceneCoordX>546</sceneCoordX>
+    <sceneCoordY>292</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>1</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>5</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>4</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>5</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

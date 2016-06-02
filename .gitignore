@@ -30,6 +30,5 @@ ipch
 test
 Output-Build.txt
 UpgradeLog.xml
-*.plv
 _UpgradeReport_Files
 

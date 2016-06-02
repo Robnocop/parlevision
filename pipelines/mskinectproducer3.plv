@@ -1,0 +1,42 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvmskinect::MSKinectProducer">
+   <properties>
+    <realWorldCoord>true</realWorldCoord>
+    <infrared>false</infrared>
+    <highres>false</highres>
+    <rotateKinect1>true</rotateKinect1>
+    <angleKinect1>0</angleKinect1>
+    <cutXL>0</cutXL>
+    <cutXR>0</cutXR>
+    <cutYU>0</cutYU>
+    <cutYD>0</cutYD>
+    <cutZ>0</cutZ>
+    <cutXL1>0</cutXL1>
+    <cutXR1>0</cutXR1>
+    <cutYU1>0</cutYU1>
+    <cutYD1>0</cutYD1>
+    <cutZ1>0</cutZ1>
+    <cutXL2>0</cutXL2>
+    <cutXR2>0</cutXR2>
+    <cutYU2>0</cutYU2>
+    <cutYD2>0</cutYD2>
+    <cutZ2>0</cutZ2>
+    <cutXL3>0</cutXL3>
+    <cutXR3>0</cutXR3>
+    <cutYU3>0</cutYU3>
+    <cutYD3>0</cutYD3>
+    <cutZ3>0</cutZ3>
+    <rotateKinect2>true</rotateKinect2>
+    <angleKinect2>0</angleKinect2>
+    <rotateKinect3>true</rotateKinect3>
+    <angleKinect3>0</angleKinect3>
+    <rotateKinect4>true</rotateKinect4>
+    <angleKinect4>0</angleKinect4>
+    <sceneCoordX>262</sceneCoordX>
+    <sceneCoordY>291</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

@@ -1,0 +1,32 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvmskinect::MSKinectProducer">
+   <properties>
+    <realWorldCoord>true</realWorldCoord>
+    <sceneCoordX>108</sceneCoordX>
+    <sceneCoordY>425</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvmskinect::MSKinectFakeColor">
+   <properties>
+    <someInt>800</someInt>
+    <someInt2>4000</someInt2>
+    <someBool>true</someBool>
+    <sceneCoordX>279</sceneCoordX>
+    <sceneCoordY>425</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

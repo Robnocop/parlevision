@@ -1,0 +1,57 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>117</sceneCoordX>
+    <sceneCoordY>120</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="HelloWorldProcessor">
+   <properties>
+    <someInt>50292</someInt>
+    <someDouble>1.23456</someDouble>
+    <someBool>true</someBool>
+    <someString>hello</someString>
+    <sceneCoordX>324</sceneCoordX>
+    <sceneCoordY>120</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="TCPServerProcessor">
+   <properties>
+    <port>1337</port>
+    <convertCvMatDataToQImage>false</convertCvMatDataToQImage>
+    <lossless>false</lossless>
+    <maxFramesInQueue>4</maxFramesInQueue>
+    <maxFramesInFlight>4</maxFramesInFlight>
+    <requireAcknowledge>false</requireAcknowledge>
+    <sceneCoordX>486</sceneCoordX>
+    <sceneCoordY>144</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>1</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>

@@ -1,0 +1,17 @@
+<pipeline>
+ <elements>
+  <element id="0" name="TCPServerProcessor">
+   <properties>
+    <port>1337</port>
+    <convertCvMatDataToQImage>false</convertCvMatDataToQImage>
+    <lossless>false</lossless>
+    <maxFramesInQueue>1</maxFramesInQueue>
+    <maxFramesInFlight>1</maxFramesInFlight>
+    <requireAcknowledge>false</requireAcknowledge>
+    <sceneCoordX>246</sceneCoordX>
+    <sceneCoordY>180</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections/>
+</pipeline>

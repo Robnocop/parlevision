@@ -1,0 +1,72 @@
+<pipeline>
+ <elements>
+  <element id="0" name="plvopencv::CameraProducer">
+   <properties>
+    <cameraId>0</cameraId>
+    <width>640</width>
+    <height>480</height>
+    <sceneCoordX>277</sceneCoordX>
+    <sceneCoordY>177</sceneCoordY>
+   </properties>
+  </element>
+  <element id="1" name="plvopencv::CropImage">
+   <properties>
+    <x1>0</x1>
+    <x2>0</x2>
+    <y1>0</y1>
+    <y2>0</y2>
+    <sceneCoordX>463</sceneCoordX>
+    <sceneCoordY>192</sceneCoordY>
+   </properties>
+  </element>
+  <element id="2" name="plvopencv::Snapshot">
+   <properties>
+    <makeSnapshot>true</makeSnapshot>
+    <keepSending>false</keepSending>
+    <sceneCoordX>610</sceneCoordX>
+    <sceneCoordY>216</sceneCoordY>
+   </properties>
+  </element>
+  <element id="3" name="plvopencv::SaveImageToFile">
+   <properties>
+    <directory>c:/Temp/</directory>
+    <fileFormat>Windows Bitmap - *.bmp</fileFormat>
+    <quality>30</quality>
+    <sceneCoordX>814</sceneCoordX>
+    <sceneCoordY>219</sceneCoordY>
+   </properties>
+  </element>
+ </elements>
+ <connections>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>0</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>1</processorId>
+   </source>
+  </connection>
+  <connection>
+   <sink>
+    <pinId>0</pinId>
+    <processorId>3</processorId>
+   </sink>
+   <source>
+    <pinId>0</pinId>
+    <processorId>2</processorId>
+   </source>
+  </connection>
+ </connections>
+</pipeline>
