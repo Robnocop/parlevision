@@ -29,6 +29,7 @@
 #include <QVariant>
 #include <QRect>
 #include <QSharedData>
+#include <QVector4D>
 
 #include <opencv/cv.h>
 #include "plvglobal.h"
@@ -90,5 +91,10 @@ PLVCORE_EXPORT QDataStream &operator>>(QDataStream &in, cv::Scalar &s);
     PinConnections and Qt's signals and slots */
 Q_DECLARE_METATYPE( plv::RectangleData )
 Q_DECLARE_METATYPE( cv::Scalar )
+
+//the Kinect requires such a format
+//Q_DECLARE_METATYPE( QVector4D )
+//Q_DECLARE_METATYPE( QVector<QVector4D> )
+
 
 #endif // TYPES_H
