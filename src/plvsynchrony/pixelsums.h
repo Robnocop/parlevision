@@ -41,7 +41,7 @@ namespace plv
         Q_CLASSINFO("author", "Richard Loos")
         Q_CLASSINFO("name", "Pixel Sum2")
         Q_CLASSINFO("description", "The functions sum calculate and return the sum of array elements, "
-                    "independently for each channel. Returns a Double.");
+                    "independently for each channel. This version divides the sum/255 in order to account for the white values. Returns a Double.");
 
         /** required standard method declaration for plv::PipelineProcessor */
         PLV_PIPELINE_PROCESSOR
@@ -56,6 +56,7 @@ namespace plv
 //        plv::InputPin<double>* m_inputPin;
 //        plv::OutputPin<cv::Scalar>* m_outputPin;
         plv::OutputPin<double>* m_outputPin;
+		plv::OutputPin<QString>* m_outputPin2;
     };
 }
 #endif // PIXELSUMS_H

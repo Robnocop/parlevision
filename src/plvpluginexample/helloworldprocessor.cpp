@@ -1,3 +1,10 @@
+//temp for fake key
+//#define WINVER 0x0500
+#define WIN32_WINNT 0x0501
+#include <windows.h>
+#include <Winuser.h>
+using namespace std;
+//
 #include "helloworldprocessor.h"
 
 #include <QDebug>
@@ -9,6 +16,8 @@
 #include <opencv/cv.h>
 
 using namespace plv;
+
+bool pressBool = false;
 
 HelloWorldProcessor::HelloWorldProcessor() :
         m_someInt(1337),
@@ -34,7 +43,7 @@ HelloWorldProcessor::~HelloWorldProcessor()
 
 bool HelloWorldProcessor::init()
 {
-    return true;
+	return true;
 }
 
 bool HelloWorldProcessor::deinit() throw ()
@@ -44,6 +53,7 @@ bool HelloWorldProcessor::deinit() throw ()
 
 bool HelloWorldProcessor::start()
 {
+	pressBool = false;
     return true;
 }
 
@@ -85,11 +95,12 @@ bool HelloWorldProcessor::process()
     cv::flip( in, out, (int)m_someBool);
 
     // publish the new image
-	m_outputPin->put( out );
+	if (m_someBool)
+		m_outputPin->put( out );
 
-	
-    // update our "frame counter"
+	// update our "frame counter"
     this->setSomeInt(this->getSomeInt()+1);
 
     return true;
 }
+

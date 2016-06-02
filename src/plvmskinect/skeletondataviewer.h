@@ -64,9 +64,11 @@ namespace plvmskinect
         //mutable QMutex m_busy_mutex;
         //bool m_busy;
 
-        void drawSkeletons( plvmskinect::SkeletonFrame frame );
+        //replaced void drawSkeletons( plvmskinect::SkeletonFrame frame );
+		void drawSkeletons( NUI_SKELETON_FRAME frame );
         void drawSkeletonSegment( QPainter& painter, int numJoints, ... );
-        void drawSkeleton( QPainter& painter, const NUI_SKELETON_DATA* pSkel, int whichSkeletonColor );
+        //void drawSkeleton( QPainter& painter, const NUI_SKELETON_DATA* pSkel, int whichSkeletonColor );
+		void drawSkeleton( QPainter& painter, NUI_SKELETON_DATA pSkel, int whichSkeletonColor );
         //void done( unsigned int serial );
 
     public slots:

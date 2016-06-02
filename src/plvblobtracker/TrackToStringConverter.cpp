@@ -8,6 +8,7 @@ using namespace plvblobtracker;
 
 TrackToStringConverter::TrackToStringConverter() :
 	m_saveToFile(true),
+	m_legacyFormat(true),
 	m_filename("blobtracklog.txt"),
 	halfhour(0)
 {
@@ -73,8 +74,14 @@ void TrackToStringConverter::setSaveToFile(bool b)
 bool TrackToStringConverter::process()
 {
     QList<plvblobtracker::BlobTrack> tracks = m_inputBlobs->get();
-	bool savetofile = true;
-    QString out = QString("FRAME:%1#").arg( this->getProcessingSerial() );
+	//? old solution
+	//bool savetofile = true;
+	
+	//set to empty
+	QString out  = QString("");
+    if (getLegacyFormat())
+		QString out = QString("FRAME:%1#").arg( this->getProcessingSerial() );
+	
 
 	if (getSaveToFile())
 	{
@@ -99,9 +106,22 @@ bool TrackToStringConverter::process()
         //p.y = image.height() - p.y;
 		//playgroundQString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#").arg(t.getID()).arg(p.x).arg(p.y);
 		//legacy format, change to tab formatted if in order
-		QString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
-		out.append(blobString);
-		out.append("\n");
+		
+		if (getLegacyFormat())
+		{
+			QString blobString = QString("BEGIN_MARKER#MARKER_ID:%1#MARKER_CENTER_X:%2#MARKER_CENTER_Y:%3#DIRECTION:%4#SPEED:%5#AVERAGEZ:%6#AGE:%7").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge());
+			out.append(blobString);
+			out.append("\n");
+		}
+		else
+		{
+			//THE # is introduced as a new split \t seemed to result in some issues for the blox processor!
+			//TODO add size of blob
+			QString blobTabString2 = QString("%1 \t #%2 \t #%3 \t #%4 \t #%5 \t #%6 \t #%7 \t #%8").arg(t.getId()).arg(p.x).arg(p.y).arg(t.getAvgDirection()).arg(t.getAvgVelocity()).arg(t.getAveragePixel()).arg(t.getAge()).arg(t.getBlobSize()); 
+			out.append(blobTabString2);
+			out.append("\n");
+		}
+
 		if (getSaveToFile())
 		{
 			//maybe better to save the values instead of calling them twice. although none of these values seem to require much proccesing power, they only return a value. 
@@ -121,7 +141,15 @@ bool TrackToStringConverter::process()
 			file.close();
 		}
     }
+	//used to be at the bottom of the file
+	if (tracks.count()==0)
+		out.append("no data");
 
+	if (getLegacyFormat())
+	{
+		out.append("\n");
+	}
+	
 	//if (getSaveToFile())
 	//{
 	//	if (halfhour>54000)
@@ -148,7 +176,8 @@ bool TrackToStringConverter::process()
 	//	}
 	//}
     // end TCP frame with newline, why?
-    out.append("\n");
+    
+	
 
     m_outputPin->put(out);
     return true;

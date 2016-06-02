@@ -134,8 +134,13 @@ ImageColorConvert::ImageColorConvert()
 
     // first one added is default
     PLV_ENUM_ADD( m_conversionType, CV_RGB2GRAY );
+	PLV_ENUM_ADD( m_conversionType, CV_BGR2GRAY );
     PLV_ENUM_ADD( m_conversionType, CV_RGB2RGBA );
     PLV_ENUM_ADD( m_conversionType, CV_RGB2BGR );
+	PLV_ENUM_ADD( m_conversionType, CV_GRAY2BGR);
+	PLV_ENUM_ADD( m_conversionType, CV_BGR2HSV);
+	PLV_ENUM_ADD( m_conversionType, PLV_16U28U );
+	PLV_ENUM_ADD( m_conversionType, PLV_16U2RGB );
 
     setConversionType( m_conversionType );
 
@@ -165,6 +170,8 @@ int ImageColorConvert::getInChannels( int code )
         case CV_BayerGB2BGR:
         case CV_BayerRG2BGR:
         case CV_BayerGR2BGR:
+		case PLV_16U28U:
+		case PLV_16U2RGB:
             inChannels = 1;
             break;
 
@@ -297,6 +304,8 @@ int ImageColorConvert::getOutChannels( int code )
     case CV_Luv2RGB:
     case CV_HLS2BGR:
     case CV_HLS2RGB:
+
+	case PLV_16U2RGB:
         outChannels = 3;
         break;
 
@@ -319,6 +328,7 @@ int ImageColorConvert::getOutChannels( int code )
     case CV_RGBA2GRAY:
     case CV_BGR5652GRAY:
     case CV_BGR5552GRAY:
+	case PLV_16U28U:
         outChannels = 1;
         break;
     default:
@@ -354,9 +364,12 @@ bool ImageColorConvert::process()
 
     CvMatData in = m_inputPin->get();
 
+	
     CvMatDataProperties props = in.properties();
-    props.setNumChannels( m_outChannels );
-    CvMatData out = CvMatData::create( props );
+    if(getConversionType().getSelectedValue()==PLV_16U28U || getConversionType().getSelectedValue()==PLV_16U2RGB)
+		props.setDepth(CV_8U);
+	props.setNumChannels( m_outChannels );
+	CvMatData out = CvMatData::create( props );
 
     // open for reading
     const cv::Mat& src = in;
@@ -365,9 +378,22 @@ bool ImageColorConvert::process()
     cv::Mat& dst = out;
 
     // cvCvtColor function, see OpenCV documentation for details
-    cv::cvtColor(src, dst, m_conversionType.getSelectedValue(), m_outChannels );
+	if (getConversionType().getSelectedValue()==PLV_16U28U)
+		cv::convertScaleAbs(src, dst, 0.00390625, 0);
+	else if(getConversionType().getSelectedValue()== PLV_16U2RGB)
+	{
+		CvMatData tempgray = CvMatData::create( props );
+		// open image for writing
+		cv::Mat& tempdst = tempgray;
+		//convert from 16U to 8u
+		cv::convertScaleAbs(src, tempdst, 0.00390625, 0);
+		//convert from gray to bgr
+		cv::cvtColor(tempdst, dst, CV_GRAY2BGR, m_outChannels );
+	}
+	else
+		cv::cvtColor(src, dst, m_conversionType.getSelectedValue(), m_outChannels );
 
-    // publish the new image
+	// publish the new image
     m_outputPin->put( out );
 
     return true;

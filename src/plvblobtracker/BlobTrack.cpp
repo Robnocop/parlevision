@@ -29,6 +29,8 @@ BlobTrack::BlobTrack(unsigned int id,
 	d->avgdirection = 361;
 	d->color = cvScalar( qrand()%255, qrand()%255, qrand()%255);
     d->history.append(blob);
+
+	d->blobsize = 0; 
 }
 
 BlobTrack::~BlobTrack()
@@ -143,6 +145,12 @@ void BlobTrack::setDirection(std::vector< cv::Point > cogs)
 /** adds a measurement to this track */
 void BlobTrack::addMeasurement( const Blob& blob )
 {
+	//quickfix to also send the size we only need the most current one 
+	if (blob.getSize() >0)
+		d->blobsize = (unsigned int) blob.getSize();
+	else
+		d->blobsize = 0;
+
     //might run out of scope of uint 
 	if (d->age >65000)
 	{

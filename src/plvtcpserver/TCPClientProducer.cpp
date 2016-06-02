@@ -311,11 +311,32 @@ void TCPClientProducer::ackFrame(quint32 frameNumber)
 		QByteArray bytes;
 		QDataStream out(&bytes, QIODevice::WriteOnly);
 		out.setVersion(QDataStream::Qt_4_0);
-
 		// write the header
 		out << (quint32)(2*sizeof(quint32)); // size of message excluding 4 bytes for size
 		out << (quint32)PROTO_ACK;
 		out << (quint32)frameNumber;
+
+		//for the Blox ball:
+		std::string testStdString = "F1,60,1500";
+		QString teststring = "F1,60,1500";
+		m_tcpSocket->write("F1,60,1500");
+		
+		//not working m_tcpSocket->write(testStdString);
+		 
+		QByteArray bytes2(testStdString.c_str(), testStdString.length());;
+		QDataStream out2(&bytes2, QIODevice::WriteOnly);
+		//out2.setVersion(QDataStream::Qt_4_0);
+		//out2 << (quint32)(2*sizeof(quint32)); // size of message excluding 4 bytes for size
+		//out2 << (quint32)PROTO_ACK;
+		//out2 << (quint32)testStdString;
+		if (m_tcpSocket->write(bytes2) == -1)
+		{
+			qDebug() << "did not work";
+		}
+		else
+		{
+			qDebug() << "did send stuff" << testStdString.c_str();
+		}
 
 		if( m_tcpSocket->write(bytes) == -1 )
 		{

@@ -12,6 +12,8 @@
 #include <NuiApi.h>
 #include <QSharedData>
 #include <QMetaType>
+#include <QVariant>
+#include <QVector4D>
 
 namespace plvmskinect
 {
@@ -55,7 +57,9 @@ namespace plvmskinect
         QSharedDataPointer<SkeletonFrameData> d;
     };
 }
-Q_DECLARE_METATYPE( plvmskinect::SkeletonFrame )
+//ADDED
+//Q_DECLARE_METATYPE( plvmskinect::SkeletonFrame )
+Q_DECLARE_METATYPE( NUI_SKELETON_FRAME )
 
 #endif
 

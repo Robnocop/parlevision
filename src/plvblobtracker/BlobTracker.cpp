@@ -32,12 +32,17 @@
 //#include <cmath>
 #include <plvcore/CvMatData.h>
 #include <plvcore/CvMatDataPin.h>
+//#include <plvcore/PlvMouseClick.h>
 #include <opencv/cv.h>
 #include <plvcore/Util.h>
 #include <set>
 #include <limits>
 
+//#include "../plvgui/PlvMouseClick.h"
+//using namespace plvmouseclick;
+
 using namespace plv;
+//using namespace plvgui;
 using namespace plvblobtracker;
 
 BlobTracker::BlobTracker() :  
@@ -93,15 +98,21 @@ bool BlobTracker::deinit() throw()
 {
     m_blobTracks.clear();
 	m_idPool.clear();
+	
 	return true;
 }
+
 
 bool BlobTracker::start()
 {
 	//qDebug() << "start"; init preceeds start
 	//sometimes there are multiple starts
 	m_biggerMaxCount = 0;
+	m_timeSinceLastFPSCalculation.restart();
 	m_maxNrOfBlobs = 0;
+
+	m_blobTracks.clear();
+
 	//sometimes start is called twice to prevent any problems with that, the pool is recreated every start
 	m_idPool.clear();
 	//use a set of ids that can be reused --> pool containing 0...maxnr-1
@@ -166,9 +177,14 @@ bool BlobTracker::process()
 		}
 	}
 
+	//this works ok
+	//qDebug() << "blobtracksize" << m_blobTracks.size() << "blobs"  << newBlobs.size();
+
 	//clean up dead blobs, draw all tracks and draw GUI selected track.
 	for( int i=0; i < m_blobTracks.size(); i++ )
     {
+		//this works ok loops once for tracks size 1
+		//qDebug() << "enter for loop" << m_blobTracks.size();
         const BlobTrack& track = m_blobTracks.at(i);
 		
 		if (track.getLastUpdate() >= (temptimesincefpscalc))
@@ -240,12 +256,15 @@ bool BlobTracker::process()
 	{		
 		// add one so elapsed is never 0 and
 		// we do not get div by 0
-		m_fps = (m_numFramesSinceLastFPSCalculation * 1000) / elapsed;
+		if (elapsed != 0)
+			m_fps = (m_numFramesSinceLastFPSCalculation * 1000) / elapsed;
 		//m_fps = m_fps == -1.0f ? fps : m_fps * 0.9f + 0.1f * fps;
 		qDebug() << "FPS in BlobTracker: " << (int)m_fps << "elapsed time" << elapsed;
 		m_timeSinceLastFPSCalculation.restart();
 		m_numFramesSinceLastFPSCalculation = 0;
 	}
+
+	
 
     return true;
 }
@@ -429,6 +448,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	QList<unsigned int> multipletrackslist;
 	
 	//reset all to not merged 9requires a non-constant and has to be done seperatly from the setting merge.
+	//CHANGED for BLOXfor( int i=0; i < tracks.size(); ++i )
 	for( int i=0; i < tracks.size(); ++i )
 	{
 		BlobTrack& track = tracks[i];
@@ -501,6 +521,7 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 		
 		if (multipletracks>1) 
 		{
+			//but multipletracklist is cleared every loop ahh ok could work
 			for( int k=0; k < multipletrackslist.size(); ++k )
 			{
 				BlobTrack& track = tracks[multipletrackslist.at(k)];
@@ -600,8 +621,11 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	//THIS SHOULD NOT BE PART OF MATCHBLOBS METHOD
 	
 	// unmatched newblobs, add them to the collection if there have been more blobs for some time
-	if (blobs.size()>m_maxNrOfBlobs) 
+	//if (blobs.size()>m_maxNrOfBlobs) 
+	//somehow on second run something goes wrong and tge maxnrofblox seems to be reset without the tracks being added.
+	if (blobs.size()>tracks.size()) 
 	{
+		//qDebug() << "indeed more than maxnrofblobs" << tracks.size() << "maxnrofblobas"<<  m_maxNrOfBlobs;
 		m_biggerMaxCount++;
 		
 		// if a track has not been updated this frame it will still ask for newid but if the number of blobs is on maximum the id is not yet given free. So it will be set to 999
@@ -638,12 +662,13 @@ void BlobTracker::matchBlobs(QList<Blob>& blobs, QList<BlobTrack>& tracks)
 	//for several frames and 
 	//they still exist
 	// add some of these blobs
-	if (m_biggerMaxCount>m_thresholdFramesMaxNrOfBlobs && blobs.size()>m_maxNrOfBlobs)
+	//for Blox to get it working on restart
+	if (m_biggerMaxCount>m_thresholdFramesMaxNrOfBlobs && ((blobs.size()>m_maxNrOfBlobs) || tracks.size()<m_maxNrOfBlobs) )
 	{
 		m_maxNrOfBlobs= blobs.size();
 		for( int j=0; j < blobs.size(); j++ )
 		{
-			//they are within range of GUI set trackable amount of tracks
+			//they are within range of GUI set trackable amount of tracks, this seems to makemax +1 but ok/..
 			if( !matchedBlobs[j] && j<=getNumberOfBlobsTracked())
 			{
 				Blob blob = blobs.at(j);

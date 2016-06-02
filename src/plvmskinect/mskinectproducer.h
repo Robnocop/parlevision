@@ -4,6 +4,7 @@
 #include <plvcore/PipelineProducer.h>
 #include <plvcore/CvMatData.h>
 #include <plvcore/Pin.h>
+#include <plvcore/Enum.h>
 #include <QMutex>
 
 #include "mskinectdatatypes.h"
@@ -39,11 +40,15 @@ namespace plvmskinect
 		Q_PROPERTY( bool realWorldCoord READ getRealWorldCoord WRITE setRealWorldCoord NOTIFY realWorldCoordChanged  )
 		Q_PROPERTY( bool infrared READ getInfrared WRITE setInfrared NOTIFY infraredChanged  )
         Q_PROPERTY( bool highres READ getHighres WRITE setHighres NOTIFY highresChanged  ) //highresColour
-		
+		Q_PROPERTY( bool facetrack READ getFacetrack WRITE setFacetrack NOTIFY facetrackChanged  )
+		Q_PROPERTY( bool skeletons READ getSkeletons WRITE setSkeletons NOTIFY skeletonsChanged  )
+		Q_PROPERTY( plv::Enum boneEnum READ getBoneEnum WRITE setBoneEnum NOTIFY boneEnumChanged )
+
 		Q_PROPERTY( bool rotateKinect1 READ getRotateKinect1 WRITE setRotateKinect1 NOTIFY rotateKinect1Changed  )
 		Q_PROPERTY( int angleKinect1 READ getAngleKinect1 WRITE setAngleKinect1 NOTIFY angleKinect1Changed  )
 
-		Q_PROPERTY( int cutXL READ getCutXL WRITE setCutXL NOTIFY cutXChangedL  )
+		//not needed for facetrakcing only use when multiple kinects have to be stiched!
+	/*	Q_PROPERTY( int cutXL READ getCutXL WRITE setCutXL NOTIFY cutXChangedL  )
 		Q_PROPERTY( int cutXR READ getCutXR WRITE setCutXR NOTIFY cutXChangedR  )
 		Q_PROPERTY( int cutYU READ getCutYU WRITE setCutYU NOTIFY cutYChangedU  )
 		Q_PROPERTY( int cutYD READ getCutYD WRITE setCutYD NOTIFY cutYChangedD  )
@@ -65,7 +70,7 @@ namespace plvmskinect
 		Q_PROPERTY( int cutXR3 READ getCutXR3 WRITE setCutXR3 NOTIFY cutXChangedR3  )
 		Q_PROPERTY( int cutYU3 READ getCutYU3 WRITE setCutYU3 NOTIFY cutYChangedU3  )
 		Q_PROPERTY( int cutYD3 READ getCutYD3 WRITE setCutYD3 NOTIFY cutYChangedD3  )
-		Q_PROPERTY( int cutZ3 READ getCutZ3 WRITE setCutZ3 NOTIFY cutZChanged3  )
+		Q_PROPERTY( int cutZ3 READ getCutZ3 WRITE setCutZ3 NOTIFY cutZChanged3  )*/
 
 		//angle of Kinect needs to be separte there is a maximum of 4Kinects per PC , todo I could not add GUI elements on initialisation, it is possible however
 		
@@ -90,9 +95,13 @@ namespace plvmskinect
         virtual bool deinit() throw();
         virtual bool start();
         virtual bool stop();
+		//?TOC CHECK no mutex here?
 		bool getRealWorldCoord() { return m_realWorldCoord; };
 		bool getInfrared() { return m_infrared; };
 		bool getHighres() { return m_highres; };
+		bool getFacetrack() { return m_facetrack; };
+		bool getSkeletons() { return m_skeletons; };
+		plv::Enum getBoneEnum() const;
 
 		int getCutXL() { return m_cutxl; };
 		int getCutXR() { return m_cutxr; };
@@ -128,6 +137,9 @@ namespace plvmskinect
 		void realWorldCoordChanged(bool newValue);
 		void infraredChanged(bool newValue);
 		void highresChanged(bool newValue);
+		void facetrackChanged(bool newValue);
+		void skeletonsChanged(bool newValue);
+		void boneEnumChanged(plv::Enum);
 		
 		void cutZChanged(int value);
 		void cutXChangedL(int value);
@@ -168,8 +180,17 @@ namespace plvmskinect
     public slots:
         void newDepthFrame( int deviceIndex, plv::CvMatData depth );
         void newVideoFrame( int deviceIndex, plv::CvMatData video );
-        void newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonFrame frame );
-        void kinectFinished( int deviceIndex );
+		//replaced plvmskinect::SkeletonFrame with NUI_SKELETON_FRAME
+        void newSkeletonFrame( int deviceIndex,  NUI_SKELETON_FRAME frame );
+		void newSkeletonPoints( int deviceIndex, QVector<QVector4D> skeletonArray);
+		void newSkeletonRotationSignal( int deviceIndex, QVector<QVector4D> skeletonRotationArray);
+        //void newSkeletonPoints( int deviceIndex, QString skeletonArray);
+        
+		void kinectFinished( int deviceIndex );
+		void newFaceRotation(int deviceIndex, float x, float y, float z);
+		void newFaceTranslation(int deviceIndex, float x, float y, float z);
+		void newFaceFeatures(int deviceIndex, QVector<cv::Point2f> p);
+		
 		
 		void setRealWorldCoord(bool i) ;
 		void setCutXL(int value);
@@ -199,9 +220,15 @@ namespace plvmskinect
 		//this setting can't be altered in realtime
 		void setInfrared(bool b) {m_infrared = b; qDebug()<< "restart pipeline to incorporate change"; emit(infraredChanged(b));}
 		void setHighres(bool b) {m_highres = b; qDebug()<< "restart pipeline to incorporate res change"; emit(highresChanged(b));}
-		
+		//void setFacetrack(bool b) {m_facetrack = b; qDebug()<< "restart pipeline to incorporate facetrack change, realwordcoord can't be used for now in facetrack mode"; emit(facetrackChanged(b));}
+		void setFacetrack(bool i);
+		void setSkeletons(bool i);
 
-		//kinect activatoronly set once that is why i is used, acctually does not else than run rotate
+		void setBoneEnum(plv::Enum boneEnum);
+
+		//void setRealWorldCoord(bool i) ;
+
+		//kinect activator only set once that is why i is used, acctually does nothing else than run rotate
 		void setRotateKinect1(bool i) {!i ? rotateKinect(0,m_angleKinect1): i=true; emit (rotateKinect1Changed(true));}
 		void setRotateKinect2(bool i) {!i ? rotateKinect(1,m_angleKinect2): i=true; emit (rotateKinect2Changed(true));}
 		void setRotateKinect3(bool i) {!i ? rotateKinect(2,m_angleKinect3): i=true; emit (rotateKinect3Changed(true));}
@@ -219,6 +246,9 @@ namespace plvmskinect
 		bool m_realWorldCoord;
 		bool m_infrared;
 		bool m_highres;
+		bool m_facetrack;
+		bool m_skeletons;
+
 		int m_cutxl;
 		int m_cutxr;
 		int m_cutyu;
@@ -275,14 +305,39 @@ namespace plvmskinect
 
         QVector<plv::CvMatDataOutputPin*> m_outputPinsVideo;
         QVector<plv::CvMatDataOutputPin*> m_outputPinsDepth;
-        QVector<plv::OutputPin<SkeletonFrame>*> m_outputPinsSkeleton;
+        QVector<plv::OutputPin<NUI_SKELETON_FRAME>*> m_outputPinsSkeleton;
+		QVector<plv::OutputPin<QString>*> m_outputPinsFaceRotation;
+		QVector<plv::OutputPin<QString>*> m_outputPinsFaceTranslation;
+		QVector<plv::OutputPin<QString>*> m_outputPinsFacePoints;
+		QVector<plv::OutputPin<QString>*> m_outputPinsBonesPositions;
+		QVector<plv::OutputPin<QVector4D>*> m_outputSpecifiedBonePositions;
+		QVector<plv::OutputPin<QVector4D>*> m_outputSpecifiedBoneRotations;
+
+		int m_specifiedbone;
+		QVector<QVector4D> m_specificBoneFrames;
+		QVector<QVector4D> m_specificBoneRotationFrames;
+
+		plv::Enum m_boneEnum;
+
+		//replaced isvalide
+		//replaced with vector of skelton per device;
+		QVector<bool> m_skeletonReady;
+		QVector<bool> m_faceTrackingReady;
 
         mutable QMutex m_kinectProducerMutex;
         QVector< KinectDevice* > m_kinects;
 
         QVector<plv::CvMatData> m_videoFrames;
         QVector<plv::CvMatData> m_depthFrames;
-        QVector<SkeletonFrame> m_skeletonFrames;
+        //replace QVector<SkeletonFrame> m_skeletonFrames;
+		QVector<NUI_SKELETON_FRAME> m_skeletonFrames;
+		QVector<QString> m_rotationFrames;
+		QVector<QString> m_translationFrames;
+		QVector<QString> m_faceFeatureFrames;
+		QVector<QString> m_bonePositionFrames;
+		QVector<QString> m_boneRotationFrames;
+
+		QVector<QVector<cv::Point2f>> m_faceFeatureVector;
 
 		//callback in plvm
 	//	static void CALLBACK    Nui_StatusProcThunk(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName, void* pUserData);

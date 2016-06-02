@@ -229,7 +229,9 @@ bool BackgroundSubtractor::process()
         }
         else
         {
-            CvMatData out = CvMatData::create(in.properties());
+			//changed to prevent colour output!
+			//CvMatData out = CvMatData::create(in.properties());
+	        CvMatData out = CvMatData::create(in.width(), in.rows(), CV_8U, 1);
 			cv::Mat& dst2 = out;
 			cv::Mat& mbg = m_background;
             cv::absdiff( inmat, mbg, dst2 );
@@ -241,7 +243,12 @@ bool BackgroundSubtractor::process()
     }
     else
     {
-        m_outForeground->put(in);
+		//changed
+		//this would perhaps result in color:
+		//m_outForeground->put(in);
+		CvMatData outGray = CvMatData::create(in.width(), in.height(), 1);
+		cv::Mat& distGray = outGray;
+		
 		m_outBackground->put(m_background);
     }
     return true;

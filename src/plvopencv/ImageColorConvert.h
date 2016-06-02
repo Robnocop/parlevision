@@ -22,6 +22,9 @@
 #ifndef IMAGECOLORCONVERT_H
 #define IMAGECOLORCONVERT_H
 
+#define PLV_16U28U 1628
+#define PLV_16U2RGB 1623
+
 #include <plvcore/PipelineProcessor.h>
 #include <plvcore/Enum.h>
 #include <QMutex>
@@ -39,7 +42,7 @@ namespace plvopencv
     {
         Q_OBJECT
         Q_DISABLE_COPY( ImageColorConvert )
-        Q_CLASSINFO("author", "Richard")
+        Q_CLASSINFO("author", "Richard, edits by Robby")
         Q_CLASSINFO("name", "Color and scale conversion")
         Q_CLASSINFO("description", "Color and scale converion using the cv::cvtColor method. See "
                     "<a href='http://opencv.willowgarage.com/documentation/cpp/imgproc_miscellaneous_image_transformations.html?highlight=cvtcolor#cvtColor'>"

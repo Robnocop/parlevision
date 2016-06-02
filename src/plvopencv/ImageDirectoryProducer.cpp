@@ -120,12 +120,20 @@ void ImageDirectoryProducer::setDirectory(const QString& directory)
 
 bool ImageDirectoryProducer::init()
 {
+	return true;
+}
+
+//temp solution: to prevent all this shit running in every run of the program even when no imagedirectory is involved
+//init --> start
+bool ImageDirectoryProducer::start()
+{
+	//Shocking all pipelinelements are called on init, so qdebug are giving a mess as well.
 	if (m_flagTimer)
 		m_timeSinceLastFPSCalculation.start();
 	else
 		m_timeSinceLastFPSCalculation.restart();
 	m_flagTimer = false;
-	qDebug() << "init with case is:" << getSortType().getSelectedValue();
+	//qDebug() << "init with case is:" << getSortType().getSelectedValue();
 	//wasn't able to put the qdir::sortflags directly in the plv enum so used a ugly workaround
 	
 	if (getSortType().getSelectedValue() != 11)
@@ -133,7 +141,7 @@ bool ImageDirectoryProducer::init()
 		QDir dir(m_directory);
 		if( !dir.exists() )
 		{
-			qDebug() << "Directory is invalid";
+			//qDebug() << "Directory is invalid";
 		    setError( PlvPipelineInitError, "Directory is invalid");
 	        return false;
 	    }
@@ -204,7 +212,7 @@ bool ImageDirectoryProducer::init()
 	} 
 	else 
 	{
-		qDebug()<< "no Qdir set to fasten up process using string instead";
+		//qDebug()<< "no Qdir set to fasten up process using string instead";
 		QFileInfo fileInfo ;
 		//added ability to  set to preceeding zeros, based on a gui so 0 will remain the same, more will add preceeding zeros
 		QStringList filters;
@@ -233,7 +241,7 @@ bool ImageDirectoryProducer::init()
 							fileInfo = QFileInfo::QFileInfo(m_directory,filenames );
 							if (!fileInfo.exists()) 
 							{
-								qDebug() << "no files img file (.jpg .jpeg .bmp .png .sr .pdm) found with startnumber in this directory";
+								//qDebug() << "no files img file (.jpg .jpeg .bmp .png .sr .pdm) found with startnumber in this directory";
 							}
 							else
 							{

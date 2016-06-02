@@ -38,6 +38,8 @@
 #include "ForegroundDetector.h"
 #include "Crop.h"
 #include "Resize.h"
+#include "OpticalFlowLK.h"
+#include "CamShift.h"
 
 PlvOpenCVPlugin::PlvOpenCVPlugin()
 {
@@ -90,6 +92,8 @@ void PlvOpenCVPlugin::onLoad()
     plvRegisterPipelineElement<plvopencv::ForegroundDetector>();
     plvRegisterPipelineElement<plvopencv::CropImage>();
 	plvRegisterPipelineElement<plvopencv::Resize>();
+	plvRegisterPipelineElement<plvopencv::OpticalFlowLK>();
+	plvRegisterPipelineElement<plvopencv::CamShift>();
 }
 Q_EXPORT_PLUGIN2(plv_opencv_plugin, PlvOpenCVPlugin)
 

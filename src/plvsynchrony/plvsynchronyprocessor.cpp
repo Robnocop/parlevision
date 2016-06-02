@@ -207,6 +207,7 @@ bool PlvSynchronyProcessor::process()
          //they were and still are dependant on imgheight and imgwidth
 
          //skip calculation steps if maxLag is set that way
+		 //TODO using modulo here might be an expensive function 
          if (getNrOfValuesStored() % getWinInc() == 0)
          {
 

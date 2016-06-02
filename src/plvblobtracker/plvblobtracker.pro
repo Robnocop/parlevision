@@ -23,7 +23,9 @@ SOURCES += plvblobtracker_plugin.cpp \
            matrix.cpp \
 		   VPBlobToStringConverter.cpp \
 		   TouchBlobAndStringConverter.cpp \
-		   TrackToStringConverter.cpp
+		   TrackToStringConverter.cpp \
+		   StringToFile.cpp \
+		   StringConcatenate.cpp
 
 HEADERS +=  plvblobtracker_plugin.h \
             plvblobtracker_global.h \
@@ -35,4 +37,6 @@ HEADERS +=  plvblobtracker_plugin.h \
             matrix.h \
 			VPBlobToStringConverter.h \
 			TouchBlobAndStringConverter.h \
-			TrackToStringConverter.h
+			TrackToStringConverter.h \
+			StringToFile.h \
+			StringConcatenate.h

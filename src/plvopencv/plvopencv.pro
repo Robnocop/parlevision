@@ -68,7 +68,9 @@ SOURCES += plvopencvplugin.cpp \
     Stitch.cpp \
 	StitchColor.cpp \
 	Resize.cpp \
-    Crop.cpp
+    Crop.cpp \
+	OpticalFlowLK.cpp \
+	CamShift.cpp
 	
 HEADERS +=  plvopencvplugin.h \
             plvopencv_global.h \
@@ -108,5 +110,7 @@ HEADERS +=  plvopencvplugin.h \
             Stitch.h \
 			StitchColor.h \
 			Resize.h \
-            Crop.h
+            Crop.h \
+			OpticalFlowLK.h \
+			CamShift.h
     

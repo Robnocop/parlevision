@@ -46,11 +46,14 @@ namespace plvopencv
         Q_OBJECT
         Q_CLASSINFO("author", "Richard Loos")
         Q_CLASSINFO("name", "VideoProducer")
-        Q_CLASSINFO("description", "" )
+        Q_CLASSINFO("description", "Makes frames from a video" )
 
         Q_PROPERTY( QString filename READ getFilename WRITE setFilename NOTIFY filenameChanged )
         Q_PROPERTY( QString directory READ getDirectory WRITE setDirectory NOTIFY directoryChanged )
 		Q_PROPERTY( bool fpsLimit READ getFpsLimit WRITE setFpsLimit NOTIFY fpsLimitChanged )
+		//overrules the fps from codec info, that tends to be incorrect
+		Q_PROPERTY( int fpsValue READ getFpsValue WRITE setFpsValue NOTIFY fpsValueChanged )
+		Q_PROPERTY( int skipFirstXFrames READ getSkipFirstXFrames WRITE setSkipFirstXFrames NOTIFY skipFirstXFramesChanged )
 
         /** required standard method declaration for Producer */
         PLV_PIPELINE_PRODUCER
@@ -61,6 +64,8 @@ namespace plvopencv
 
         virtual bool init();
         virtual bool deinit() throw();
+		virtual bool stop();
+		virtual bool start();
 
         /** property methods **/
         QString getFilename();
@@ -71,16 +76,25 @@ namespace plvopencv
 
 		//GUI controlled settings
 		bool getFpsLimit() {return fpsLimit;}
+		int getFpsValue() const;
+		int getSkipFirstXFrames() const;
+	
+	protected:
+		 mutable QMutex m_videoMutex;
 
     signals:
         void filenameChanged(const QString& newValue);
         void directoryChanged(const QString& newValue);
-		void fpsLimitChanged (bool b);
+		void fpsLimitChanged(bool b);
+		void fpsValueChanged(int i);
+		void skipFirstXFramesChanged(int i);
 
     public slots:
         void setFilename(const QString& filename);
         void setDirectory(const QString& directory);
 		void setFpsLimit(bool b) {fpsLimit = b; emit (fpsLimitChanged(b));}
+		void setFpsValue(int i);
+		void setSkipFirstXFrames(int i);
 
     private:
         QString m_filename;  /** the filename of the image to load */
@@ -101,8 +115,17 @@ namespace plvopencv
         plv::OutputPin<int>* m_outFps;
         cv::VideoCapture* m_capture;
 
+		//for skipping the first x frames keepcount if we did this allready
+		bool m_skippedFrames;
+		bool m_continueProduce;
+
 		//GUI controlled settings
 		bool fpsLimit;
+		int m_fpsValue;
+		int m_skipFirstXFrames;
+		int m_totalFrames;
+
+
 
         /** This method checks whether the extension of the filename is one of the
           * accepted extensions for images by OpenCV. See:

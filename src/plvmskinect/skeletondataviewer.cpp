@@ -69,7 +69,7 @@ SkeletonDataViewer::SkeletonDataViewer(QWidget *parent)
     m_image = QImage( size, QImage::Format_ARGB32_Premultiplied );
 
     QPainter painter( &m_image );
-    painter.fillRect( m_image.rect(), QColor( Qt::white ));
+    painter.fillRect( m_image.rect(), QColor( Qt::black ));
 
     // initialize pens
     const int penWidth = m_width / 80;
@@ -84,7 +84,7 @@ SkeletonDataViewer::SkeletonDataViewer(QWidget *parent)
     // TODO make minimum configurable somewhere
     m_imageWidget->setMinimumSize( 160, 120 );
     m_imageWidget->setImage( m_image );
-
+	qDebug() << "skeletondataframe";
     this->setLayout( m_layout );
 }
 
@@ -94,30 +94,37 @@ SkeletonDataViewer::~SkeletonDataViewer()
 
 void SkeletonDataViewer::newData( unsigned int serial, QVariant data )
 {
-    if( data.canConvert< plvmskinect::SkeletonFrame >() )
+	//replaced
+    if( data.canConvert< NUI_SKELETON_FRAME >() )
     {
-        plvmskinect::SkeletonFrame sf = data.value< plvmskinect::SkeletonFrame >();
+		//replaced
+        NUI_SKELETON_FRAME sf = data.value< NUI_SKELETON_FRAME >();
         drawSkeletons( sf );
     }
 }
 
-void SkeletonDataViewer::drawSkeletons( plvmskinect::SkeletonFrame sf )
+//replaced plvmskinect::SkeletonFrame sf
+void SkeletonDataViewer::drawSkeletons( NUI_SKELETON_FRAME nuiSkeletonFrame )
 {
-    const NUI_SKELETON_FRAME* nuiSkeletonFrame = sf.getNuiSkeletonFramePointer();
+	//qDebug() << "drawskeleton";
+    //const NUI_SKELETON_FRAME* nuiSkeletonFrame = sf.getNuiSkeletonFramePointer();
     QPainter painter(&m_image);
-    painter.fillRect( m_image.rect(), QColor( Qt::white ));
+    painter.fillRect( m_image.rect(), QColor( Qt::black ));
 
     // draw each skeleton color according to the slot within they are found.
     for( int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
     {
-        if( nuiSkeletonFrame->SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED )
+		//replaced -> with . "no pointer"
+        if( nuiSkeletonFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED )
         {
-            drawSkeleton( painter, &nuiSkeletonFrame->SkeletonData[i], i );
+			//replaced -> with . "no pointer"
+            drawSkeleton( painter, nuiSkeletonFrame.SkeletonData[i], i );
         }
     }
     m_imageWidget->setImage( m_image );
 }
 
+//drawSkeleton
 void SkeletonDataViewer::drawSkeletonSegment( QPainter& painter, int numJoints, ... )
 {
     va_list vl;
@@ -135,29 +142,64 @@ void SkeletonDataViewer::drawSkeletonSegment( QPainter& painter, int numJoints, 
     va_end(vl);
 }
 
-void SkeletonDataViewer::drawSkeleton( QPainter& painter, const NUI_SKELETON_DATA* pSkel, int whichSkeletonColor )
+//replace const *
+void SkeletonDataViewer::drawSkeleton( QPainter& painter, NUI_SKELETON_DATA pSkel, int whichSkeletonColor )
 {
-    int scaleX = m_width; //scaling up to image coordinates
+    //scaling up to image coordinates //1280 by default and independent of actual scaling of the widget.
+	int scaleX = m_width; 
     int scaleY = m_height;
+	NUI_IMAGE_RESOLUTION depimres;
     float fx = 0;
     float fy = 0;
-
+	bool firstrun = true;
     for(int i = 0; i < NUI_SKELETON_POSITION_COUNT; ++i)
     {
 		// NuiTransformSkeletonToDepthImageF( pSkel->SkeletonPositions[i], &fx, &fy );
-        NuiTransformSkeletonToDepthImage( pSkel->SkeletonPositions[i], &fx, &fy );
-        m_points[i].setX( (int) ( fx * scaleX + 0.5f ) );
-        m_points[i].setY( (int) ( fy * scaleY + 0.5f ) );
+        NuiTransformSkeletonToDepthImage( pSkel.SkeletonPositions[i], &fx, &fy, depimres);
+		
+		/*if (i==3)
+			qDebug() << "wtf"<< fx << "scale"<< scaleX << " scaled"<< (fx * scaleX + 0.5f) ;*/
+		
+		//resolution will not change between positions
+		if (firstrun)
+		{
+			switch( depimres )
+			{
+				case NUI_IMAGE_RESOLUTION_80x60:
+					scaleX = m_width/80;
+					scaleY = m_height/60;
+				break;
+				case NUI_IMAGE_RESOLUTION_320x240:
+					scaleX = m_width/320;
+					scaleY = m_height/240;
+				break;
+				case NUI_IMAGE_RESOLUTION_640x480:
+					scaleX = m_width/640;
+					scaleY = m_height/480;
+				break;
+				case NUI_IMAGE_RESOLUTION_1280x960:
+					scaleX = m_width/1280;
+					scaleY = m_height/960;
+				break;
+			}
+		}
+		//sdk: [out] A pointer to a FLOAT that receives the x-coordinate of the point in depth space. This pointer must be non-NULL when you call the function. If this is a NULL pointer, this function returns without doing anything.??
+        //scale seems bullshit here //replaced:
+		/*m_points[i].setX( (int) ( fx * scaleX + 0.5f ) );
+        m_points[i].setY( (int) ( fy * scaleY + 0.5f ) );*/
+		m_points[i].setX( (int) ( fx * scaleX) );
+        m_points[i].setY( (int) ( fy * scaleY) );
     }
 
     int whichColor = whichSkeletonColor % m_pens.size();
     painter.setPen(m_pens.at(whichColor));
 
-    drawSkeletonSegment( painter, 4, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_HEAD);
-    drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT);
-    drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT);
-    drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT);
-    drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT);
+	//COMMENT OUT DON't trust it
+    //drawSkeletonSegment( painter, 4, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_HEAD);
+    //drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT);
+    //drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT);
+    //drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT);
+    //drawSkeletonSegment( painter, 5, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT);
 
     // Draw the joints in a different color
     for( int i = 0; i < NUI_SKELETON_POSITION_COUNT ; ++i )

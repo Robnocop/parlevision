@@ -24,11 +24,15 @@
 
 #include <plvcore/PipelineProcessor.h>
 #include <plvcore/Pin.h>
+
 //#include <plvcore/Enum.h>
 #include <QStringList>
 
 #include "Blob.h"
 #include "BlobTrack.h"
+
+
+using namespace plv;
 
 namespace plv
 {
@@ -124,7 +128,8 @@ namespace plvblobtracker
 		QTime m_timeSinceLastFPSCalculation;
 		int m_numFramesSinceLastFPSCalculation;
 		float m_fps; /** running avg of fps */
-
+		
+		
     };
 }
 #endif // BLOBTRACKER_H

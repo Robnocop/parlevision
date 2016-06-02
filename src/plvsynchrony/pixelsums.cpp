@@ -31,6 +31,7 @@ PixelSumS::PixelSumS()
 {
     m_inputPin = createCvMatDataInputPin( "input", this );
     m_outputPin = createOutputPin<double>( "output", this );
+	m_outputPin2 = createOutputPin<QString>( "sum in string format", this );
 
     m_inputPin->addAllChannels();
     m_inputPin->addAllDepths();
@@ -43,10 +44,16 @@ PixelSumS::~PixelSumS()
 bool PixelSumS::process()
 {
     CvMatData in = m_inputPin->get();
+	//in.type();
     const cv::Mat& inputImage = in;
     cv::Scalar sumout = cv::sum(inputImage);
-    //only need the first tuple of the four in the form of a double as this contains the actual value
-    m_outputPin->put( sumout[0]);
+    
+	//only need the first tuple of the four in the form of a double as this contains the actual value
+    //TODO need to address for the incoming image type, we can assume it is BW but we are not sure
+	double sumoutd = sumout[0]/255;
+	m_outputPin->put( sumoutd);
+	QString doubletostring= QString("%1").arg(sumoutd);
+	m_outputPin2->put(doubletostring);
     return true;
 
     //original sumpixels from Richard Loos

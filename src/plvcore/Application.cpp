@@ -115,28 +115,32 @@ void Application::loadPlugins()
 
     foreach( const QString& fileName, fileList )
     {
-        qDebug() << "Trying " << fileName;
-        QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
-        pluginLoader.load();
-        QObject *plugin = pluginLoader.instance();
-        if (plugin)
-        {
-            Plugin* thePlugin = qobject_cast<plv::Plugin*>(plugin);
-            if (thePlugin)
-            {
-                thePlugin->onLoad();
-            }
-            else
-            {
-                qWarning() << "Plugin library " << fileName
-                        << " is not a valid plugin: " << pluginLoader.errorString();
-            }
-        }
-        else
-        {
-            qWarning() << "Failed to load plugin " << fileName;
-            qWarning() << "Reason: " << pluginLoader.errorString();
-        }
+		//added by robby to filter the libs and exps files that are currently created by visual studio, only the dlls should be loaded 
+		if (fileName.endsWith(".dll"))
+		{
+			qDebug() << "Trying " << fileName;
+			QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
+			pluginLoader.load();
+			QObject *plugin = pluginLoader.instance();
+			if (plugin)
+			{
+				Plugin* thePlugin = qobject_cast<plv::Plugin*>(plugin);
+				if (thePlugin)
+				{
+					thePlugin->onLoad();
+				}
+				else
+				{
+					qWarning() << "Plugin library " << fileName
+							<< " is not a valid plugin: " << pluginLoader.errorString();
+				}
+			}
+			else
+			{
+				qWarning() << "Failed to load plugin " << fileName;
+				qWarning() << "Reason: " << pluginLoader.errorString();
+			}
+		}
     }
 }
 

@@ -65,7 +65,6 @@ private:
     double m_someDouble;
     bool m_someBool;
     QString m_someString;
-
 };
 
-#endif // HELLOWORLDPROCESSOR_H
+#endif // HelloWorldProcessor_H

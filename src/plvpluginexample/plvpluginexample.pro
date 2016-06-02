@@ -40,8 +40,12 @@ include (../../common.pri)
 DEFINES += HELLO_WORLD_PLUGIN_LIBRARY
 
 SOURCES += helloworldplugin.cpp \
-            helloworldprocessor.cpp
+            helloworldprocessor.cpp \
+			skipframes.cpp \
+			bloxprocessor.cpp
 
 HEADERS +=  helloworldplugin.h \
             hello_world_plugin_global.h \
-            helloworldprocessor.h
+            helloworldprocessor.h \
+			skipframes.h \
+			bloxprocessor.h

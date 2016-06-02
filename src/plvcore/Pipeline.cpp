@@ -419,6 +419,7 @@ void Pipeline::start()
 			}
 			else
 			{
+				//TODO prevent memory leak on failing load
 				QString msg = tr("PipelineElement %1 failed to start.").arg(element->getName());
 				handleMessage(QtWarningMsg, msg);
 				element->__deinit();

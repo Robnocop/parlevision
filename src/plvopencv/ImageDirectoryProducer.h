@@ -53,7 +53,7 @@ namespace plvopencv
     class ImageDirectoryProducer : public plv::PipelineProducer
     {
         Q_OBJECT
-        Q_CLASSINFO("author", "Richard Loos heavily rewritten by Robby")
+        Q_CLASSINFO("author", "Richard Loos heavily rewritten by Robby van Delden")
         Q_CLASSINFO("name", "Image directory producer")
         Q_CLASSINFO("description", "A producer that loads all the images in a directory. We recommend only to use the WithNumbers method for large directories of image files.");
 
@@ -86,6 +86,7 @@ namespace plvopencv
 		//void setAveragePixelValue(bool i) {m_averagePixelValue = i; emit (averagePixelValueChanged(i));}
 
 		virtual bool init();
+		virtual bool start();
         virtual bool deinit() throw ();
 
         

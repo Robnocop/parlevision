@@ -293,7 +293,7 @@ void InspectorWidget::addRow(QFormLayout* form, RefPtr<PipelineElement> element,
 
     if(prop.hasNotifySignal())
     {
-        qDebug() << "connecting signal " << prop.notifySignal().signature();;
+        //qDebug() << "connecting signal " << prop.notifySignal().signature();;
         connect(element, QByteArray::number(QSIGNAL_CODE) + prop.notifySignal().signature(),
                 spinBox, SLOT(setValue(int)));
     }

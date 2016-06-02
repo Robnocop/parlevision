@@ -85,6 +85,7 @@ namespace plvblobtracker
 		unsigned int lastUpdate;
 
 		bool merged;
+		unsigned int blobsize; //double seems strange choice but it is in blob
 		
 		//last measured centroid of the three leds
 		cv::Point centroid;
@@ -135,6 +136,7 @@ namespace plvblobtracker
 		inline unsigned int getLastUpdate() const { return d->lastUpdate; }
 		inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }
 		inline unsigned int getAveragePixel() const {return d->averagepixel; }
+		inline unsigned int getBlobSize() const {return d->blobsize;}
 
 		//inline unsigned int getLastUpdate() const { return d->lastUpdate; }
 		//inline unsigned int getTimeSinceLastMeasurement() const {return d->timesincelastmeasurement; }

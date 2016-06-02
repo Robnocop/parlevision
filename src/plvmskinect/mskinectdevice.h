@@ -29,6 +29,15 @@
 #include <plvcore/CvMatData.h>
 #include <QMutex>
 
+//for facetracking include C:\Program Files\Microsoft SDKs\Kinect\Developer Toolkit v1.8.0\inc or something similar
+#include "FaceTrackLib.h"
+#include <QThread>
+//#include "C:\Program Files\Microsoft SDKs\Kinect\Developer Toolkit v1.8.0\inc\FaceTrackLib.h"
+//#include <NuiApi.h>
+
+#include <QVariant>
+#include <QVector4D>
+
 namespace plvmskinect
 {
     class KinectDevice : public QThread
@@ -62,6 +71,13 @@ namespace plvmskinect
 		//settings
 		int m_infrared;
 		int m_highres;
+		////an added boolean to check whether facetracking is even needed
+		//somehow other were int bool m_facetracking;
+		////an added boolean to check whether facetracking is even needed
+		int m_facetracking;
+		//ADDED to keep skeleton without facetracking
+		bool m_skeletontracking;
+
 		int m_xcutoff;
 		int m_ycutoff;
 		int m_zcutoff;
@@ -80,6 +96,7 @@ namespace plvmskinect
 		int m_maxscalex;
 		int m_maxscaley;
 
+		
 		KinectState m_state;
         //old INuiInstance* m_nuiInstance;
         INuiSensor*	m_nuiInstance;
@@ -136,17 +153,94 @@ namespace plvmskinect
 		int TransformationToRealworldEucledianPointX(int x, USHORT z);
 		int TransformationToRealworldEucledianPointY(int x, USHORT z);
 		BYTE Nui_ShortToIntensity( USHORT s);
+		
+		////for facetracking
+		void CheckCameraInput();
+		
+		
+		bool m_LastTrackSucceeded;
+		FLOAT       m_ZoomFactor;   // video frame zoom factor (it is 1.0f if there is no zoom)
+		POINT       m_ViewOffset;
+		IFTImage*   m_DepthBuffer;
+		IFTImage*   m_VideoBuffer;
+		IFTResult*                  m_pFTResult;
+		IFTFaceTracker*             m_pFaceTracker;
+		 //IFTIMAGE is not exactly the same type used for opencv/parlevision so we copy it
+		//one easily switch from iftimage to iplimage/cvmat data with http://www.benbarbour.com/Convert_Kinect_Color_IFTImage_To_IplImage
+		
+		//8u???
+		//cvCreateImage(cvSize(kinectImage->getWidth(), kinectImage->getHeight(), IPL_DEPTH_8U, 4);
+		//memcpy(img->imageData, kinectImage->GetBuffer(), kinectImage->GetBufferSize());
+		IFTImage*                   m_colorImage;
+		IFTImage*                   m_depthImage;
+		float                       m_XCenterFace;
+		float                       m_YCenterFace;
+		FT_VECTOR3D                 m_hint3D[2];
+		bool m_DrawMask;
+		NUI_IMAGE_RESOLUTION m_depthRes;
+		mutable QMutex m_ftMutex;
+
+		//methods:
+		HRESULT GetVideoConfiguration(FT_CAMERA_CONFIG* videoConfig);
+		HRESULT GetDepthConfiguration(FT_CAMERA_CONFIG* depthConfig);
+		
+		float GetXCenterFace()      { return(m_XCenterFace);}
+		float GetYCenterFace()      { return(m_YCenterFace);}
+		////keep in min that there is a difference between BOOL and bool
+		BOOL SubmitFraceTrackingResult(IFTResult* pResult);
+		void SetCenterOfImage(IFTResult* pResult);
+		//void faceUpdate(FLOAT* f);
+		
+		FT_VECTOR3D m_HeadPoint[NUI_SKELETON_COUNT];
+		FT_VECTOR3D m_NeckPoint[NUI_SKELETON_COUNT];
+		
+		//TODO tempsolution add the bones from one skeleton as an array of floats
+		//upperbody bones only preferably;
+		//0-11 or 1-11
+		QVector<Vector4> m_UpperBodyPoints;
+		QVector<Vector4> m_UpperBodyRotation;
+		QVector<QVector4D> m_SendUpperBodyRotations;
+		QVector<QVector4D> m_SendUpperBodyPoints;
+		bool m_UpperBodyPointsTracked[NUI_SKELETON_POSITION_COUNT];
+		bool m_SkeletonTracked[NUI_SKELETON_COUNT];
+		
+		//from kinectmodule kinecthelper, needed to send it over signal
+		// Convert Kinect SDK Vector4 to QVector4D.
+        /// @param Vector4 Kinect SDK Vector4.
+        /// @return QVector4D The Converted vector.
+        QVector4D ConvertVector4ToQVector4D(::Vector4 kinectVector);
+		
 
     signals:
         void newDepthFrame( int deviceIndex, plv::CvMatData frame );
         void newVideoFrame( int deviceIndex, plv::CvMatData frame );
-        void newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonFrame frame );
+        //FUCK THE OLD VERSION:
+		//void newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonFrame frame );
+		void newSkeletonFrame( int deviceIndex, NUI_SKELETON_FRAME frame );
+
         void deviceFinished( int deviceIndex );
+		//TODO check type
+		void newSkeletonPointsSignal( int deviceIndex, QVector<QVector4D> frame);
+		void newSkeletonRotationSignal(int deviceIndex, QVector<QVector4D> frame);
+		//void newSkeletonPointsSignal( int deviceIndex, QString frame);
+
+
+		 /** stops the facetracker thread */
+		void stopFaceTracker();
+		//forward rotation and translation from facetracker through the face..update slot
+		void newfacerotation(int a, float x, float y, float z);
+		void newfacetranslation(int a, float x, float y, float z);
+		void newfacefeatures(int id, QVector<cv::Point2f> p);
 
     public slots:
         virtual void start();
         virtual void stop();
         void threadFinished();
+		//void faceUpdate(FLOAT *rotationxyz);
+		void faceRotUpdate(float x, float y, float z);
+		void faceTransUpdate(float x, float y, float z);
+		void faceFeatureUpdate(QVector<cv::Point2f> p);
+
 		//ADDED
 	//temps solution
 	public:		
@@ -159,11 +253,33 @@ namespace plvmskinect
 		int getAngle();
 		void setAngle(int angle);
 		void setMaxScale(int x, int y);
+		
+		//for facetracking
+		//void setFaceTracking(bool change) {m_facetracking = change;};
+		IFTImage*   GetVideoBuffer(){ return(m_VideoBuffer); };
+		IFTImage*   GetDepthBuffer(){ return(m_DepthBuffer); };
+		float       GetZoomFactor() { return(m_ZoomFactor); };
+		POINT*      GetViewOffSet() { return(&m_ViewOffset); };
+		HRESULT     GetClosestHint(FT_VECTOR3D* pHint3D);
+
+
 
     };
 	////callback in plvm
 	//void CALLBACK    KinectStatusProc(HRESULT hrStatus, const OLECHAR* instanceName, const OLECHAR* deviceName);
+
+
 }
+
+//no clue why this should be here but it is in the server with qtthreading
+//class FaceTrackCheck;
+
+/** Helper class for a QThread to run its own event loop */
+class QThreadEx : public QThread
+{
+protected:
+    void run() { exec(); }
+};
 
 #endif // PLVKINECTDEVICE_H
 

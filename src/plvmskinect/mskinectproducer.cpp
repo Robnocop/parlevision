@@ -2,6 +2,32 @@
 #include "mskinectdevice.h"
 #include <plvcore/CvMatDataPin.h>
 
+//copy-pasted order from 1.0-1.8
+enum BoneSelection{
+	plv_NUI_SKELETON_POSITION_HIP_CENTER,
+	plv_NUI_SKELETON_POSITION_SPINE	,
+	plv_NUI_SKELETON_POSITION_SHOULDER_CENTER	,
+	plv_NUI_SKELETON_POSITION_HEAD	,
+	plv_NUI_SKELETON_POSITION_SHOULDER_LEFT	 ,
+	plv_NUI_SKELETON_POSITION_ELBOW_LEFT,
+	plv_NUI_SKELETON_POSITION_WRIST_LEFT,
+	plv_NUI_SKELETON_POSITION_HAND_LEFT,
+	plv_NUI_SKELETON_POSITION_SHOULDER_RIGHT,
+	plv_NUI_SKELETON_POSITION_ELBOW_RIGHT,
+	plv_NUI_SKELETON_POSITION_WRIST_RIGHT,
+	plv_NUI_SKELETON_POSITION_HAND_RIGHT,
+	plv_NUI_SKELETON_POSITION_HIP_LEFT,
+	plv_NUI_SKELETON_POSITION_KNEE_LEFT,
+	plv_NUI_SKELETON_POSITION_ANKLE_LEFT,
+	plv_NUI_SKELETON_POSITION_FOOT_LEFT,
+	plv_NUI_SKELETON_POSITION_HIP_RIGHT,
+	plv_NUI_SKELETON_POSITION_KNEE_RIGHT,
+	plv_NUI_SKELETON_POSITION_ANKLE_RIGHT,
+	plv_NUI_SKELETON_POSITION_FOOT_RIGHT
+//	plv_NUI_SKELETON_POSITION_FOOT_RIGHT,
+//	plv_NUI_SKELETON_POSITION_COUNT 
+};
+
 using namespace plvmskinect;
 
 MSKinectProducer::MSKinectProducer() : 
@@ -10,6 +36,8 @@ MSKinectProducer::MSKinectProducer() :
 	m_rotateKinect1(true),
 	m_infrared(false),
 	m_highres(false),
+	m_facetrack(true),
+	m_skeletons(true),
 	m_cutxl(0),
 	m_cutxr(0),
 	m_cutyu(0),
@@ -58,10 +86,30 @@ MSKinectProducer::MSKinectProducer() :
         m_depthFrames.resize( m_deviceCount );
         m_videoFrames.resize( m_deviceCount );
         m_skeletonFrames.resize( m_deviceCount );
+		m_rotationFrames.resize( m_deviceCount );
+		m_translationFrames.resize( m_deviceCount );
+		m_faceFeatureFrames.resize( m_deviceCount );
+		m_bonePositionFrames.resize( m_deviceCount );
+		m_boneRotationFrames.resize( m_deviceCount );
+
+		m_faceFeatureVector.resize( m_deviceCount );
+		//specific bone
+		m_specificBoneFrames.resize( m_deviceCount );
+		m_specificBoneRotationFrames.resize( m_deviceCount );
 
         m_outputPinsDepth.resize( m_deviceCount );
         m_outputPinsVideo.resize( m_deviceCount );
         m_outputPinsSkeleton.resize( m_deviceCount );
+		m_outputPinsFaceRotation.resize( m_deviceCount );
+		m_outputPinsFaceTranslation.resize( m_deviceCount );
+		m_outputPinsFacePoints.resize( m_deviceCount );
+		m_outputPinsBonesPositions.resize( m_deviceCount );
+		//specific bone
+		m_outputSpecifiedBonePositions.resize( m_deviceCount );
+		m_outputSpecifiedBoneRotations.resize( m_deviceCount );
+
+		m_skeletonReady.resize( m_deviceCount );
+		m_faceTrackingReady.resize( m_deviceCount );
 
         for( int i = 0; i < m_deviceCount; ++i )
         {
@@ -74,15 +122,39 @@ MSKinectProducer::MSKinectProducer() :
             connect( device, SIGNAL( newVideoFrame( int, plv::CvMatData ) ),
                     this,     SLOT( newVideoFrame( int, plv::CvMatData ) ) );
 
-            connect( device, SIGNAL( newSkeletonFrame( int, plvmskinect::SkeletonFrame ) ),
-                     this,     SLOT( newSkeletonFrame( int, plvmskinect::SkeletonFrame ) ) );
+			//replaced plvmskinect::SkeletonFrame  with NUI_SKELETON_FRAME
+            connect( device, SIGNAL( newSkeletonFrame( int, NUI_SKELETON_FRAME ) ),
+                     this,     SLOT( newSkeletonFrame( int, NUI_SKELETON_FRAME ) ) );
+
+			//TODO add for temp solution the signal containing the upperbody bones that will be passed and parsed to a string....
+			connect( device, SIGNAL( newSkeletonPointsSignal( int, QVector<QVector4D>)),
+					this, SLOT (newSkeletonPoints( int, QVector<QVector4D>)));
+			//connect( device, SIGNAL( newSkeletonPointsSignal( int, QString)),
+			//		this, SLOT (newSkeletonPoints( int, QString)));
+
+			//changed
+			connect( device, SIGNAL( newSkeletonRotationSignal( int, QVector<QVector4D>)),
+					this, SLOT (newSkeletonRotationSignal( int, QVector<QVector4D>)));
 
             connect( device, SIGNAL( deviceFinished(int)), this, SLOT(kinectFinished(int)));
+			//added for facetracker
+			connect( device, SIGNAL( newfacerotation(int, float, float, float)), this, SLOT(newFaceRotation(int, float, float, float)));
+			connect( device, SIGNAL( newfacetranslation(int, float, float, float)), this, SLOT(newFaceTranslation(int, float, float, float)));
+			connect( device, SIGNAL( newfacefeatures(int, QVector<cv::Point2f>)), this, SLOT(newFaceFeatures(int, QVector<cv::Point2f>)));
 
             // we have one output pin
             m_outputPinsDepth[i] = plv::createCvMatDataOutputPin( "depth", this );
             m_outputPinsVideo[i] = plv::createCvMatDataOutputPin( "camera", this );
-            m_outputPinsSkeleton[i] = plv::createOutputPin<SkeletonFrame>( "skeletons", this );
+            //replaced m_outputPinsSkeleton[i] = plv::createOutputPin<SkeletonFrame>( "skeletons", this );
+			m_outputPinsSkeleton[i] = plv::createOutputPin<NUI_SKELETON_FRAME>( "skeletons", this );
+			//facetracker
+			m_outputPinsFaceRotation[i] = plv::createOutputPin<QString>( "h-rotations", this );
+			m_outputPinsFaceTranslation[i] = plv::createOutputPin<QString>( "h-position", this );
+			m_outputPinsFacePoints[i] = plv::createOutputPin<QString>( "f-points", this );
+			m_outputPinsBonesPositions[i] = plv::createOutputPin<QString>( "bones-pos", this );
+			//specific bone TODO select the bone
+			m_outputSpecifiedBonePositions[i] = plv::createOutputPin<QVector4D>( "one specifc bone", this );
+			m_outputSpecifiedBoneRotations[i] = plv::createOutputPin<QVector4D>( "one specifc bone rot", this );
 
             // supports all types of images
             m_outputPinsVideo[i]->addAllChannels();
@@ -90,8 +162,33 @@ MSKinectProducer::MSKinectProducer() :
 
             m_outputPinsDepth[i]->addAllChannels();
             m_outputPinsDepth[i]->addAllDepths();
+			m_skeletonReady[i]= false;
+			m_faceTrackingReady[i]=false;
         }
     }
+
+	//enum:
+	//style: m_method.add("gray", BGSM_GRAYSCALE);
+	m_boneEnum.add("HIP_CENTER", plv_NUI_SKELETON_POSITION_HIP_CENTER);
+	m_boneEnum.add("SPINE", plv_NUI_SKELETON_POSITION_SPINE);
+	m_boneEnum.add("SHOULDER_CENTER", plv_NUI_SKELETON_POSITION_SHOULDER_CENTER);
+	m_boneEnum.add("HEAD", plv_NUI_SKELETON_POSITION_HEAD);
+	m_boneEnum.add("SHOULDER_LEFT", plv_NUI_SKELETON_POSITION_SHOULDER_LEFT);
+	m_boneEnum.add("ELBOW_LEFT", plv_NUI_SKELETON_POSITION_ELBOW_LEFT);
+	m_boneEnum.add("WRIST_LEFT", plv_NUI_SKELETON_POSITION_WRIST_LEFT);
+	m_boneEnum.add("HAND_LEFT", plv_NUI_SKELETON_POSITION_HAND_LEFT);
+	m_boneEnum.add("SHOULDER_RIGHT", plv_NUI_SKELETON_POSITION_SHOULDER_RIGHT);
+	m_boneEnum.add("ELBOW_RIGHT", plv_NUI_SKELETON_POSITION_ELBOW_RIGHT);
+	m_boneEnum.add("WRIST_RIGHT", plv_NUI_SKELETON_POSITION_WRIST_RIGHT);
+	m_boneEnum.add("HAND_RIGHT", plv_NUI_SKELETON_POSITION_HAND_RIGHT);
+	m_boneEnum.add("HIP_LEFT", plv_NUI_SKELETON_POSITION_HIP_LEFT);
+	m_boneEnum.add("KNEE_LEFT", plv_NUI_SKELETON_POSITION_KNEE_LEFT);
+	m_boneEnum.add("ANKLE_LEFT", plv_NUI_SKELETON_POSITION_ANKLE_LEFT);
+	m_boneEnum.add("FOOT_LEFT", plv_NUI_SKELETON_POSITION_FOOT_LEFT);
+	m_boneEnum.add("HIP_RIGHT", plv_NUI_SKELETON_POSITION_HIP_RIGHT);
+	m_boneEnum.add("KNEE_RIGHT", plv_NUI_SKELETON_POSITION_KNEE_RIGHT);
+	m_boneEnum.add("ANKLE_RIGHT", plv_NUI_SKELETON_POSITION_ANKLE_RIGHT);
+	m_boneEnum.add("FOOT_RIGHT", plv_NUI_SKELETON_POSITION_FOOT_RIGHT);
 }
 
 MSKinectProducer::~MSKinectProducer()
@@ -170,11 +267,15 @@ void CALLBACK MSKinectProducer::Nui_StatusProc( HRESULT hrStatus, const OLECHAR*
 
 bool MSKinectProducer::init()
 {	
+	m_specifiedbone = 0;
+
 	//setAngleKinect1(0);
 	//qDebug() << "I do set device callback"; 
 	//NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 	for( int i = 0; i < m_deviceCount; ++i )
     {
+		m_skeletonReady[i] = false;
+		m_faceTrackingReady[i] =false;
 		//NuiSetDeviceStatusCallback(KinectStatusProc,NULL);
 		//NuiSetDeviceStatusCallback((NuiStatusProc)&KinectStatusProc, NULL);
 		//declared as QVector< KinectDevice* > m_kinects;
@@ -182,7 +283,10 @@ bool MSKinectProducer::init()
 		//the infrared//color input can not be switched during the process so should be set in the init or start;
 		m_kinects.at(i)->m_infrared=getInfrared();
 		m_kinects.at(i)->m_highres=getHighres();
-		
+		//facetrack as well...
+		m_kinects.at(i)->m_facetracking=getFacetrack();
+		m_kinects.at(i)->m_skeletontracking= getSkeletons();
+
         if( !m_kinects.at(i)->init() )
         {
 		    setError( PlvPipelineInitError, tr("Kinect with id %1 failed to initialise").arg(m_kinects.at(i)->getId()) );
@@ -229,6 +333,8 @@ bool MSKinectProducer::init()
 					break;
 			}
 		}
+
+		//check the gui and set the facetracker if neccesary
     }
 	
     return true;
@@ -250,8 +356,13 @@ bool MSKinectProducer::deinit() throw()
 
 bool MSKinectProducer::start()
 {
+	
+
 	for( int i = 0; i < m_deviceCount; ++i )
     {
+		//TODO I assume one skeleton tracking device this might change in the future
+		m_skeletonReady[i] = false;
+		m_faceTrackingReady[i]=false;
         m_kinects.at(i)->start();
 		/*if (i==1) setAngleKinect1((int) getAngleKinect(i));
 		if (i==2) setAngleKinect2((int) getAngleKinect(i));
@@ -276,19 +387,71 @@ bool MSKinectProducer::produce()
 {
     QMutexLocker lock( &m_kinectProducerMutex );
 	
+	//for multiple Kinects this might give errors, as skeletonready 
     for( int i = 0; i < m_deviceCount; ++i )
     {
         m_outputPinsDepth.at(i)->put( m_depthFrames.at(i) );
-        m_outputPinsVideo.at(i)->put( m_videoFrames.at(i) );
 		
+		//added temp! draw on the video when size of features > 0
+		//TODO add a seperate pin
+		plv::CvMatData drawface = m_videoFrames.at(i);
+		cv::Mat& image = drawface;
+		//? To check is this thread safe?
+		//if (m_faceFeatureVector[i].size()>0)
+		if (m_faceTrackingReady[i])
+		{
+			for( int j = 0; j < m_faceFeatureVector[i].size(); j++ )
+			{	
+				//circle( image, cv::Point((int) m_faceFeatureVector[i].at(j).x,(int) m_faceFeatureVector[i].at(j).y), 5, cv::Scalar(0,255,255), -1, 8);
+				circle( image, cv::Point((int) m_faceFeatureVector[i].at(j).x,(int) m_faceFeatureVector[i].at(j).y), 2, cv::Scalar(0,255,255), 1, 8);
+			}
+			m_outputPinsFaceRotation.at(i)->put( m_rotationFrames.at(i) );
+			m_outputPinsFaceTranslation.at(i)->put( m_translationFrames.at(i) );
+			m_outputPinsFacePoints.at(i)->put( m_faceFeatureFrames.at(i) );
+			m_faceTrackingReady[i] = false;
+			//TODO make thread safe and in proper format
+			//m_rotationFrames[i] = QString("0.0 \t 0.0 \t 0.0");
+			//m_translationFrames[i] = QString("0.0 \t 0.0 \t 0.0");
+		}
+		/////////
+		//TODO seperate the copy with facefeatures from the normal rgb image
+		//m_outputPinsVideo.at(i)->put( m_videoFrames.at(i) );
+		m_outputPinsVideo.at(i)->put( image );
+		
+
+		//empty
+		//?threadsafety?
+		//TO check why do I need to reset these frames?
 		m_depthFrames[i] = cv::Mat();
         m_videoFrames[i] = cv::Mat();
-		if( m_skeletonFrames.at(i).isValid() )
+		
+		//TO check do we need to reset these values?
+		//m_bonePositionFrames[i] = QString("0.0 \t 0.0 \t 0.0");
+		//m_faceFeatureFrames[i] = QString("0.0 \t 0.0 \t 0.0");
+
+		//replaced if( m_skeletonFrames.at(i).isValid() )
+		
+		if( m_skeletonReady[i] )
         {
             m_outputPinsSkeleton.at(i)->put( m_skeletonFrames.at(i) );
-            m_skeletonFrames[i] = SkeletonFrame();
-        }
-    }
+            m_skeletonFrames[i] = NUI_SKELETON_FRAME();
+			m_outputPinsBonesPositions.at(i)->put( m_bonePositionFrames.at(i) );
+			//specific bone
+			m_outputSpecifiedBonePositions.at(i)->put(m_specificBoneFrames.at(i));
+			m_outputSpecifiedBoneRotations.at(i)->put(m_specificBoneRotationFrames.at(i));
+
+			m_skeletonReady[i] =false;
+		}
+		else
+		{
+			//send empty line to also trigger events when no bone info is there, probably needed for keystrokes to work
+			//TODO make this choice a bool in the GUI
+			QVector4D neues;
+			
+			m_outputSpecifiedBonePositions.at(i)->put(neues);
+			m_outputSpecifiedBoneRotations.at(i)->put(neues);
+		}
+	}
 
     return true;
 }
@@ -319,11 +482,126 @@ void MSKinectProducer::newVideoFrame( int deviceIndex, plv::CvMatData video )
     m_videoFrames[deviceIndex] = video;
 }
 
-void MSKinectProducer::newSkeletonFrame( int deviceIndex, plvmskinect::SkeletonFrame frame )
+//replaced
+void MSKinectProducer::newSkeletonFrame( int deviceIndex, NUI_SKELETON_FRAME frame )
 {
     QMutexLocker lock( &m_kinectProducerMutex );
     assert( deviceIndex > -1 && deviceIndex < m_deviceCount );
     m_skeletonFrames[deviceIndex] = frame;
+	m_skeletonReady[deviceIndex] = true;
+}
+
+void MSKinectProducer::newFaceRotation(int deviceIndex, float x, float y, float z)
+{
+	QMutexLocker lock( &m_kinectProducerMutex );
+	assert( deviceIndex > -1 && deviceIndex < m_deviceCount ); 
+	//TODO 
+	QString str = QString::number(x).append("\t").append(QString::number(y)).append("\t").append(QString::number(z));
+	m_rotationFrames[deviceIndex] = str;
+}
+
+void MSKinectProducer::newFaceTranslation(int deviceIndex, float x, float y, float z)
+{
+	QMutexLocker lock( &m_kinectProducerMutex );
+	assert( deviceIndex > -1 && deviceIndex < m_deviceCount ); 
+	//TODO 
+	QString str = QString::number(x).append("\t").append(QString::number(y)).append("\t").append(QString::number(z));
+	m_translationFrames[deviceIndex] = str;
+}
+
+//TODO this is inefficient, I recast it twice now
+//take into account that the i != the deviceindex!
+void MSKinectProducer::newFaceFeatures(int deviceIndex, QVector<cv::Point2f> faceFeaturePoints)
+{
+	QMutexLocker lock( &m_kinectProducerMutex );
+	assert( deviceIndex > -1 && deviceIndex < m_deviceCount ); 
+	//qDebug() << "facefeatures arrive in producer";	
+	QString str;
+	for (int i = 0;i<faceFeaturePoints.size();i++)
+	{
+		//QString tempString = QString::number(m_UpperBodyPoints[0].x).append("\t").append(QString::number(m_UpperBodyPoints[0].y)).append("\t").append(QString::number(m_UpperBodyPoints[0].z));
+		
+		//qDebug() << "bone" << i << " x: " << skeletonArray[i].x() << "\t ,y:" << skeletonArray[i].y() << "\t ,z:" <<skeletonArray[i].z();
+		if (i<faceFeaturePoints.size()-1)
+			str = str.append( QString::number(faceFeaturePoints[i].x).append("\t").append(QString::number(faceFeaturePoints[i].y)).append("\t"));
+		else
+			str = str.append( QString::number(faceFeaturePoints[i].x).append("\t").append(QString::number(faceFeaturePoints[i].y)));
+		//line-end added automatically in qdebug() functions
+	}
+	//end is added in the string to file processor
+	//str.append("\n");
+	m_faceFeatureVector[deviceIndex] = faceFeaturePoints;
+	m_faceFeatureFrames[deviceIndex] = str;
+	m_faceTrackingReady[deviceIndex] = true;
+}
+
+void MSKinectProducer::newSkeletonPoints( int deviceIndex, QVector<QVector4D> skeletonArray) //QString skeletonArray)
+{
+	//TODO make this a pin with \n and \t string formated bones so they can be read or.... make a new proccesorr 
+	QMutexLocker lock( &m_kinectProducerMutex );
+	assert( deviceIndex > -1 && deviceIndex < m_deviceCount ); 
+	
+	//qDebug() << "got a skeleton with size " << skeletonArray.size();
+	QString str;
+	for (int i = 0;i<skeletonArray.size();i++)
+	{
+		//QString tempString = QString::number(m_UpperBodyPoints[0].x).append("\t").append(QString::number(m_UpperBodyPoints[0].y)).append("\t").append(QString::number(m_UpperBodyPoints[0].z));
+		
+		//qDebug() << "bone" << i << " x: " << skeletonArray[i].x() << "\t ,y:" << skeletonArray[i].y() << "\t ,z:" <<skeletonArray[i].z();
+		
+		//make a tabdelimited list of bones, every bone seperated by a tab, the last line should not end with an empty field
+		if(i<skeletonArray.size()-1)
+			str = str.append( QString::number(skeletonArray[i].x()).append("\t").append(QString::number(skeletonArray[i].y())).append("\t").append(QString::number(skeletonArray[i].z())).append("\t"));
+		else
+			str = str.append( QString::number(skeletonArray[i].x()).append("\t").append(QString::number(skeletonArray[i].y())).append("\t").append(QString::number(skeletonArray[i].z())));
+		//line-end added automatically in qdebug() functions
+		
+		//QVector4D checkthis = skeletonArray.at(i);
+		//specific bone
+		if (i == m_specifiedbone)
+			m_specificBoneFrames[deviceIndex] = skeletonArray[i];
+	}
+	m_bonePositionFrames[deviceIndex] = str;
+	
+	//for (int i = 0;i<NUI_SKELETON_COUNT;i++)
+	//{
+	//}
+	//m_skeletonPointsFrame 
+}
+
+
+void MSKinectProducer::newSkeletonRotationSignal( int deviceIndex, QVector<QVector4D> skeletonRotationArray) //QString skeletonArray)
+{
+	//TODO make this a pin with \n and \t string formated bones so they can be read or.... make a new proccesorr 
+	QMutexLocker lock( &m_kinectProducerMutex );
+	assert( deviceIndex > -1 && deviceIndex < m_deviceCount ); 
+	
+	//qDebug() << "got a skeleton with size " << skeletonArray.size();
+	QString str;
+	for (int i = 0;i<skeletonRotationArray.size();i++)
+	{
+		//QString tempString = QString::number(m_UpperBodyPoints[0].x).append("\t").append(QString::number(m_UpperBodyPoints[0].y)).append("\t").append(QString::number(m_UpperBodyPoints[0].z));
+		
+		//qDebug() << "bone" << i << " x: " << skeletonArray[i].x() << "\t ,y:" << skeletonArray[i].y() << "\t ,z:" <<skeletonArray[i].z();
+		
+		//make a tabdelimited list of bones, every bone seperated by a tab, the last line should not end with an empty field
+		if(i<skeletonRotationArray.size()-1)
+			str = str.append( QString::number(skeletonRotationArray[i].x()).append("\t").append(QString::number(skeletonRotationArray[i].y())).append("\t").append(QString::number(skeletonRotationArray[i].z())).append("\t"));
+		else
+			str = str.append( QString::number(skeletonRotationArray[i].x()).append("\t").append(QString::number(skeletonRotationArray[i].y())).append("\t").append(QString::number(skeletonRotationArray[i].z())));
+		//line-end added automatically in qdebug() functions
+		
+		//QVector4D checkthis = skeletonArray.at(i);
+		//specific bone
+		if (i == m_specifiedbone)
+			m_specificBoneRotationFrames[deviceIndex] = skeletonRotationArray[i];
+	}
+	m_boneRotationFrames[deviceIndex] = str;
+	
+	//for (int i = 0;i<NUI_SKELETON_COUNT;i++)
+	//{
+	//}
+	//m_skeletonPointsFrame 
 }
 
 void MSKinectProducer::kinectFinished( int deviceIndex )
@@ -518,13 +796,76 @@ void MSKinectProducer::setMaxScale()
 void MSKinectProducer::setRealWorldCoord(bool change)
 {
 	QMutexLocker lock(m_propertyMutex);
-	m_realWorldCoord = change; 
+	if (!getFacetrack() && !getSkeletons())
+	{
+		m_realWorldCoord = change; 
+		for (int i=0;i<m_deviceCount;i++)
+		{
+			m_kinects.at(i)->setRealWorldCoord(change);
+		}
+		emit (realWorldCoordChanged(change));
+	}
+	else
+	{
+		qDebug()<< "realwordcoord can't be used for now when in facetrack mode"; 
+		m_realWorldCoord = false;
+		emit (realWorldCoordChanged(false));
+	}
+}
+
+void MSKinectProducer::setFacetrack(bool change)
+{
+	QMutexLocker lock(m_propertyMutex);
+	qDebug()<< "restart pipeline to incorporate facetrack change, realwordcoord can't be used for now in facetrack mode"; 
+	if (change)
+	{
+		setRealWorldCoord(false);
+		setSkeletons(true);
+		//emit (realWorldCoordChanged(false));
+	}
+	
+	m_facetrack = change; 
+
 	for (int i=0;i<m_deviceCount;i++)
 	{
-		m_kinects.at(i)->setRealWorldCoord(change);
+		//only at start not at runtime as it creates threads etc. 
+		//m_kinects.at(i)->setRealWorldCoord(change);
 	}
-	emit (realWorldCoordChanged(change));
+
+	emit facetrackChanged(change);
+
 }
+
+void MSKinectProducer::setSkeletons(bool change)
+{
+	QMutexLocker lock(m_propertyMutex);
+	qDebug()<< "restart pipeline to incorporate change in skeleton tracking, realwordcoord can't be used for now in skeleton tracking mode"; 
+	if (change)
+	{
+		setRealWorldCoord(false);
+		//emit (realWorldCoordChanged(false));
+	}
+	//we can only track face if we track skeletons
+	else
+	{
+		setFacetrack(false);
+	}
+	
+	m_skeletons = change; 
+
+	for (int i=0;i<m_deviceCount;i++)
+	{
+		//only at start not at runtime as it creates threads etc. 
+		//m_kinects.at(i)->setRealWorldCoord(change);
+	}
+
+	emit skeletonsChanged(change);
+
+}
+
+////make clear to user that we don't use realworld coordinates if we are tracking faces
+//		if (change)
+//			m_kinects.at(i)->setRealWorldCoord(change);
 
 void MSKinectProducer::setCutXL(int value)
 {
@@ -878,6 +1219,22 @@ int MSKinectProducer::getAngleKinect(int device)
 		qDebug() << "you requested/set a Kinect angle that is unavailable";
 		return 0;
 	}
+}
+
+
+void MSKinectProducer::setBoneEnum(plv::Enum bone)
+{
+    QMutexLocker lock(m_propertyMutex);
+    m_boneEnum = bone;
+	m_specifiedbone = m_boneEnum.getSelectedIndex();
+	qDebug()<< "set bone to " << m_specifiedbone << "by setting " << m_boneEnum.getSelectedItemName();
+    emit boneEnumChanged( bone);
+}
+
+plv::Enum MSKinectProducer::getBoneEnum() const
+{
+    QMutexLocker lock(m_propertyMutex);
+    return m_boneEnum;
 }
 
 void MSKinectProducer::rotateKinect(int device, int angle)

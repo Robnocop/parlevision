@@ -36,8 +36,13 @@ SOURCES += mskinectplugin.cpp \
            skeletondataviewer.cpp \
            mskinectdatatypes.cpp \
 		   mskinectfakecolor.cpp \
-    kinectthreshold.cpp
-
+		   kinectthreshold.cpp \
+		   mskinecttransform.cpp \
+		   #FaceTrack probably not coded properly yet!
+		   FaceTrackCheck.cpp \
+		   tokeystrokes.cpp \
+		   mskinecttransformmask.cpp
+		   
 HEADERS +=  mskinectplugin_global.h \
             mskinectplugin.h \
             mskinectproducer.h \
@@ -45,4 +50,11 @@ HEADERS +=  mskinectplugin_global.h \
             skeletondataviewer.h \
             mskinectdatatypes.h \
 			mskinectfakecolor.h \
-    kinectthreshold.h
+			kinectthreshold.h \
+			#FaceTrack probably not coded properly yet!
+			FaceTrackCheck.h \
+			FaceTrackLib.h \
+			mskinecttransform.h \
+			#this is platform specific and placed inside mskinect therefor:
+			tokeystrokes.h \
+			mskinecttransformmask.h

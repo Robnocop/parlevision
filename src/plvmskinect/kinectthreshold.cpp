@@ -50,6 +50,7 @@ KinectThreshold::KinectThreshold() :
     m_outputPin->addSupportedChannels(1);
 	//m_inputPin->addSupportedDepth(CV_8U); //IR camera 
     m_outputPin->addSupportedDepth(CV_16U);
+	m_outputPin->addSupportedDepth(CV_8U);
 	//m_inputPin->addSupportedDepth(CV_32F);
 }
 
@@ -58,6 +59,7 @@ KinectThreshold::~KinectThreshold(){}
 bool KinectThreshold::process()
 {
     CvMatData in = m_inputPin->get();
+	
 	//qDebug()<< "w " << in.width() << "h"<< in.height() << "type " << in.type(); // w  640 h 480 type  5  qdebug 
     CvMatData out = CvMatData::create( in.width(), in.height(), in.type() );
 
@@ -79,24 +81,15 @@ bool KinectThreshold::process()
         for( int x = 0 ; x < src.cols ; ++x )
         {
             unsigned short v = src.at<unsigned short>(y,x);
-            dst.at<unsigned short>(y,x) = v >= threshold ? (v > maxValue ? 0 : v) : 0;
-			//if (toggle )
-		//	//{
-		//	//		qDebug() << "x is " << x  << "v is" << v;  //indeed 640 or 639 indeed similar values left and rigth of cut off x.
-		//	//}
-
-        }/*
-		*if (y == 20)
-			toggle = true;
-		else 
-			toggle = false;
-		**////qDebug() << "x is " << y;  //indedd 480 or 479
-    }
+            //TEMP of
+			dst.at<unsigned short>(y,x) = v >= threshold ? (v > maxValue ? 0 : v) : 0;
+			
+        }
+	}
 
     // publish the new image
-    m_outputPin->put( out );
-
-    return true;
+	m_outputPin->put( out );
+	return true;
 }
 
 /** propery methods */

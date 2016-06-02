@@ -7,6 +7,7 @@
 #include "mskinectfakecolor.h"
 #include "skeletondataviewer.h"
 #include "kinectthreshold.h"
+#include "tokeystrokes.h"
 #include <plvgui/RendererFactory.h>
 
 using namespace plv;
@@ -38,14 +39,19 @@ void MSKinectPlugin::onLoad()
 {
     qDebug() << "MSKinectPlugin onLoad";
 
-    qRegisterMetaType< plvmskinect::SkeletonFrame >( "plvmskinect::SkeletonFrame" );
+	//replaced plvmskinect::SkeletonFrame with  NUI_SKELETON_FRAME 
+    qRegisterMetaType< NUI_SKELETON_FRAME >( "NUI_SKELETON_FRAME" );
+	//qRegisterMetaType< plvmskinect::SkeletonFrame >( "plvmskinect::SkeletonFrame" );
 
     plvRegisterPipelineElement<plvmskinect::MSKinectProducer>();
     plvRegisterPipelineElement<plvmskinect::KinectThreshold>();
 	plvRegisterPipelineElement<plvmskinect::MSKinectFakeColor>();
+	plvRegisterPipelineElement<plvmskinect::ToKeyStrokes>();
 
     // register renderers
-    plvgui::RendererFactory::add<plvmskinect::SkeletonFrame, plvmskinect::SkeletonDataViewer>();
+    //replaced plvmskinect::SkeletonFrame with NUI_SKELETON_FRAME
+	//plvgui::RendererFactory::add<plvmskinect::SkeletonFrame, plvmskinect::SkeletonDataViewer>();
+	plvgui::RendererFactory::add<NUI_SKELETON_FRAME, plvmskinect::SkeletonDataViewer>();
 
     //plvgui::RendererFactory::instance()->add( new Test() );
 }
